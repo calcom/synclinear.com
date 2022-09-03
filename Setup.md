@@ -1,23 +1,3 @@
-Initially created by [Spacedrive](https://github.com/spacedriveapp/linear-github-sync), now maintained by Cal.com and Neat.run
-
-# Linear GitHub Sync
-
-This is a system to synchronize Linear issues to GitHub issues when a specific tag tag is added to the Linear issue. Spacedrive uses this to allow contributors to work with us without having to give them access to our internal Linear team.
-
-## Usage
-
-Ensure you have the [Vercel CLI](https://vercel.com/docs/cli) installed globally on your machine!
-
-```
-git clone https://github.com/calcom/linear-to-github.git
-cd linear-to-github/
-cp .env.example .env # Make sure to fill to fill out your .env file
-pnpm i
-vercel dev
-```
-
-Before you've started the server make sure to fill out the information in the `.env` file, if you don't know how:
-
 # Setup
 
 Welcome to the installation page for Spacedrive's Linear and GitHub sync system.
@@ -99,4 +79,3 @@ query {
 7. Check all top-level scopes <sub>I wasn't able to figure out which scopes properly worked with both public and private repositories, if you have please feel free to make an issue!</sub>
 8. Press "Generate token".
 9. Copy the generated token.
-

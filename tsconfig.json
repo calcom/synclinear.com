@@ -1,0 +1,33 @@
+{
+	"compilerOptions": {
+	  "target": "ESNext",
+	  "module": "ESNext",
+	  "moduleResolution": "node",
+	  "lib": ["ESNext"],
+  
+	  "rootDir": ".",
+	  "outDir": "dist",
+  
+	  "strict": true,
+	  "alwaysStrict": true,
+	  "strictFunctionTypes": true,
+	  "strictNullChecks": true,
+	  "strictPropertyInitialization": true,
+	  "allowSyntheticDefaultImports": true,
+  
+	  "forceConsistentCasingInFileNames": true,
+	  "noImplicitAny": true,
+	  "noImplicitThis": true,
+	  "noFallthroughCasesInSwitch": true,
+	  "noUnusedLocals": true,
+	  "noUnusedParameters": true,
+	  "noImplicitOverride": true,
+  
+	  "skipLibCheck": true,
+  
+	  "pretty": true,
+  
+	  "typeRoots": ["node_modules/@types", "typings/"]
+	},
+	"main": "src/index.ts"
+  }
