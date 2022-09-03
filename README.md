@@ -1,6 +1,6 @@
 Initially created by [Spacedrive](https://github.com/spacedriveapp/linear-github-sync), now maintained by Cal.com and Neat.run
 
-# Linear GitHub Sync
+# Linear to GitHub Sync
 
 This is a system to synchronize Linear issues to GitHub issues when a specific tag tag is added to the Linear issue. Spacedrive uses this to allow contributors to work with us without having to give them access to our internal Linear team.
 
