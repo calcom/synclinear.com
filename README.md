@@ -1,4 +1,4 @@
-Initially created by [Spacedrive](https://github.com/spacedriveapp/linear-github-sync), now maintained by Cal.com and Neat.run
+Initially created by [Spacedrive](https://github.com/spacedriveapp/linear-github-sync), now maintained by [Cal.com](https://cal.com/) and [Neat.run](https://neat.run/)
 
 # Linear to GitHub Sync
 
