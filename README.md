@@ -1,3 +1,6 @@
+![Linear to GitHub](https://user-images.githubusercontent.com/8019099/188273504-4a3c46cd-7870-49da-ae8a-8bb2608529a3.png)
+
+
 Initially created by [Spacedrive](https://github.com/spacedriveapp/linear-github-sync), now maintained by [Cal.com](https://cal.com/) and [Neat.run](https://neat.run/)
 
 # Linear to GitHub Sync
