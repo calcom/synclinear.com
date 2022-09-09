@@ -4,7 +4,7 @@ Initially created by [Spacedrive](https://github.com/spacedriveapp/linear-github
 
 # Linear to GitHub Sync
 
-This is a system to synchronize Linear issues to GitHub issues when a specific tag tag is added to the Linear issue. This allows contributors to work with open source projects without having to give them access to your internal Linear team.
+This is a system to synchronize Linear issues to GitHub issues when a specific tag is added to the Linear issue. This allows contributors to work with open source projects without having to give them access to your internal Linear team.
 
 ## Usage
 
@@ -13,7 +13,7 @@ Ensure you have the [Vercel CLI](https://vercel.com/docs/cli) installed globally
 ```
 git clone https://github.com/calcom/linear-to-github.git
 cd linear-to-github/
-cp .env.example .env # Make sure to fill to fill out your .env file
+cp .env.example .env # Make sure to fill out your .env file
 pnpm i
 vercel dev
 ```
@@ -101,4 +101,16 @@ query {
 7. Check all top-level scopes <sub>I wasn't able to figure out which scopes properly worked with both public and private repositories, if you have please feel free to make an issue!</sub>
 8. Press "Generate token".
 9. Copy the generated token.
+
+## Database
+
+### PostgreSQL Instance
+
+One way to provision a simple PostgreSQL instance is with [Railway](https://docs.railway.app/databases/postgresql).
+
+1. Sign up for [Railway](https://railway.app/)
+2. Click "Start a New Project" -> "Provision PostgreSQL"
+3. Once the DB is ready, focus it -> go to "Connect" -> "Postgres Connection URL" -> hover to copy
+4. Paste this URL (beginning with `postgresql://`) to the `DATABASE_URL` variable in .env.
+5. Run `npx prisma migrate dev` to generate a table with the necessary fields.
 
