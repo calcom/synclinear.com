@@ -2,7 +2,7 @@ import { VercelRequest, VercelResponse } from "@vercel/node";
 import petitio from "petitio";
 import { components } from "@octokit/openapi-types";
 import { PrismaClient } from "@prisma/client";
-import { LinearWebhookPayload } from "../typings";
+import { LinearWebhookPayload } from "../../typings";
 import { createHmac, timingSafeEqual } from "crypto";
 import {
     IssueCommentCreatedEvent,

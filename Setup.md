@@ -15,7 +15,7 @@ git clone https://github.com/calcom/linear-to-github.git
 cd linear-to-github/
 cp .env.example .env # Make sure to fill out your .env file
 pnpm i
-pnpm start:dev
+pnpm dev
 ```
 
 To receive webhooks locally, install [ngrok](https://ngrok.com) (`pnpm install -g ngrok`) then expose your local server with `ngrok http 3000` (or whichever port it's running on). This will give you a temporary public URL.

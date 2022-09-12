@@ -1,33 +1,21 @@
 {
-	"compilerOptions": {
-	  "target": "ESNext",
-	  "module": "ESNext",
-	  "moduleResolution": "node",
-	  "lib": ["ESNext"],
-  
-	  "rootDir": ".",
-	  "outDir": "dist",
-  
-	  "strict": true,
-	  "alwaysStrict": true,
-	  "strictFunctionTypes": true,
-	  "strictNullChecks": true,
-	  "strictPropertyInitialization": true,
-	  "allowSyntheticDefaultImports": true,
-  
-	  "forceConsistentCasingInFileNames": true,
-	  "noImplicitAny": true,
-	  "noImplicitThis": true,
-	  "noFallthroughCasesInSwitch": true,
-	  "noUnusedLocals": true,
-	  "noUnusedParameters": true,
-	  "noImplicitOverride": true,
-  
-	  "skipLibCheck": true,
-  
-	  "pretty": true,
-  
-	  "typeRoots": ["node_modules/@types", "typings/"]
-	},
-	"main": "src/index.ts"
-  }
+    "compilerOptions": {
+        "target": "es5",
+        "lib": ["dom", "dom.iterable", "esnext"],
+        "allowJs": true,
+        "skipLibCheck": true,
+        "strict": false,
+        "forceConsistentCasingInFileNames": true,
+        "noEmit": true,
+        "incremental": true,
+        "esModuleInterop": true,
+        "module": "esnext",
+        "moduleResolution": "node",
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "jsx": "preserve",
+        "typeRoots": ["node_modules/@types", "typings/"]
+    },
+    "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+    "exclude": ["node_modules"]
+}
