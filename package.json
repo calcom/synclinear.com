@@ -23,6 +23,7 @@
     "dependencies": {
         "@linear/sdk": "^1.22.0",
         "@prisma/client": "^3.15.2",
+        "@radix-ui/react-icons": "^1.1.1",
         "next": "^12.3.0",
         "petitio": "^1.4.0",
         "react": "^18.2.0",

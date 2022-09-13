@@ -5,6 +5,7 @@ specifiers:
   '@octokit/openapi-types': ^12.4.0
   '@octokit/webhooks-types': ^5.8.0
   '@prisma/client': ^3.15.2
+  '@radix-ui/react-icons': ^1.1.1
   '@types/node': ^17.0.45
   '@types/react': 18.0.19
   '@vercel/node': ^1.15.4
@@ -23,6 +24,7 @@ specifiers:
 dependencies:
   '@linear/sdk': 1.22.0
   '@prisma/client': 3.15.2_prisma@3.15.2
+  '@radix-ui/react-icons': 1.1.1_react@18.2.0
   next: 12.3.0_biqbaboplfbrettd7655fr4n2y
   petitio: 1.4.0
   react: 18.2.0
@@ -266,6 +268,14 @@ packages:
   /@prisma/engines/3.15.1-1.461d6a05159055555eb7dfb337c9fb271cbd4d7e:
     resolution: {integrity: sha512-NHlojO1DFTsSi3FtEleL9QWXeSF/UjhCW0fgpi7bumnNZ4wj/eQ+BJJ5n2pgoOliTOGv9nX2qXvmHap7rJMNmg==}
     requiresBuild: true
+
+  /@radix-ui/react-icons/1.1.1_react@18.2.0:
+    resolution: {integrity: sha512-xc3wQC59rsFylVbSusQCrrM+6695ppF730Q6yqzhRdqDcRNWIm2R6ngpzBoSOQMcwnq4p805F+Gr7xo4fmtN1A==}
+    peerDependencies:
+      react: ^16.x || ^17.x || ^18.x
+    dependencies:
+      react: 18.2.0
+    dev: false
 
   /@swc/helpers/0.4.11:
     resolution: {integrity: sha512-rEUrBSGIoSFuYxwBYtlUFMlE2CwGhmW+w9355/5oduSw8e5h2+Tj4UrAGNNgP9915++wj5vkQo0UuOBqOAq4nw==}

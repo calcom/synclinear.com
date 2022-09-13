@@ -1,7 +1,7 @@
 import { LINEAR } from "./constants";
 
 export const getLinearAuthURL = (verificationCode: string) => {
-    // Combine
+    // Specify OAuth app and scopes
     const params = {
         client_id: LINEAR.OAUTH_ID,
         redirect_uri: window.location.origin,
@@ -18,5 +18,13 @@ export const getLinearAuthURL = (verificationCode: string) => {
     );
 
     return authURL;
+};
+
+export const copyToClipboard = (text: string) => {
+    if (!window?.navigator) {
+        throw new Error("window.navigator is not defined");
+    }
+
+    navigator?.clipboard?.writeText(text);
 };
 
