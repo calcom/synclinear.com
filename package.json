@@ -3,7 +3,7 @@
     "private": true,
     "scripts": {
         "dev": "next dev",
-        "build": "next build",
+        "build": "npx prisma migrate deploy && next build",
         "start": "next start",
         "lint": "next lint"
     },
@@ -21,9 +21,11 @@
         "typescript": "4.7.2"
     },
     "dependencies": {
+        "@apollo/client": "^3.6.9",
         "@linear/sdk": "^1.22.0",
         "@prisma/client": "^3.15.2",
         "@radix-ui/react-icons": "^1.1.1",
+        "graphql": "^16.6.0",
         "next": "^12.3.0",
         "petitio": "^1.4.0",
         "react": "^18.2.0",

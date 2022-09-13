@@ -1,3 +1,4 @@
+import { linearQuery } from "./apollo";
 import { GITHUB, LINEAR } from "./constants";
 
 export const getLinearAuthURL = (verificationCode: string): string => {
@@ -7,7 +8,8 @@ export const getLinearAuthURL = (verificationCode: string): string => {
         redirect_uri: window.location.origin,
         scope: LINEAR.SCOPES.join(","),
         state: verificationCode,
-        response_type: "code"
+        response_type: "code",
+        prompt: "consent"
     };
 
     // Combine params in a URL-friendly string
@@ -18,6 +20,54 @@ export const getLinearAuthURL = (verificationCode: string): string => {
     );
 
     return authURL;
+};
+
+export const getLinearContext = async (token: string) => {
+    const query = `query {
+        projects {
+            nodes {
+                name
+                id
+            }
+        }
+        teams {
+            nodes {
+                name
+                id
+            }
+        }
+        viewer {
+            name
+            id
+        }
+    }`;
+
+    return await linearQuery(query, token);
+};
+
+export const setLinearWebhook = async (
+    token: string,
+    callbackURL: string,
+    teamID: string
+) => {
+    const mutation = `mutation CreateWebhook($callbackURL: String!, $teamID: String) {
+        webhookCreate(
+            input: {
+                url: $callbackURL
+                teamId: $teamID
+                label: "GitHub Sync"
+                resourceTypes: ["Issue", "Comment", "IssueLabel"]
+            }
+        ) {
+            success
+            webhook {
+            id
+            enabled
+            }
+        }
+    }`;
+
+    return await linearQuery(mutation, token, { callbackURL, teamID });
 };
 
 export const getGitHubTokenURL = (): string => {

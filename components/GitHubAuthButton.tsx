@@ -30,7 +30,7 @@ const GitHubAuthButton = () => {
                     Generate GitHub Token
                 </button>
             )}
-            <ul className={tokenInput ? "invisible" : ""}>
+            <ul className={`${tokenInput ? "invisible" : ""} font-tertiary`}>
                 <li>
                     1. Set <code>Expiration</code> to maximum
                 </li>
