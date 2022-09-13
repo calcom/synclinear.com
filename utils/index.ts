@@ -1,6 +1,6 @@
-import { LINEAR } from "./constants";
+import { GITHUB, LINEAR } from "./constants";
 
-export const getLinearAuthURL = (verificationCode: string) => {
+export const getLinearAuthURL = (verificationCode: string): string => {
     // Specify OAuth app and scopes
     const params = {
         client_id: LINEAR.OAUTH_ID,
@@ -18,6 +18,14 @@ export const getLinearAuthURL = (verificationCode: string) => {
     );
 
     return authURL;
+};
+
+export const getGitHubTokenURL = (): string => {
+    const scopes = GITHUB.SCOPES.join(",");
+    const description = GITHUB.TOKEN_NOTE.split(" ").join("%20");
+    const tokenURL = `${GITHUB.NEW_TOKEN_URL}?scopes=${scopes}&description=${description}`;
+
+    return tokenURL;
 };
 
 export const copyToClipboard = (text: string) => {

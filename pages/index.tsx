@@ -1,4 +1,5 @@
 import React from "react";
+import GitHubAuthButton from "../components/GitHubAuthButton";
 import LinearAuthButton from "../components/LinearAuthButton";
 import SyncArrow from "../components/SyncArrow";
 
@@ -12,7 +13,7 @@ const index = () => {
                     <SyncArrow direction="right" />
                     <SyncArrow direction="left" />
                 </div>
-                <button>Authorize GitHub</button>
+                <GitHubAuthButton />
             </div>
         </div>
     );

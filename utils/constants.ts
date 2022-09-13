@@ -5,6 +5,13 @@ export const LINEAR = {
     TOKEN_URL: "https://api.linear.app/oauth/token"
 };
 
+export const GITHUB = {
+    NEW_TOKEN_URL: "https://github.com/settings/tokens/new",
+    SCOPES: ["repo", "write:repo_hook", "read:user", "user:email"],
+    TOKEN_NOTE: "Linear-GitHub Sync"
+};
+
 export const TIMEOUTS = {
     DEFAULT: 3000
 };
+
