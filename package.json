@@ -2,8 +2,8 @@
     "name": "linear-github-sync",
     "private": true,
     "scripts": {
-        "dev": "next dev",
-        "build": "npx prisma migrate deploy && next build",
+        "dev": "npx prisma migrate dev && next dev",
+        "build": "db push && next build",
         "start": "next start",
         "lint": "next lint"
     },
@@ -33,3 +33,4 @@
         "uuid": "^9.0.0"
     }
 }
+
