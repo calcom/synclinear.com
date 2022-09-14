@@ -7,7 +7,7 @@ export const isDev = (): boolean => {
 };
 
 export const getWebhookURL = (): string => {
-    if (isDev()) return "https://ffc3-192-222-236-143.ngrok.io/api";
+    if (isDev()) return "https://example.com";
     return `${window.location.origin}/api`;
 };
 
