@@ -59,3 +59,7 @@ export interface LinearTeam extends LinearObject {
     states: { nodes: LinearState[] };
 }
 
+export interface GitHubRepo {
+    id: string;
+    name: string;
+}

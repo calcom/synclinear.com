@@ -19,8 +19,6 @@ const LINEAR_TODO_STATE_ID = process.env.LINEAR_TODO_STATE_ID || "";
 
 const linear = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
 
-const HMAC = createHmac("sha256", process.env.GITHUB_WEBHOOK_SECRET || "");
-
 export default async (req: VercelRequest, res: VercelResponse) => {
     if (req.method !== "POST")
         return res.status(405).send({
@@ -692,6 +690,10 @@ export default async (req: VercelRequest, res: VercelResponse) => {
             }
         }
     } else {
+        const githubRepo = await prisma.gitHubRepo.findFirst();
+        const webhookSecret = githubRepo.webhookSecret ?? "";
+        const HMAC = createHmac("sha256", webhookSecret);
+
         const digest = Buffer.from(
             `sha256=${HMAC.update(JSON.stringify(req.body)).digest("hex")}`,
             "utf-8"

@@ -6,6 +6,7 @@ import {
     copyToClipboard,
     getLinearAuthURL,
     getLinearContext,
+    getWebhookURL,
     saveLinearLabels,
     setLinearWebhook
 } from "../utils";
@@ -82,11 +83,7 @@ const LinearAuthButton = () => {
             .then(res => console.log(res))
             .catch(err => alert(err));
 
-        setLinearWebhook(
-            accessToken,
-            `${window.location.origin}/api`,
-            chosenTeam.id
-        )
+        setLinearWebhook(accessToken, getWebhookURL(), chosenTeam.id)
             .then(() => setDeployed(true))
             .catch(err => alert(err));
     }, [chosenTeam, accessToken]);
@@ -100,8 +97,6 @@ const LinearAuthButton = () => {
             {teams.length > 0 && (
                 <div className="flex flex-col items-center space-y-4">
                     <select
-                        name="team-select"
-                        className="rounded-md bg-gray-700 hover:bg-gray-600 py-3 px-6 text-xl focus:outline-none"
                         onChange={e =>
                             setChosenTeam(
                                 teams.find(team => team.id === e.target.value)

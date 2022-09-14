@@ -1,6 +1,21 @@
-import { LinearTeam } from "../typings";
+import { GitHubRepo, LinearTeam } from "../typings";
 import { linearQuery } from "./apollo";
 import { GITHUB, LINEAR } from "./constants";
+
+export const isDev = (): boolean => {
+    return process.env.NODE_ENV === "development";
+};
+
+export const getWebhookURL = (): string => {
+    if (isDev()) return "https://ffc3-192-222-236-143.ngrok.io/api";
+    return `${window.location.origin}/api`;
+};
+
+export const copyToClipboard = (text: string) => {
+    if (!window?.navigator) alert("Cannot copy to clipboard");
+
+    navigator?.clipboard?.writeText(text);
+};
 
 export const getLinearAuthURL = (verificationCode: string): string => {
     // Specify OAuth app and scopes
@@ -100,6 +115,7 @@ export const createLinearPublicLabel = async (
     return await linearQuery(mutation, token, { teamID });
 };
 
+// TODO: extend this to save all Linear context (team ID, user ID, and labels)
 export const saveLinearLabels = async (token: string, team: LinearTeam) => {
     const labels = [
         ...(team.states?.nodes ?? []),
@@ -134,11 +150,49 @@ export const getGitHubTokenURL = (): string => {
     return tokenURL;
 };
 
-export const copyToClipboard = (text: string) => {
-    if (!window?.navigator) {
-        throw new Error("window.navigator is not defined");
-    }
+export const saveGitHubContext = async (
+    repo: GitHubRepo,
+    webhookSecret: string
+) => {
+    const data = {
+        repoId: repo.id,
+        name: repo.name,
+        webhookSecret
+    };
 
-    navigator?.clipboard?.writeText(text);
+    const response = await fetch("/api/github-context", {
+        method: "POST",
+        body: JSON.stringify(data)
+    });
+
+    return response.json();
+};
+
+export const setGitHubWebook = async (
+    token: string,
+    repo: GitHubRepo,
+    webhookSecret: string
+) => {
+    const webhookURL = getWebhookURL();
+    const webhookData = {
+        name: "web",
+        active: true,
+        events: GITHUB.WEBHOOK_EVENTS,
+        config: {
+            url: webhookURL,
+            content_type: "json",
+            insecure_ssl: "0",
+            secret: webhookSecret
+        }
+    };
+
+    return await fetch(`https://api.github.com/repos/${repo.name}/hooks`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/vnd.github+json"
+        },
+        body: JSON.stringify(webhookData)
+    });
 };
 

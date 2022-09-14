@@ -9,7 +9,8 @@ export const LINEAR = {
 export const GITHUB = {
     NEW_TOKEN_URL: "https://github.com/settings/tokens/new",
     SCOPES: ["repo", "write:repo_hook", "read:user", "user:email"],
-    TOKEN_NOTE: "Linear-GitHub Sync"
+    TOKEN_NOTE: "Linear-GitHub Sync",
+    WEBHOOK_EVENTS: ["issues", "issue_comment", "label"]
 };
 
 export const TIMEOUTS = {

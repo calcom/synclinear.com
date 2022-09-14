@@ -33,3 +33,14 @@ model LinearLabel {
 
     @@map("linear_labels")
 }
+
+model GitHubRepo {
+    id String @id @default(cuid())
+
+    repoId Int
+    name   String
+
+    webhookSecret String
+
+    @@map("github_repos")
+}
