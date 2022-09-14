@@ -1,3 +1,4 @@
+import { LinearTeam } from "../typings";
 import { linearQuery } from "./apollo";
 import { GITHUB, LINEAR } from "./constants";
 
@@ -24,16 +25,22 @@ export const getLinearAuthURL = (verificationCode: string): string => {
 
 export const getLinearContext = async (token: string) => {
     const query = `query {
-        projects {
-            nodes {
-                name
-                id
-            }
-        }
         teams {
             nodes {
                 name
                 id
+                labels {
+                    nodes {
+                        id
+                        name
+                    }
+                }
+                states {
+                    nodes {
+                        id
+                        name
+                    }
+                }
             }
         }
         viewer {
@@ -68,6 +75,55 @@ export const setLinearWebhook = async (
     }`;
 
     return await linearQuery(mutation, token, { callbackURL, teamID });
+};
+
+export const createLinearPublicLabel = async (
+    token: string,
+    teamID: string
+) => {
+    const mutation = `mutation CreateLabel($teamID: String!) {
+        issueLabelCreate(
+            input: {
+                name: "Public"
+                color: "#2DA54E"
+                teamId: $teamID
+            }
+        ) {
+            success
+            issueLabel {
+                id
+                name
+            }
+        }
+    }`;
+
+    return await linearQuery(mutation, token, { teamID });
+};
+
+export const saveLinearLabels = async (token: string, team: LinearTeam) => {
+    const labels = [
+        ...(team.states?.nodes ?? []),
+        ...(team.labels?.nodes ?? [])
+    ];
+
+    if (!labels.find(n => n.name?.toLowerCase() === "public")) {
+        await createLinearPublicLabel(token, team.id);
+    }
+
+    const data = {
+        publicLabelId: labels.find(n => n.name === "public")?.id,
+        canceledStateId: labels.find(n => n.name === "Canceled")?.id,
+        doneStateId: labels.find(n => n.name === "Done")?.id,
+        toDoStateId: labels.find(n => n.name === "Todo")?.id,
+        inProgressStateId: labels.find(n => n.name === "In Progress")?.id
+    };
+
+    const response = await fetch("/api/labels/", {
+        method: "POST",
+        body: JSON.stringify(data)
+    });
+
+    return response.json();
 };
 
 export const getGitHubTokenURL = (): string => {

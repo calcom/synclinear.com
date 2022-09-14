@@ -1,7 +1,6 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import petitio from "petitio";
 import { components } from "@octokit/openapi-types";
-import { PrismaClient } from "@prisma/client";
 import { LinearWebhookPayload } from "../../typings";
 import { createHmac, timingSafeEqual } from "crypto";
 import {
@@ -11,13 +10,13 @@ import {
     IssuesOpenedEvent
 } from "@octokit/webhooks-types";
 import { LinearClient } from "@linear/sdk";
+import prisma from "../../prisma";
 
 const LINEAR_PUBLIC_LABEL_ID = process.env.LINEAR_PUBLIC_LABEL_ID || "";
 const LINEAR_CANCELED_STATE_ID = process.env.LINEAR_CANCELED_STATE_ID || "";
 const LINEAR_DONE_STATE_ID = process.env.LINEAR_DONE_STATE_ID || "";
 const LINEAR_TODO_STATE_ID = process.env.LINEAR_TODO_STATE_ID || "";
 
-const prisma = new PrismaClient();
 const linear = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
 
 const HMAC = createHmac("sha256", process.env.GITHUB_WEBHOOK_SECRET || "");

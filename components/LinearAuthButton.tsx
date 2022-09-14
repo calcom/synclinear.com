@@ -1,18 +1,20 @@
 import { CheckIcon, CopyIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { v4 as uuid } from "uuid";
+import { LinearTeam } from "../typings";
 import {
     copyToClipboard,
     getLinearAuthURL,
     getLinearContext,
+    saveLinearLabels,
     setLinearWebhook
 } from "../utils";
 import { LINEAR } from "../utils/constants";
 
 const LinearAuthButton = () => {
     const [accessToken, setAccessToken] = useState("");
-    const [teamID, setTeamID] = useState("");
-    const [teams, setTeams] = useState<Array<any>>([]);
+    const [teams, setTeams] = useState<Array<LinearTeam>>([]);
+    const [chosenTeam, setChosenTeam] = useState<LinearTeam>();
     const [copied, setCopied] = useState(false);
     const [deployed, setDeployed] = useState(false);
 
@@ -74,11 +76,20 @@ const LinearAuthButton = () => {
     }, [accessToken]);
 
     const deployWebhook = useCallback(() => {
-        if (!teamID) return;
-        setLinearWebhook(accessToken, `${window.location.origin}/api`, teamID)
+        if (!chosenTeam) return;
+
+        saveLinearLabels(accessToken, chosenTeam)
+            .then(res => console.log(res))
+            .catch(err => alert(err));
+
+        setLinearWebhook(
+            accessToken,
+            `${window.location.origin}/api`,
+            chosenTeam.id
+        )
             .then(() => setDeployed(true))
             .catch(err => alert(err));
-    }, [teamID, accessToken]);
+    }, [chosenTeam, accessToken]);
 
     return (
         <div className="center space-y-12 max-w-xs">
@@ -91,7 +102,11 @@ const LinearAuthButton = () => {
                     <select
                         name="team-select"
                         className="rounded-md bg-gray-700 hover:bg-gray-600 py-3 px-6 text-xl focus:outline-none"
-                        onChange={e => setTeamID(e.target.value)}
+                        onChange={e =>
+                            setChosenTeam(
+                                teams.find(team => team.id === e.target.value)
+                            )
+                        }
                     >
                         <option value="" disabled selected>
                             Select your team
@@ -102,7 +117,7 @@ const LinearAuthButton = () => {
                             </option>
                         ))}
                     </select>
-                    {teamID && (
+                    {chosenTeam && (
                         <button onClick={deployWebhook} disabled={deployed}>
                             <span>Deploy webhook</span>
                             {deployed ? (

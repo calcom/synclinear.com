@@ -20,3 +20,16 @@ model SyncedIssue {
 
     @@map("synced_issues")
 }
+
+model LinearLabel {
+    id String @id @default(cuid())
+
+    publicLabelId String
+
+    canceledStateId   String
+    doneStateId       String
+    toDoStateId       String
+    inProgressStateId String
+
+    @@map("linear_labels")
+}
