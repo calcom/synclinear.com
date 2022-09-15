@@ -3,7 +3,8 @@
     "private": true,
     "scripts": {
         "dev": "npx prisma migrate dev && next dev",
-        "build": "db push && next build",
+        "build": "next build",
+        "release": "npx prisma migrate deploy && npx prisma generate",
         "start": "next start",
         "lint": "next lint"
     },
