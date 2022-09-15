@@ -873,7 +873,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
             req.headers["x-github-event"] === "issues" &&
             req.body.action === "opened"
         ) {
-            const webhookPayload: IssuesOpenedEvent = req.body;
+            const webhookPayload: IssuesOpenedEvent & {
+                issue: {
+                    closed_at: never;
+                };
+            } = req.body;
 
             const createdIssueData = await linear.issueCreate({
                 title: webhookPayload.issue.title,
