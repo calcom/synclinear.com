@@ -6,9 +6,11 @@ Initially created by [Spacedrive](https://github.com/spacedriveapp/linear-github
 
 This is a system to synchronize Linear issues to GitHub issues when a specific tag is added to the Linear issue. This allows contributors to work with open source projects without having to give them access to your internal Linear team.
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/L__0PR)
-
 # Setup
 
-See [Setup.md](Setup.md) for dev instructions. If you need any help, please feel free to raise an issue!
+Simply one-click deploy on Railway (or clone and deploy on Heroku, DigitalOcean, etc.).
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/L__0PR)
+
+See [Setup.md](Setup.md) for dev instructions. If you need any help, please feel free to raise an [issue](https://github.com/calcom/linear-to-github/issues/new)!
 
