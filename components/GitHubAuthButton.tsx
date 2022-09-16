@@ -45,11 +45,11 @@ const GitHubAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
             .catch(err => alert(err));
     }, [tokenInput]);
 
-    const deployWebhook = useCallback(async () => {
+    const deployWebhook = useCallback(() => {
         if (!chosenRepo || deployed) return;
 
         const webhookSecret = `${uuid()}`;
-        await saveGitHubContext(chosenRepo, webhookSecret);
+        saveGitHubContext(chosenRepo, webhookSecret).catch(err => alert(err));
 
         setGitHubWebook(tokenInput, chosenRepo, webhookSecret)
             .then(res => res.json())

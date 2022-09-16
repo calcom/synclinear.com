@@ -1,4 +1,4 @@
-import { GitHubRepo, LinearTeam } from "../typings";
+import { GitHubRepo, LinearObject, LinearTeam } from "../typings";
 import { linearQuery } from "./apollo";
 import { GITHUB, LINEAR } from "./constants";
 
@@ -104,8 +104,11 @@ export const createLinearPublicLabel = async (
     return await linearQuery(mutation, token, { teamID });
 };
 
-// TODO: extend this to save all Linear context (team ID, user ID, and labels)
-export const saveLinearLabels = async (token: string, team: LinearTeam) => {
+export const saveLinearContext = async (
+    token: string,
+    team: LinearTeam,
+    user: LinearObject
+) => {
     const labels = [
         ...(team.states?.nodes ?? []),
         ...(team.labels?.nodes ?? [])
@@ -121,6 +124,10 @@ export const saveLinearLabels = async (token: string, team: LinearTeam) => {
     }
 
     const data = {
+        userId: user.id,
+        userName: user.name,
+        teamId: team.id,
+        teamName: team.name,
         publicLabelId: labels.find(n => n.name === "Public")?.id,
         canceledStateId: labels.find(n => n.name === "Canceled")?.id,
         doneStateId: labels.find(n => n.name === "Done")?.id,
@@ -128,7 +135,7 @@ export const saveLinearLabels = async (token: string, team: LinearTeam) => {
         inProgressStateId: labels.find(n => n.name === "In Progress")?.id
     };
 
-    const response = await fetch("/api/labels/", {
+    const response = await fetch("/api/linear-context", {
         method: "POST",
         body: JSON.stringify(data)
     });

@@ -21,8 +21,14 @@ model SyncedIssue {
     @@map("synced_issues")
 }
 
-model LinearLabel {
+model LinearTeam {
     id String @id @default(cuid())
+
+    teamId   String
+    teamName String
+
+    userId   String
+    userName String
 
     publicLabelId String
 
@@ -31,7 +37,7 @@ model LinearLabel {
     toDoStateId       String
     inProgressStateId String
 
-    @@map("linear_labels")
+    @@map("linear_teams")
 }
 
 model GitHubRepo {

@@ -1,11 +1,11 @@
 import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
-import { LinearTeam } from "../typings";
+import { LinearObject, LinearTeam } from "../typings";
 import {
     getLinearContext,
     getLinearTokenURL,
     getWebhookURL,
-    saveLinearLabels,
+    saveLinearContext,
     setLinearWebhook
 } from "../utils";
 
@@ -18,6 +18,7 @@ const LinearAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
     const [clicked, setClicked] = useState(false);
     const [tokenInput, setTokenInput] = useState("");
     const [teams, setTeams] = useState<Array<LinearTeam>>([]);
+    const [user, setUser] = useState<LinearObject>();
     const [chosenTeam, setChosenTeam] = useState<LinearTeam>();
     const [deployed, setDeployed] = useState(false);
 
@@ -27,8 +28,11 @@ const LinearAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
 
         getLinearContext(tokenInput)
             .then(res => {
-                if (!res?.data?.teams) alert("No Linear teams found");
+                if (!res?.data?.teams || !res.data?.viewer)
+                    alert("No Linear user or teams found");
+
                 setTeams(res.data.teams.nodes);
+                setUser(res.data.viewer);
                 onPasteToken();
             })
             .catch(err => alert(err));
@@ -41,11 +45,11 @@ const LinearAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
     };
 
     const deployWebhook = useCallback(() => {
-        if (!chosenTeam) return;
+        if (!chosenTeam || deployed) return;
 
-        saveLinearLabels(tokenInput, chosenTeam)
-            .then(res => console.log(res))
-            .catch(err => alert(err));
+        saveLinearContext(tokenInput, chosenTeam, user).catch(err =>
+            alert(err)
+        );
 
         setLinearWebhook(tokenInput, getWebhookURL(), chosenTeam.id)
             .then(() => {
@@ -55,7 +59,7 @@ const LinearAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
             .catch(err => alert(err));
 
         setDeployed(true);
-    }, [chosenTeam, tokenInput]);
+    }, [tokenInput, chosenTeam, deployed]);
 
     return (
         <div className="center space-y-8 w-80">

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "../../prisma";
 
-// POST /api/labels
+// POST /api/linear-context
 export default async function handle(
     req: NextApiRequest,
     res: NextApiResponse
@@ -14,6 +14,10 @@ export default async function handle(
         });
 
     const {
+        userId,
+        userName,
+        teamId,
+        teamName,
         publicLabelId,
         canceledStateId,
         doneStateId,
@@ -21,8 +25,12 @@ export default async function handle(
         inProgressStateId
     } = JSON.parse(req.body);
 
-    const result = await prisma.linearLabel.create({
+    const result = await prisma.linearTeam.create({
         data: {
+            userId,
+            userName,
+            teamId,
+            teamName,
             publicLabelId,
             canceledStateId,
             doneStateId,

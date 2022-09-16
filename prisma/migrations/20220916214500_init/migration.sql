@@ -11,15 +11,19 @@ CREATE TABLE "synced_issues" (
 );
 
 -- CreateTable
-CREATE TABLE "linear_labels" (
+CREATE TABLE "linear_teams" (
     "id" TEXT NOT NULL,
+    "teamId" TEXT NOT NULL,
+    "teamName" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "userName" TEXT NOT NULL,
     "publicLabelId" TEXT NOT NULL,
     "canceledStateId" TEXT NOT NULL,
     "doneStateId" TEXT NOT NULL,
     "toDoStateId" TEXT NOT NULL,
     "inProgressStateId" TEXT NOT NULL,
 
-    CONSTRAINT "linear_labels_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "linear_teams_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
