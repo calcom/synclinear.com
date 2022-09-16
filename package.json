@@ -2,21 +2,36 @@
     "name": "linear-github-sync",
     "private": true,
     "scripts": {
-        "start:dev": "vercel dev"
+        "dev": "npx prisma migrate dev && next dev",
+        "build": "next build",
+        "release": "npx prisma migrate deploy && npx prisma generate",
+        "start": "next start",
+        "lint": "next lint"
     },
     "devDependencies": {
         "@octokit/openapi-types": "^12.4.0",
         "@octokit/webhooks-types": "^5.8.0",
         "@types/node": "^17.0.45",
+        "@types/react": "18.0.19",
         "@vercel/node": "^1.15.4",
-        "vercel": "28.2.2",
+        "autoprefixer": "^10.4.9",
         "eslint": "8.16.0",
+        "postcss": "^8.4.16",
         "prisma": "^3.15.2",
+        "tailwindcss": "^3.1.8",
         "typescript": "4.7.2"
     },
     "dependencies": {
+        "@apollo/client": "^3.6.9",
         "@linear/sdk": "^1.22.0",
         "@prisma/client": "^3.15.2",
-        "petitio": "^1.4.0"
+        "@radix-ui/react-icons": "^1.1.1",
+        "graphql": "^16.6.0",
+        "next": "^12.3.0",
+        "petitio": "^1.4.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "uuid": "^9.0.0"
     }
 }
+

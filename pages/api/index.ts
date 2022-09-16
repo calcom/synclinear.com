@@ -1,8 +1,7 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import petitio from "petitio";
 import { components } from "@octokit/openapi-types";
-import { PrismaClient } from "@prisma/client";
-import { LinearWebhookPayload } from "../typings";
+import { LinearWebhookPayload } from "../../typings";
 import { createHmac, timingSafeEqual } from "crypto";
 import {
     IssueCommentCreatedEvent,
@@ -11,16 +10,14 @@ import {
     IssuesOpenedEvent
 } from "@octokit/webhooks-types";
 import { LinearClient } from "@linear/sdk";
+import prisma from "../../prisma";
 
 const LINEAR_PUBLIC_LABEL_ID = process.env.LINEAR_PUBLIC_LABEL_ID || "";
 const LINEAR_CANCELED_STATE_ID = process.env.LINEAR_CANCELED_STATE_ID || "";
 const LINEAR_DONE_STATE_ID = process.env.LINEAR_DONE_STATE_ID || "";
 const LINEAR_TODO_STATE_ID = process.env.LINEAR_TODO_STATE_ID || "";
 
-const prisma = new PrismaClient();
 const linear = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
-
-const HMAC = createHmac("sha256", process.env.GITHUB_WEBHOOK_SECRET || "");
 
 export default async (req: VercelRequest, res: VercelResponse) => {
     if (req.method !== "POST")
@@ -693,6 +690,10 @@ export default async (req: VercelRequest, res: VercelResponse) => {
             }
         }
     } else {
+        const githubRepo = await prisma.gitHubRepo.findFirst();
+        const webhookSecret = githubRepo.webhookSecret ?? "";
+        const HMAC = createHmac("sha256", webhookSecret);
+
         const digest = Buffer.from(
             `sha256=${HMAC.update(JSON.stringify(req.body)).digest("hex")}`,
             "utf-8"
@@ -872,7 +873,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
             req.headers["x-github-event"] === "issues" &&
             req.body.action === "opened"
         ) {
-            const webhookPayload: IssuesOpenedEvent = req.body;
+            const webhookPayload: IssuesOpenedEvent & {
+                issue: {
+                    closed_at: never;
+                };
+            } = req.body;
 
             const createdIssueData = await linear.issueCreate({
                 title: webhookPayload.issue.title,

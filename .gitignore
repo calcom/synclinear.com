@@ -1,6 +1,27 @@
-node_modules/
-*.log
-pnpm-debug.log*
-.vercel
-.env
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# misc
 .DS_Store
+*.pem
+
+# next.js
+/.next/
+/out/
+/build
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+
+# env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

@@ -1,4 +1,4 @@
-interface LinearWebhookPayload {
+export interface LinearWebhookPayload {
     action: "create" | "update" | "remove";
     type: string;
     createdAt: string;
@@ -40,7 +40,7 @@ interface LinearData {
     };
 }
 
-interface LinearObject {
+export interface LinearObject {
     id: string;
     name: string;
 }
@@ -49,13 +49,17 @@ interface ColoredLinearObject extends LinearObject {
     color: string;
 }
 
-interface LinearState extends ColoredLinearObject {
+export interface LinearState extends ColoredLinearObject {
     type: string;
 }
 
-interface LinearTeam extends LinearObject {
+export interface LinearTeam extends LinearObject {
     key: string;
+    labels: { nodes: LinearObject[] };
+    states: { nodes: LinearState[] };
 }
 
-export { LinearWebhookPayload };
-
+export interface GitHubRepo {
+    id: string;
+    name: string;
+}
