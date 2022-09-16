@@ -17,25 +17,14 @@ export const copyToClipboard = (text: string) => {
     navigator?.clipboard?.writeText(text);
 };
 
-export const getLinearAuthURL = (verificationCode: string): string => {
-    // Specify OAuth app and scopes
-    const params = {
-        client_id: LINEAR.OAUTH_ID,
-        redirect_uri: window.location.origin,
-        scope: LINEAR.SCOPES.join(","),
-        state: verificationCode,
-        response_type: "code",
-        prompt: "consent"
-    };
+export const getLinearTokenURL = (): string => {
+    const baseURL = LINEAR.NEW_TOKEN_URL;
+    const sectionSelector = `#:~:text=${LINEAR.TOKEN_SECTION_HEADER.split(
+        " "
+    ).join("%20")}`;
+    const tokenURL = `${baseURL}${sectionSelector}`;
 
-    // Combine params in a URL-friendly string
-    const authURL = Object.keys(params).reduce(
-        (url, param, i) =>
-            `${url}${i == 0 ? "?" : "&"}${param}=${params[param]}`,
-        LINEAR.OAUTH_URL
-    );
-
-    return authURL;
+    return tokenURL;
 };
 
 export const getLinearContext = async (token: string) => {

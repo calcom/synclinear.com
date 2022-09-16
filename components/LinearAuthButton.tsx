@@ -1,102 +1,103 @@
-import { CheckIcon, CopyIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
+import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
-import { v4 as uuid } from "uuid";
 import { LinearTeam } from "../typings";
 import {
-    copyToClipboard,
-    getLinearAuthURL,
     getLinearContext,
+    getLinearTokenURL,
     getWebhookURL,
     saveLinearLabels,
     setLinearWebhook
 } from "../utils";
-import { LINEAR } from "../utils/constants";
 
-const LinearAuthButton = () => {
-    const [accessToken, setAccessToken] = useState("");
+interface IProps {
+    onPasteToken: () => void;
+    onDeployWebhook: () => void;
+}
+
+const LinearAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
+    const [clicked, setClicked] = useState(false);
+    const [tokenInput, setTokenInput] = useState("");
     const [teams, setTeams] = useState<Array<LinearTeam>>([]);
     const [chosenTeam, setChosenTeam] = useState<LinearTeam>();
-    const [copied, setCopied] = useState(false);
     const [deployed, setDeployed] = useState(false);
-
-    // If present, exchange the temporary auth code for an access token
-    useEffect(() => {
-        // If the URL params have an auth code, we're returning from the Linear auth page.
-        // Ensure the verification code is unchanged.
-        const authResponse = new URLSearchParams(window.location.search);
-        if (!authResponse.has("code")) return;
-
-        const verificationCode = localStorage.getItem("linear-verification");
-        if (authResponse.get("state") !== verificationCode) {
-            alert("Linear auth returned an invalid code. Please try again.");
-            return;
-        }
-
-        // Exchange auth code for access token
-        const tokenParams = new URLSearchParams({
-            code: authResponse.get("code"),
-            redirect_uri: window.location.origin,
-            client_id: LINEAR.OAUTH_ID,
-            client_secret: process.env.NEXT_PUBLIC_LINEAR_SECRET, // TODO: find a way to obscure this
-            grant_type: "authorization_code"
-        });
-        fetch(LINEAR.TOKEN_URL, {
-            method: "POST",
-            body: tokenParams,
-            headers: { "Content-Type": "application/x-www-form-urlencoded" }
-        })
-            .then(response => response.json())
-            .then(body => {
-                if (body.access_token) setAccessToken(body.access_token);
-            })
-            .catch(err => alert(err));
-    }, []);
 
     // Fetch the user ID and available teams when the token is available
     useEffect(() => {
-        if (!accessToken) return;
-        getLinearContext(accessToken)
+        if (!tokenInput) return;
+
+        getLinearContext(tokenInput)
             .then(res => {
                 if (!res?.data?.teams) alert("No Linear teams found");
                 setTeams(res.data.teams.nodes);
+                onPasteToken();
             })
             .catch(err => alert(err));
-    }, [accessToken]);
+    }, [tokenInput]);
 
-    const openLinearAuth = () => {
-        // Generate random code to validate against CSRF attack
-        const verificationCode = uuid();
-        localStorage.setItem("linear-verification", verificationCode);
-        window.location.replace(getLinearAuthURL(verificationCode));
+    const openTokenPage = () => {
+        const tokenURL = getLinearTokenURL();
+        window.open(tokenURL);
+        setClicked(true);
     };
-
-    const copyAccessToken = useCallback(() => {
-        if (!accessToken) return;
-        copyToClipboard(accessToken);
-        setCopied(true);
-    }, [accessToken]);
 
     const deployWebhook = useCallback(() => {
         if (!chosenTeam) return;
 
-        saveLinearLabels(accessToken, chosenTeam)
+        saveLinearLabels(tokenInput, chosenTeam)
             .then(res => console.log(res))
             .catch(err => alert(err));
 
-        setLinearWebhook(accessToken, getWebhookURL(), chosenTeam.id)
-            .then(() => setDeployed(true))
+        setLinearWebhook(tokenInput, getWebhookURL(), chosenTeam.id)
+            .then(() => {
+                setDeployed(true);
+                onDeployWebhook();
+            })
             .catch(err => alert(err));
-    }, [chosenTeam, accessToken]);
+
+        setDeployed(true);
+    }, [chosenTeam, tokenInput]);
 
     return (
-        <div className="center space-y-12 max-w-xs">
-            <button onClick={openLinearAuth} disabled={!!accessToken}>
-                <span>Authorize Linear</span>
-                {accessToken && <CheckIcon className="ml-4 h-6 w-6" />}
-            </button>
+        <div className="center space-y-8 w-80">
+            <div className="space-y-2 w-full">
+                {clicked ? (
+                    <div className="flex items-center pr-3 w-full rounded-md bg-gray-800 border border-gray-500 hover:border-gray-400 hover:bg-gray-700">
+                        <input
+                            placeholder="Paste your token here"
+                            value={tokenInput}
+                            onChange={e => setTokenInput(e.target?.value)}
+                            type="text"
+                            spellCheck="false"
+                        />
+                        {tokenInput && <CheckIcon className="w-6 h-6" />}
+                    </div>
+                ) : (
+                    <button onClick={openTokenPage}>
+                        Generate Linear Token
+                    </button>
+                )}
+                {tokenInput && (
+                    <p className="font-tertiary text-center">
+                        Also paste this as the <code>LINEAR_API_KEY</code> env
+                        variable
+                    </p>
+                )}
+            </div>
+            {!tokenInput && (
+                <ul className="font-tertiary">
+                    <li>
+                        1. Set <code>Expiration</code> to maximum
+                    </li>
+                    <li>
+                        2. Click <code>Generate token</code>
+                    </li>
+                    <li>3. Copy your newly created token</li>
+                </ul>
+            )}
             {teams.length > 0 && (
-                <div className="flex flex-col items-center space-y-4">
+                <div className="flex flex-col items-center w-full space-y-4">
                     <select
+                        disabled={deployed}
                         onChange={e =>
                             setChosenTeam(
                                 teams.find(team => team.id === e.target.value)
@@ -122,28 +123,6 @@ const LinearAuthButton = () => {
                             )}
                         </button>
                     )}
-                </div>
-            )}
-            {accessToken && (
-                <div className="center text-center space-y-2">
-                    <div>Your access token</div>
-                    <button
-                        onClick={copyAccessToken}
-                        className={copied ? "border-gray-500" : ""}
-                    >
-                        <span className="w-40 overflow-clip text-ellipsis">
-                            {accessToken}
-                        </span>
-                        {copied ? (
-                            <CheckIcon className="w-6 h-6" />
-                        ) : (
-                            <CopyIcon className="w-6 h-6" />
-                        )}
-                    </button>
-                    <p className="font-tertiary">
-                        Paste this as the <code>LINEAR_API_KEY</code> env
-                        variable.
-                    </p>
                 </div>
             )}
         </div>

@@ -1,5 +1,5 @@
 import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { GitHubRepo } from "../typings";
 import {
     getGitHubTokenURL,
@@ -7,23 +7,30 @@ import {
     setGitHubWebook
 } from "../utils";
 import { v4 as uuid } from "uuid";
+import { GITHUB } from "../utils/constants";
 
-const GitHubAuthButton = () => {
+interface IProps {
+    onPasteToken: () => void;
+    onDeployWebhook: () => void;
+}
+
+const GitHubAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
     const [clicked, setClicked] = useState(false);
     const [tokenInput, setTokenInput] = useState("");
     const [repos, setRepos] = useState<GitHubRepo[]>([]);
     const [chosenRepo, setChosenRepo] = useState<GitHubRepo>();
     const [deployed, setDeployed] = useState(false);
 
-    const openGitHubTokenPage = () => {
-        window.open(getGitHubTokenURL());
+    const openTokenPage = () => {
+        const tokenURL = getGitHubTokenURL();
+        window.open(tokenURL);
         setClicked(true);
     };
 
     useEffect(() => {
         if (!tokenInput) return;
 
-        fetch("https://api.github.com/user/repos", {
+        fetch(GITHUB.LIST_REPOS_ENDPOINT, {
             headers: { Authorization: `Bearer ${tokenInput}` }
         })
             .then(res => res.json())
@@ -33,11 +40,12 @@ const GitHubAuthButton = () => {
                         return { id: repo.id, name: repo.full_name };
                     })
                 );
+                onPasteToken();
             })
             .catch(err => alert(err));
     }, [tokenInput]);
 
-    const deployWebhook = async () => {
+    const deployWebhook = useCallback(async () => {
         if (!chosenRepo || deployed) return;
 
         const webhookSecret = `${uuid()}`;
@@ -51,36 +59,38 @@ const GitHubAuthButton = () => {
                     return;
                 }
                 setDeployed(true);
+                onDeployWebhook();
             })
             .catch(err => alert(err));
-    };
+    }, [tokenInput, chosenRepo, deployed]);
 
     return (
-        <div className="center space-y-8 max-w-xs">
-            {clicked ? (
-                <div className="flex items-center pr-3 w-full rounded-md bg-gray-800 border border-gray-500 hover:border-gray-400 hover:bg-gray-700">
-                    <input
-                        placeholder="Paste your token here"
-                        value={tokenInput}
-                        onChange={e => setTokenInput(e.target?.value)}
-                        type="text"
-                        spellCheck="false"
-                        className="bg-transparent grow p-3 text-ellipsis focus:outline-none"
-                    />
-                    {tokenInput && <CheckIcon className="w-6 h-6" />}
-                </div>
-            ) : (
-                <button onClick={openGitHubTokenPage}>
-                    Generate GitHub Token
-                </button>
-            )}
-            {tokenInput && (
-                <p>
-                    Also paste your token as the <code>GITHUB_API_KEY</code> env
-                    variable
-                </p>
-            )}
-            {!tokenInput && (
+        <div className="center space-y-8 w-80">
+            <div className="space-y-2 w-full">
+                {clicked ? (
+                    <div className="flex items-center pr-3 w-full rounded-md bg-gray-800 border border-gray-500 hover:border-gray-400 hover:bg-gray-700">
+                        <input
+                            placeholder="Paste your token here"
+                            value={tokenInput}
+                            onChange={e => setTokenInput(e.target?.value)}
+                            type="text"
+                            spellCheck="false"
+                        />
+                        {tokenInput && <CheckIcon className="w-6 h-6" />}
+                    </div>
+                ) : (
+                    <button onClick={openTokenPage}>
+                        Generate GitHub Token
+                    </button>
+                )}
+                {tokenInput && (
+                    <p className="font-tertiary text-center">
+                        Also paste this as the <code>GITHUB_API_KEY</code> env
+                        variable
+                    </p>
+                )}
+            </div>
+            {!clicked && (
                 <ul className="font-tertiary">
                     <li>
                         1. Set <code>Expiration</code> to maximum
