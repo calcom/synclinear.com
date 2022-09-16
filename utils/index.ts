@@ -111,12 +111,17 @@ export const saveLinearLabels = async (token: string, team: LinearTeam) => {
         ...(team.labels?.nodes ?? [])
     ];
 
-    if (!labels.find(n => n.name?.toLowerCase() === "public")) {
-        await createLinearPublicLabel(token, team.id);
+    if (!labels.find(n => n.name === "Public")) {
+        const { data } = await createLinearPublicLabel(token, team.id);
+
+        if (!data?.issueLabelCreate?.issueLabel)
+            alert('Please create a Linear label called "Public"');
+
+        labels.push(data?.issueLabelCreate?.issueLabel);
     }
 
     const data = {
-        publicLabelId: labels.find(n => n.name === "public")?.id,
+        publicLabelId: labels.find(n => n.name === "Public")?.id,
         canceledStateId: labels.find(n => n.name === "Canceled")?.id,
         doneStateId: labels.find(n => n.name === "Done")?.id,
         toDoStateId: labels.find(n => n.name === "Todo")?.id,
