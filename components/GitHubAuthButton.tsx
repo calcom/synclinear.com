@@ -32,11 +32,10 @@ const GitHubAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
         // If the URL params have an auth code, we're returning from the GitHub auth page.
         // Ensure the verification code is unchanged.
         const authResponse = new URLSearchParams(window.location.search);
+        if (!authResponse.has("code")) return;
+
         const verificationCode = localStorage.getItem("github-verification");
-        if (
-            !authResponse.has("code") ||
-            authResponse.get("state") !== verificationCode
-        ) {
+        if (authResponse.get("state") !== verificationCode) {
             alert("GitHub auth returned an invalid code. Please try again.");
             return;
         }
