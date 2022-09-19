@@ -1,3 +1,4 @@
+import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 import { GitHubRepo, LinearObject, LinearTeam } from "../typings";
 import { linearQuery } from "./apollo";
 import { GITHUB, LINEAR } from "./constants";
@@ -15,6 +16,38 @@ export const copyToClipboard = (text: string) => {
     if (!window?.navigator) alert("Cannot copy to clipboard");
 
     navigator?.clipboard?.writeText(text);
+};
+
+export const encrypt = (text: string): { hash: string; initVector: string } => {
+    const algorithm = "aes-256-ctr";
+    const secret = process.env.ENCRYPTION_KEY;
+    console.log(secret);
+
+    const initVector = randomBytes(16);
+    const cipher = createCipheriv(algorithm, secret, initVector);
+    const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
+
+    return {
+        hash: encrypted.toString("hex"),
+        initVector: initVector.toString("hex")
+    };
+};
+
+export const decrypt = (content: string, initVector: string): string => {
+    const algorithm = "aes-256-ctr";
+    const secret = process.env.ENCRYPTION_KEY;
+
+    const decipher = createDecipheriv(
+        algorithm,
+        secret,
+        Buffer.from(initVector, "hex")
+    );
+    const decrypted = Buffer.concat([
+        decipher.update(Buffer.from(content, "hex")),
+        decipher.final()
+    ]);
+
+    return decrypted.toString();
 };
 
 export const getLinearTokenURL = (): string => {
@@ -151,17 +184,38 @@ export const getGitHubTokenURL = (): string => {
     return tokenURL;
 };
 
+export const getGitHubAuthURL = (verificationCode: string): string => {
+    // Specify OAuth app and scopes
+    const params = {
+        client_id: GITHUB.OAUTH_ID,
+        redirect_uri: window.location.origin,
+        scope: GITHUB.SCOPES.join(" "),
+        state: verificationCode
+    };
+
+    // Combine params in a URL-friendly string
+    const authURL = Object.keys(params).reduce(
+        (url, param, i) =>
+            `${url}${i == 0 ? "?" : "&"}${param}=${params[param]}`,
+        GITHUB.OAUTH_URL
+    );
+
+    return authURL;
+};
+
 export const saveGitHubContext = async (
     repo: GitHubRepo,
-    webhookSecret: string
+    webhookSecret: string,
+    apiKey: string
 ) => {
     const data = {
         repoId: repo.id,
         name: repo.name,
-        webhookSecret
+        webhookSecret,
+        apiKey
     };
 
-    const response = await fetch("/api/github-context", {
+    const response = await fetch("/api/github/save", {
         method: "POST",
         body: JSON.stringify(data)
     });

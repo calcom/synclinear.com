@@ -46,6 +46,9 @@ model GitHubRepo {
     repoId Int
     name   String
 
+    apiKey           String
+    apiKeyInitVector String
+
     webhookSecret String
 
     @@map("github_repos")

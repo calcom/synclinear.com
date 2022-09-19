@@ -7,6 +7,9 @@ export const LINEAR = {
 };
 
 export const GITHUB = {
+    OAUTH_ID: "487937ed57e1d5ffea0d",
+    OAUTH_URL: "https://github.com/login/oauth/authorize",
+    TOKEN_URL: "https://github.com/login/oauth/access_token",
     NEW_TOKEN_URL: "https://github.com/settings/tokens/new",
     SCOPES: ["repo", "write:repo_hook", "read:user", "user:email"],
     TOKEN_NOTE: "Linear-GitHub Sync",
