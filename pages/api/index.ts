@@ -37,29 +37,32 @@ export default async (req: VercelRequest, res: VercelResponse) => {
         });
 
     if (req.headers["user-agent"] === "Linear-Webhook") {
-        const webhookPayload: LinearWebhookPayload = req.body;
+        const {
+            action,
+            updatedFrom,
+            data,
+            type: actionType
+        }: LinearWebhookPayload = req.body;
 
         if (
-            webhookPayload.action === "update" &&
-            webhookPayload.updatedFrom &&
-            webhookPayload.data.labelIds.includes(LINEAR_PUBLIC_LABEL_ID)
+            action === "update" &&
+            updatedFrom &&
+            data.labelIds.includes(LINEAR_PUBLIC_LABEL_ID)
         ) {
             if (
-                webhookPayload.updatedFrom.labelIds &&
-                !webhookPayload.updatedFrom.labelIds.includes(
-                    LINEAR_PUBLIC_LABEL_ID
-                )
+                updatedFrom.labelIds &&
+                !updatedFrom.labelIds.includes(LINEAR_PUBLIC_LABEL_ID)
             ) {
                 const issueAlreadyExists = await prisma.syncedIssue.findFirst({
                     where: {
-                        linearIssueId: webhookPayload.data.id,
-                        linearTeamId: webhookPayload.data.teamId
+                        linearIssueId: data.id,
+                        linearTeamId: data.teamId
                     }
                 });
 
                 if (issueAlreadyExists) {
                     console.log(
-                        `Not creating issue after label added as issue ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] already exists on GitHub as issue #${issueAlreadyExists.githubIssueNumber} [${issueAlreadyExists.githubIssueId}].`
+                        `Not creating issue after label added as issue ${data.team.key}-${data.number} [${data.id}] already exists on GitHub as issue #${issueAlreadyExists.githubIssueNumber} [${issueAlreadyExists.githubIssueId}].`
                     );
 
                     return res.status(200).send({
@@ -68,9 +71,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                     });
                 }
 
-                const issueCreator = await linear.user(
-                    webhookPayload.data.creatorId
-                );
+                const issueCreator = await linear.user(data.creatorId);
 
                 const createdIssueResponse = await petitio(
                     `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`,
@@ -85,8 +86,8 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                         `token ${process.env.GITHUB_API_KEY}`
                     )
                     .body({
-                        title: `[${webhookPayload.data.team.key}-${webhookPayload.data.number}] ${webhookPayload.data.title}`,
-                        body: `${webhookPayload.data.description}${
+                        title: `[${data.team.key}-${data.number}] ${data.title}`,
+                        body: `${data.description}${
                             issueCreator.id !== process.env.LINEAR_USER_ID
                                 ? `\n<sub>${issueCreator.name} on Linear</sub>`
                                 : ""
@@ -96,9 +97,9 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
                 if (createdIssueResponse.statusCode !== 201) {
                     console.log(
-                        `Failed to create GitHub issue for ${
-                            webhookPayload.data.team.key
-                        }-${webhookPayload.data.number}, received status code ${
+                        `Failed to create GitHub issue for ${data.team.key}-${
+                            data.number
+                        }, received status code ${
                             createdIssueResponse.statusCode
                         }, body of ${JSON.stringify(
                             await createdIssueResponse.json(),
@@ -116,7 +117,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                 let createdIssueData: components["schemas"]["issue"] =
                     await createdIssueResponse.json();
 
-                const linearIssue = await linear.issue(webhookPayload.data.id);
+                const linearIssue = await linear.issue(data.id);
 
                 const linearComments = await linearIssue
                     .comments()
@@ -141,7 +142,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                         .body({
                             query: `mutation {
                                 attachmentCreate(input:{
-                                    issueId: "${webhookPayload.data.id}"
+                                    issueId: "${data.id}"
                                     title: "GitHub Issue #${createdIssueData.number}"
                                     subtitle: "Synchronized"
                                     url: "https://github.com/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${createdIssueData.number}"
@@ -165,9 +166,9 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                             if (attachmentResponse.statusCode !== 201)
                                 console.log(
                                     `Failed to create attachment for ${
-                                        webhookPayload.data.team.key
-                                    }-${webhookPayload.data.number} [${
-                                        webhookPayload.data.id
+                                        data.team.key
+                                    }-${data.number} [${
+                                        data.id
                                     }] for GitHub issue #${
                                         createdIssueData.number
                                     } [${
@@ -182,20 +183,20 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                                 );
                             else if (!attachmentData.success)
                                 console.log(
-                                    `Failed to create attachment for ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
+                                    `Failed to create attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
                                 );
                             else
                                 console.log(
-                                    `Created attachment for ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
+                                    `Created attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
                                 );
                         }),
                     prisma.syncedIssue.create({
                         data: {
                             githubIssueId: createdIssueData.id,
-                            linearIssueId: webhookPayload.data.id,
-                            linearTeamId: webhookPayload.data.teamId,
+                            linearIssueId: data.id,
+                            linearTeamId: data.teamId,
                             githubIssueNumber: createdIssueData.number,
-                            linearIssueNumber: webhookPayload.data.number
+                            linearIssueNumber: data.number
                         }
                     })
                 ] as Promise<any>[]);
@@ -225,9 +226,9 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                             if (commentResponse.statusCode !== 201)
                                 console.log(
                                     `Failed to create GitHub comment for ${
-                                        webhookPayload.data.team.key
-                                    }-${webhookPayload.data.number} [${
-                                        webhookPayload.data.id
+                                        data.team.key
+                                    }-${data.number} [${
+                                        data.id
                                     }] on GitHub issue #${
                                         createdIssueData.number
                                     } [${
@@ -242,23 +243,23 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                                 );
                             else
                                 console.log(
-                                    `Created comment on GitHub issue #${createdIssueData.number} [${createdIssueData.id}] for Linear issue ${webhookPayload.data.team.key}-${webhookPayload.data.number}.`
+                                    `Created comment on GitHub issue #${createdIssueData.number} [${createdIssueData.id}] for Linear issue ${data.team.key}-${data.number}.`
                                 );
                         });
                 }
             }
 
-            if (webhookPayload.updatedFrom.title) {
+            if (updatedFrom.title) {
                 const syncedIssue = await prisma.syncedIssue.findFirst({
                     where: {
-                        linearTeamId: webhookPayload.data.teamId,
-                        linearIssueId: webhookPayload.data.id
+                        linearTeamId: data.teamId,
+                        linearIssueId: data.id
                     }
                 });
 
                 if (!syncedIssue) {
                     console.log(
-                        `Skipping over title change for ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] as it is not synced.`
+                        `Skipping over title change for ${data.team.key}-${data.number} [${data.id}] as it is not synced.`
                     );
 
                     return res.status(200).send({
@@ -280,16 +281,16 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                         `token ${process.env.GITHUB_API_KEY}`
                     )
                     .body({
-                        title: `[${webhookPayload.data.team.key}-${webhookPayload.data.number}] ${webhookPayload.data.title}`
+                        title: `[${data.team.key}-${data.number}] ${data.title}`
                     })
                     .send()
                     .then(updatedIssueResponse => {
                         if (updatedIssueResponse.statusCode !== 200)
                             console.log(
                                 `Failed to update GitHub issue title for ${
-                                    webhookPayload.data.team.key
-                                }-${webhookPayload.data.number} [${
-                                    webhookPayload.data.id
+                                    data.team.key
+                                }-${data.number} [${
+                                    data.id
                                 }] on GitHub issue #${
                                     syncedIssue.githubIssueNumber
                                 } [${
@@ -304,22 +305,22 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                             );
                         else
                             console.log(
-                                `Updated GitHub issue title for ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                                `Updated GitHub issue title for ${data.team.key}-${data.number} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                             );
                     });
             }
 
-            if (webhookPayload.updatedFrom.description) {
+            if (updatedFrom.description) {
                 const syncedIssue = await prisma.syncedIssue.findFirst({
                     where: {
-                        linearIssueId: webhookPayload.data.id,
-                        linearTeamId: webhookPayload.data.teamId
+                        linearIssueId: data.id,
+                        linearTeamId: data.teamId
                     }
                 });
 
                 if (!syncedIssue) {
                     console.log(
-                        `Skipping over description change for ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] as it is not synced.`
+                        `Skipping over description change for ${data.team.key}-${data.number} [${data.id}] as it is not synced.`
                     );
 
                     return res.status(200).send({
@@ -328,9 +329,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                     });
                 }
 
-                const issueCreator = await linear.user(
-                    webhookPayload.data.creatorId
-                );
+                const issueCreator = await linear.user(data.creatorId);
 
                 await petitio(
                     `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${syncedIssue.githubIssueNumber}`,
@@ -345,7 +344,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                         `token ${process.env.GITHUB_API_KEY}`
                     )
                     .body({
-                        body: `${webhookPayload.data.description}${
+                        body: `${data.description}${
                             issueCreator.id !== process.env.LINEAR_USER_ID
                                 ? `\n<sub>${issueCreator.name} on Linear</sub>`
                                 : ""
@@ -356,9 +355,9 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                         if (updatedIssueResponse.statusCode !== 200)
                             console.log(
                                 `Failed to update GitHub issue description for ${
-                                    webhookPayload.data.team.key
-                                }-${webhookPayload.data.number} [${
-                                    webhookPayload.data.id
+                                    data.team.key
+                                }-${data.number} [${
+                                    data.id
                                 }] on GitHub issue #${
                                     syncedIssue.githubIssueNumber
                                 } [${
@@ -373,17 +372,15 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                             );
                         else
                             console.log(
-                                `Updated GitHub issue description for ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                                `Updated GitHub issue description for ${data.team.key}-${data.number} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                             );
                     });
             }
 
-            if (webhookPayload.updatedFrom.stateId) {
-                if (
-                    webhookPayload.data.user?.id === process.env.LINEAR_USER_ID
-                ) {
+            if (updatedFrom.stateId) {
+                if (data.user?.id === process.env.LINEAR_USER_ID) {
                     console.log(
-                        `Skipping over state change for ${webhookPayload.data.team.key}-${webhookPayload.data.number} as it is caused by sync.`
+                        `Skipping over state change for ${data.team.key}-${data.number} as it is caused by sync.`
                     );
 
                     return res.status(200).send({
@@ -394,14 +391,14 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
                 const syncedIssue = await prisma.syncedIssue.findFirst({
                     where: {
-                        linearIssueId: webhookPayload.data.id,
-                        linearTeamId: webhookPayload.data.teamId
+                        linearIssueId: data.id,
+                        linearTeamId: data.teamId
                     }
                 });
 
                 if (!syncedIssue) {
                     console.log(
-                        `Skipping over state change for ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] as it is not synced.`
+                        `Skipping over state change for ${data.team.key}-${data.number} [${data.id}] as it is not synced.`
                     );
 
                     return res.status(200).send({
@@ -426,11 +423,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                         state: [
                             LINEAR_DONE_STATE_ID,
                             LINEAR_CANCELED_STATE_ID
-                        ].includes(webhookPayload.data.stateId)
+                        ].includes(data.stateId)
                             ? "closed"
                             : "open",
                         state_reason:
-                            LINEAR_DONE_STATE_ID === webhookPayload.data.stateId
+                            LINEAR_DONE_STATE_ID === data.stateId
                                 ? "completed"
                                 : "not_planned"
                     })
@@ -439,9 +436,9 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                         if (updatedIssueResponse.statusCode !== 200)
                             console.log(
                                 `Failed to update GitHub issue state for ${
-                                    webhookPayload.data.team.key
-                                }-${webhookPayload.data.number} [${
-                                    webhookPayload.data.id
+                                    data.team.key
+                                }-${data.number} [${
+                                    data.id
                                 }] on GitHub issue #${
                                     syncedIssue.githubIssueNumber
                                 } [${
@@ -456,20 +453,18 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                             );
                         else
                             console.log(
-                                `Updated GitHub issue state for ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                                `Updated GitHub issue state for ${data.team.key}-${data.number} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                             );
                     });
             }
         }
 
-        if (webhookPayload.action === "create") {
-            if (webhookPayload.type === "Comment") {
-                if (
-                    webhookPayload.data.user?.id === process.env.LINEAR_USER_ID
-                ) {
+        if (action === "create") {
+            if (actionType === "Comment") {
+                if (data.user?.id === process.env.LINEAR_USER_ID) {
                     console.log(
                         `Skipping over comment creation for ${
-                            webhookPayload.data.issue!.id
+                            data.issue!.id
                         } as it is caused by sync.`
                     );
 
@@ -481,13 +476,13 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
                 const syncedIssue = await prisma.syncedIssue.findFirst({
                     where: {
-                        linearIssueId: webhookPayload.data.issueId
+                        linearIssueId: data.issueId
                     }
                 });
 
                 if (!syncedIssue) {
                     console.log(
-                        `Skipping over comment for ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] as it is not synced.`
+                        `Skipping over comment for ${data.team.key}-${data.number} [${data.id}] as it is not synced.`
                     );
 
                     return res.status(200).send({
@@ -509,8 +504,8 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                         `token ${process.env.GITHUB_API_KEY}`
                     )
                     .body({
-                        body: `${webhookPayload.data.body}\n<sub>${
-                            webhookPayload.data.user!.name
+                        body: `${data.body}\n<sub>${
+                            data.user!.name
                         } on Linear</sub>`
                     })
                     .send()
@@ -518,7 +513,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                         if (commentResponse.statusCode !== 201)
                             console.log(
                                 `Failed to update GitHub issue state for ${
-                                    webhookPayload.data.issue?.id
+                                    data.issue?.id
                                 } on GitHub issue #${
                                     syncedIssue.githubIssueNumber
                                 } [${
@@ -533,18 +528,16 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                             );
                         else
                             console.log(
-                                `Synced comment [${webhookPayload.data.id}] for ${webhookPayload.data.issue?.id} on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                                `Synced comment [${data.id}] for ${data.issue?.id} on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                             );
                     });
             } else if (
-                webhookPayload.type === "Issue" &&
-                webhookPayload.data.labelIds.includes(LINEAR_PUBLIC_LABEL_ID)
+                actionType === "Issue" &&
+                data.labelIds.includes(LINEAR_PUBLIC_LABEL_ID)
             ) {
-                if (
-                    webhookPayload.data.creatorId === process.env.LINEAR_USER_ID
-                ) {
+                if (data.creatorId === process.env.LINEAR_USER_ID) {
                     console.log(
-                        `Skipping over issue creation for ${webhookPayload.data.id} as it is caused by sync.`
+                        `Skipping over issue creation for ${data.id} as it is caused by sync.`
                     );
 
                     return res.status(200).send({
@@ -555,14 +548,14 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
                 const issueAlreadyExists = await prisma.syncedIssue.findFirst({
                     where: {
-                        linearIssueId: webhookPayload.data.id,
-                        linearTeamId: webhookPayload.data.teamId
+                        linearIssueId: data.id,
+                        linearTeamId: data.teamId
                     }
                 });
 
                 if (issueAlreadyExists) {
                     console.log(
-                        `Not creating issue after label added as issue ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] already exists on GitHub as issue #${issueAlreadyExists.githubIssueNumber} [${issueAlreadyExists.githubIssueId}].`
+                        `Not creating issue after label added as issue ${data.team.key}-${data.number} [${data.id}] already exists on GitHub as issue #${issueAlreadyExists.githubIssueNumber} [${issueAlreadyExists.githubIssueId}].`
                     );
 
                     return res.status(200).send({
@@ -571,9 +564,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                     });
                 }
 
-                const issueCreator = await linear.user(
-                    webhookPayload.data.creatorId
-                );
+                const issueCreator = await linear.user(data.creatorId);
 
                 const createdIssueResponse = await petitio(
                     `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`,
@@ -588,8 +579,8 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                         `token ${process.env.GITHUB_API_KEY}`
                     )
                     .body({
-                        title: `[${webhookPayload.data.team.key}-${webhookPayload.data.number}] ${webhookPayload.data.title}`,
-                        body: `${webhookPayload.data.description}${
+                        title: `[${data.team.key}-${data.number}] ${data.title}`,
+                        body: `${data.description}${
                             issueCreator.id !== process.env.LINEAR_USER_ID
                                 ? `\n<sub>${issueCreator.name} on Linear</sub>`
                                 : ""
@@ -599,9 +590,9 @@ export default async (req: VercelRequest, res: VercelResponse) => {
 
                 if (createdIssueResponse.statusCode !== 201) {
                     console.log(
-                        `Failed to create GitHub issue for ${
-                            webhookPayload.data.team.key
-                        }-${webhookPayload.data.number}, received status code ${
+                        `Failed to create GitHub issue for ${data.team.key}-${
+                            data.number
+                        }, received status code ${
                             createdIssueResponse.statusCode
                         }, body of ${JSON.stringify(
                             await createdIssueResponse.json(),
@@ -629,7 +620,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                         .body({
                             query: `mutation {
                         attachmentCreate(input:{
-                            issueId: "${webhookPayload.data.id}"
+                            issueId: "${data.id}"
                             title: "GitHub Issue #${createdIssueData.number}"
                             subtitle: "Synchronized"
                             url: "https://github.com/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${createdIssueData.number}"
@@ -653,9 +644,9 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                             if (attachmentResponse.statusCode !== 201)
                                 console.log(
                                     `Failed to create attachment for ${
-                                        webhookPayload.data.team.key
-                                    }-${webhookPayload.data.number} [${
-                                        webhookPayload.data.id
+                                        data.team.key
+                                    }-${data.number} [${
+                                        data.id
                                     }] for GitHub issue #${
                                         createdIssueData.number
                                     } [${
@@ -670,20 +661,20 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                                 );
                             else if (!attachmentData.success)
                                 console.log(
-                                    `Failed to create attachment for ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
+                                    `Failed to create attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
                                 );
                             else
                                 console.log(
-                                    `Created attachment for ${webhookPayload.data.team.key}-${webhookPayload.data.number} [${webhookPayload.data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
+                                    `Created attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
                                 );
                         }),
                     prisma.syncedIssue.create({
                         data: {
                             githubIssueId: createdIssueData.id,
-                            linearIssueId: webhookPayload.data.id,
-                            linearTeamId: webhookPayload.data.teamId,
+                            linearIssueId: data.id,
+                            linearTeamId: data.teamId,
                             githubIssueNumber: createdIssueData.number,
-                            linearIssueNumber: webhookPayload.data.number
+                            linearIssueNumber: data.number
                         }
                     })
                 ]);
