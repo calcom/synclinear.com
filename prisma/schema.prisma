@@ -37,6 +37,9 @@ model LinearTeam {
     toDoStateId       String
     inProgressStateId String
 
+    apiKey           String
+    apiKeyInitVector String
+
     @@map("linear_teams")
 }
 

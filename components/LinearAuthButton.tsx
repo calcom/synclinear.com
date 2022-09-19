@@ -2,12 +2,13 @@ import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { LinearObject, LinearTeam } from "../typings";
 import {
+    getLinearAuthURL,
     getLinearContext,
-    getLinearTokenURL,
     getWebhookURL,
     saveLinearContext,
     setLinearWebhook
 } from "../utils";
+import { v4 as uuid } from "uuid";
 
 interface IProps {
     onPasteToken: () => void;
@@ -15,18 +16,49 @@ interface IProps {
 }
 
 const LinearAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
-    const [clicked, setClicked] = useState(false);
-    const [tokenInput, setTokenInput] = useState("");
+    const [accessToken, setAccessToken] = useState("");
     const [teams, setTeams] = useState<Array<LinearTeam>>([]);
     const [user, setUser] = useState<LinearObject>();
     const [chosenTeam, setChosenTeam] = useState<LinearTeam>();
     const [deployed, setDeployed] = useState(false);
 
+    // If present, exchange the temporary auth code for an access token
+    useEffect(() => {
+        // If the URL params have an auth code, we're returning from the Linear auth page.
+        // Ensure the verification code is unchanged.
+        const authResponse = new URLSearchParams(window.location.search);
+        if (!authResponse.has("code")) return;
+
+        const verificationCode = localStorage.getItem("linear-verification");
+        if (!authResponse.get("state")?.includes("linear")) return;
+        if (authResponse.get("state") !== verificationCode) {
+            alert("Linear auth returned an invalid code. Please try again.");
+            return;
+        }
+
+        const refreshToken = authResponse.get("code");
+        const redirectURI = window.location.origin;
+
+        // Exchange auth code for access token
+        fetch("/api/linear/token", {
+            method: "POST",
+            body: JSON.stringify({ refreshToken, redirectURI }),
+            headers: { "Content-Type": "application/json" }
+        })
+            .then(res => res.json())
+            .then(body => {
+                if (body.access_token) setAccessToken(body.access_token);
+                else
+                    alert("No Linear access token returned. Please try again.");
+            })
+            .catch(err => alert(err));
+    }, []);
+
     // Fetch the user ID and available teams when the token is available
     useEffect(() => {
-        if (!tokenInput) return;
+        if (!accessToken) return;
 
-        getLinearContext(tokenInput)
+        getLinearContext(accessToken)
             .then(res => {
                 if (!res?.data?.teams || !res.data?.viewer)
                     alert("No Linear user or teams found");
@@ -36,22 +68,23 @@ const LinearAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
                 onPasteToken();
             })
             .catch(err => alert(err));
-    }, [tokenInput]);
+    }, [accessToken]);
 
-    const openTokenPage = () => {
-        const tokenURL = getLinearTokenURL();
-        window.open(tokenURL);
-        setClicked(true);
+    const openLinearAuth = () => {
+        // Generate random code to validate against CSRF attack
+        const verificationCode = `linear-${uuid()}`;
+        localStorage.setItem("linear-verification", verificationCode);
+        window.location.replace(getLinearAuthURL(verificationCode));
     };
 
     const deployWebhook = useCallback(() => {
         if (!chosenTeam || deployed) return;
 
-        saveLinearContext(tokenInput, chosenTeam, user).catch(err =>
+        saveLinearContext(accessToken, chosenTeam, user).catch(err =>
             alert(err)
         );
 
-        setLinearWebhook(tokenInput, getWebhookURL(), chosenTeam.id)
+        setLinearWebhook(accessToken, getWebhookURL(), chosenTeam.id)
             .then(() => {
                 setDeployed(true);
                 onDeployWebhook();
@@ -59,45 +92,14 @@ const LinearAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
             .catch(err => alert(err));
 
         setDeployed(true);
-    }, [tokenInput, chosenTeam, deployed]);
+    }, [accessToken, chosenTeam, deployed]);
 
     return (
         <div className="center space-y-8 w-80">
-            <div className="space-y-2 w-full">
-                {clicked ? (
-                    <div className="flex items-center pr-3 w-full rounded-md bg-gray-800 border border-gray-500 hover:border-gray-400 hover:bg-gray-700">
-                        <input
-                            placeholder="Paste your token here"
-                            value={tokenInput}
-                            onChange={e => setTokenInput(e.target?.value)}
-                            type="text"
-                            spellCheck="false"
-                        />
-                        {tokenInput && <CheckIcon className="w-6 h-6" />}
-                    </div>
-                ) : (
-                    <button onClick={openTokenPage}>
-                        Generate Linear Token
-                    </button>
-                )}
-                {tokenInput && (
-                    <p className="font-tertiary text-center">
-                        Also paste this as the <code>LINEAR_API_KEY</code> env
-                        variable
-                    </p>
-                )}
-            </div>
-            {!tokenInput && (
-                <ul className="font-tertiary">
-                    <li>
-                        1. Set <code>Expiration</code> to maximum
-                    </li>
-                    <li>
-                        2. Click <code>Generate token</code>
-                    </li>
-                    <li>3. Copy your newly created token</li>
-                </ul>
-            )}
+            <button onClick={openLinearAuth} disabled={!!accessToken}>
+                <span>Connect Linear</span>
+                {accessToken && <CheckIcon className="w-6 h-6" />}
+            </button>
             {teams.length > 0 && (
                 <div className="flex flex-col items-center w-full space-y-4">
                     <select

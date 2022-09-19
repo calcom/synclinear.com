@@ -18,7 +18,7 @@ const GitHubAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
 
     const openAuthPage = () => {
         // Generate random code to validate against CSRF attack
-        const verificationCode = uuid();
+        const verificationCode = `github-${uuid()}`;
         localStorage.setItem("github-verification", verificationCode);
 
         const authURL = getGitHubAuthURL(verificationCode);
@@ -35,6 +35,7 @@ const GitHubAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
         if (!authResponse.has("code")) return;
 
         const verificationCode = localStorage.getItem("github-verification");
+        if (!authResponse.get("state")?.includes("github")) return;
         if (authResponse.get("state") !== verificationCode) {
             alert("GitHub auth returned an invalid code. Please try again.");
             return;
@@ -98,12 +99,10 @@ const GitHubAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
 
     return (
         <div className="center space-y-8 w-80">
-            <div className="space-y-2 w-full">
-                <button onClick={openAuthPage} disabled={!!accessToken}>
-                    <span>Connect GitHub</span>
-                    {accessToken && <CheckIcon className="w-6 h-6" />}
-                </button>
-            </div>
+            <button onClick={openAuthPage} disabled={!!accessToken}>
+                <span>Connect GitHub</span>
+                {accessToken && <CheckIcon className="w-6 h-6" />}
+            </button>
             {repos.length > 0 && (
                 <div className="flex flex-col items-center space-y-4">
                     <select

@@ -21,7 +21,6 @@ export const copyToClipboard = (text: string) => {
 export const encrypt = (text: string): { hash: string; initVector: string } => {
     const algorithm = "aes-256-ctr";
     const secret = process.env.ENCRYPTION_KEY;
-    console.log(secret);
 
     const initVector = randomBytes(16);
     const cipher = createCipheriv(algorithm, secret, initVector);
@@ -58,6 +57,27 @@ export const getLinearTokenURL = (): string => {
     const tokenURL = `${baseURL}${sectionSelector}`;
 
     return tokenURL;
+};
+
+export const getLinearAuthURL = (verificationCode: string): string => {
+    // Specify OAuth app and scopes
+    const params = {
+        client_id: LINEAR.OAUTH_ID,
+        redirect_uri: window.location.origin,
+        scope: LINEAR.SCOPES.join(","),
+        state: verificationCode,
+        response_type: "code",
+        prompt: "consent"
+    };
+
+    // Combine params in a URL-friendly string
+    const authURL = Object.keys(params).reduce(
+        (url, param, i) =>
+            `${url}${i == 0 ? "?" : "&"}${param}=${params[param]}`,
+        LINEAR.OAUTH_URL
+    );
+
+    return authURL;
 };
 
 export const getLinearContext = async (token: string) => {
@@ -161,6 +181,7 @@ export const saveLinearContext = async (
         userName: user.name,
         teamId: team.id,
         teamName: team.name,
+        apiKey: token,
         publicLabelId: labels.find(n => n.name === "Public")?.id,
         canceledStateId: labels.find(n => n.name === "Canceled")?.id,
         doneStateId: labels.find(n => n.name === "Done")?.id,
@@ -168,7 +189,7 @@ export const saveLinearContext = async (
         inProgressStateId: labels.find(n => n.name === "In Progress")?.id
     };
 
-    const response = await fetch("/api/linear-context", {
+    const response = await fetch("/api/linear/save", {
         method: "POST",
         body: JSON.stringify(data)
     });
