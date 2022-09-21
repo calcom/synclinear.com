@@ -15,16 +15,7 @@ import { formatJSON, getAttachmentQuery, isIssue } from "../../utils";
 import { LINEAR } from "../../utils/constants";
 import { getIssueUpdateError, getOtherUpdateError } from "../../utils/errors";
 
-const LINEAR_PUBLIC_LABEL_ID = process.env.LINEAR_PUBLIC_LABEL_ID || "";
-const LINEAR_CANCELED_STATE_ID = process.env.LINEAR_CANCELED_STATE_ID || "";
-const LINEAR_DONE_STATE_ID = process.env.LINEAR_DONE_STATE_ID || "";
-const LINEAR_TODO_STATE_ID = process.env.LINEAR_TODO_STATE_ID || "";
-
-const repoFullName = `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}`;
-const userAgentHeader = `${repoFullName}, linear-github-sync`;
 const githubAuthHeader = `token ${process.env.GITHUB_API_KEY}`;
-const githubBaseURL = `https://api.github.com/repos/${repoFullName}/issues`;
-
 const linear = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
@@ -52,14 +43,41 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             type: actionType
         }: LinearWebhookPayload = req.body;
 
+        const sync = await prisma.sync.findFirst({
+            where: {
+                linearUserId: data.creatorId,
+                linearTeamId: data.teamId
+            },
+            include: {
+                LinearTeam: true,
+                GitHubRepo: true
+            }
+        });
+
+        if (!sync?.LinearTeam || !sync?.GitHubRepo) {
+            return res.status(404).send({
+                success: false,
+                message: "Could not find synced repo or team."
+            });
+        }
+
+        const {
+            linearUserId,
+            LinearTeam: { publicLabelId, doneStateId, canceledStateId },
+            GitHubRepo: { repoName: repoFullName }
+        } = sync;
+
+        const userAgentHeader = `${repoFullName}, linear-github-sync`;
+        const githubBaseURL = `https://api.github.com/repos/${repoFullName}/issues`;
+
         if (
             action === "update" &&
             updatedFrom &&
-            data.labelIds.includes(LINEAR_PUBLIC_LABEL_ID)
+            data.labelIds.includes(publicLabelId)
         ) {
             if (
                 updatedFrom.labelIds &&
-                !updatedFrom.labelIds.includes(LINEAR_PUBLIC_LABEL_ID)
+                !updatedFrom.labelIds.includes(publicLabelId)
             ) {
                 const issueAlreadyExists = await prisma.syncedIssue.findFirst({
                     where: {
@@ -82,7 +100,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 const issueCreator = await linear.user(data.creatorId);
 
                 const createdIssueResponse = await petitio(
-                    `${githubBaseURL}`,
+                    githubBaseURL,
                     "POST"
                 )
                     .header("User-Agent", userAgentHeader)
@@ -90,7 +108,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
                         body: `${data.description}${
-                            issueCreator.id !== process.env.LINEAR_USER_ID
+                            issueCreator.id !== linearUserId
                                 ? `\n<sub>${issueCreator.name} on Linear</sub>`
                                 : ""
                         }`
@@ -294,7 +312,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("Authorization", githubAuthHeader)
                     .body({
                         body: `${data.description}${
-                            issueCreator.id !== process.env.LINEAR_USER_ID
+                            issueCreator.id !== linearUserId
                                 ? `\n<sub>${issueCreator.name} on Linear</sub>`
                                 : ""
                         }`
@@ -318,7 +336,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             }
 
             if (updatedFrom.stateId) {
-                if (data.user?.id === process.env.LINEAR_USER_ID) {
+                if (data.user?.id === linearUserId) {
                     console.log(
                         `Skipping over state change for ${data.team.key}-${data.number} as it is caused by sync.`
                     );
@@ -354,14 +372,13 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        state: [
-                            LINEAR_DONE_STATE_ID,
-                            LINEAR_CANCELED_STATE_ID
-                        ].includes(data.stateId)
+                        state: [doneStateId, canceledStateId].includes(
+                            data.stateId
+                        )
                             ? "closed"
                             : "open",
                         state_reason:
-                            LINEAR_DONE_STATE_ID === data.stateId
+                            doneStateId === data.stateId
                                 ? "completed"
                                 : "not_planned"
                     })
@@ -386,7 +403,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         if (action === "create") {
             if (actionType === "Comment") {
-                if (data.user?.id === process.env.LINEAR_USER_ID) {
+                if (data.user?.id === linearUserId) {
                     console.log(
                         `Skipping over comment creation for ${
                             data.issue!.id
@@ -450,9 +467,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
             } else if (
                 actionType === "Issue" &&
-                data.labelIds.includes(LINEAR_PUBLIC_LABEL_ID)
+                data.labelIds.includes(publicLabelId)
             ) {
-                if (data.creatorId === process.env.LINEAR_USER_ID) {
+                if (data.creatorId === linearUserId) {
                     console.log(
                         `Skipping over issue creation for ${data.id} as it is caused by sync.`
                     );
@@ -492,7 +509,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
                         body: `${data.description}${
-                            issueCreator.id !== process.env.LINEAR_USER_ID
+                            issueCreator.id !== linearUserId
                                 ? `\n<sub>${issueCreator.name} on Linear</sub>`
                                 : ""
                         }`
@@ -582,18 +599,40 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             where: {
                 githubRepoId: repository.id,
                 githubUserId: sender.id
+            },
+            include: {
+                GitHubRepo: true,
+                LinearTeam: true
             }
         });
 
+        if (!sync?.LinearTeam || !sync?.GitHubRepo) {
+            return res.status(404).send({
+                success: false,
+                message: "Could not find synced repo or team."
+            });
+        }
+
+        const {
+            LinearTeam: {
+                publicLabelId,
+                doneStateId,
+                toDoStateId,
+                canceledStateId,
+                teamId: linearTeamId
+            },
+            GitHubRepo: { repoName: repoFullName }
+        } = sync;
+
+        const userAgentHeader = `${repoFullName}, linear-github-sync`;
+        const githubBaseURL = `https://api.github.com/repos/${repoFullName}/issues`;
+
         const webhookSecret = sync.githubWebhookSecret ?? "";
-
         const HMAC = createHmac("sha256", webhookSecret);
-
         const digest = Buffer.from(
             `sha256=${HMAC.update(JSON.stringify(req.body)).digest("hex")}`,
             "utf-8"
         );
-
         const sig = Buffer.from(
             req.headers["x-hub-signature-256"] as string,
             "utf-8"
@@ -737,10 +776,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 .issueUpdate(syncedIssue.linearIssueId, {
                     stateId:
                         issue.state_reason === "not_planned"
-                            ? LINEAR_CANCELED_STATE_ID
+                            ? canceledStateId
                             : issue.state_reason === "completed"
-                            ? LINEAR_DONE_STATE_ID
-                            : LINEAR_TODO_STATE_ID
+                            ? doneStateId
+                            : toDoStateId
                 })
                 .then(updatedIssue => {
                     console.log(-1);
@@ -770,8 +809,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             const createdIssueData = await linear.issueCreate({
                 title: issue.title,
                 description: issue.body,
-                teamId: process.env.LINEAR_TEAM_ID || "",
-                labelIds: [LINEAR_PUBLIC_LABEL_ID || ""]
+                teamId: linearTeamId,
+                labelIds: [publicLabelId]
             });
 
             if (!createdIssueData.success) {
