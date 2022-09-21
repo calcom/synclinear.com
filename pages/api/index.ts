@@ -17,6 +17,8 @@ const LINEAR_CANCELED_STATE_ID = process.env.LINEAR_CANCELED_STATE_ID || "";
 const LINEAR_DONE_STATE_ID = process.env.LINEAR_DONE_STATE_ID || "";
 const LINEAR_TODO_STATE_ID = process.env.LINEAR_TODO_STATE_ID || "";
 
+const userAgentHeader = `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}, linear-github-sync`;
+
 const linear = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
 
 export default async (req: VercelRequest, res: VercelResponse) => {
@@ -77,10 +79,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                     `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`,
                     "POST"
                 )
-                    .header(
-                        "User-Agent",
-                        `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}, linear-github-sync`
-                    )
+                    .header("User-Agent", userAgentHeader)
                     .header(
                         "Authorization",
                         `token ${process.env.GITHUB_API_KEY}`
@@ -211,10 +210,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                         `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${createdIssueData.number}/comments`,
                         "POST"
                     )
-                        .header(
-                            "User-Agent",
-                            `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}, linear-github-sync`
-                        )
+                        .header("User-Agent", userAgentHeader)
                         .header(
                             "Authorization",
                             `token ${process.env.GITHUB_API_KEY}`
@@ -273,10 +269,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                     `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${syncedIssue.githubIssueNumber}`,
                     "PATCH"
                 )
-                    .header(
-                        "User-Agent",
-                        `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}, linear-github-sync`
-                    )
+                    .header("User-Agent", userAgentHeader)
                     .header(
                         "Authorization",
                         `token ${process.env.GITHUB_API_KEY}`
@@ -336,10 +329,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                     `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${syncedIssue.githubIssueNumber}`,
                     "PATCH"
                 )
-                    .header(
-                        "User-Agent",
-                        `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}, linear-github-sync`
-                    )
+                    .header("User-Agent", userAgentHeader)
                     .header(
                         "Authorization",
                         `token ${process.env.GITHUB_API_KEY}`
@@ -412,10 +402,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                     `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${syncedIssue.githubIssueNumber}`,
                     "PATCH"
                 )
-                    .header(
-                        "User-Agent",
-                        `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}, linear-github-sync`
-                    )
+                    .header("User-Agent", userAgentHeader)
                     .header(
                         "Authorization",
                         `token ${process.env.GITHUB_API_KEY}`
@@ -496,10 +483,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                     `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${syncedIssue.githubIssueNumber}/comments`,
                     "POST"
                 )
-                    .header(
-                        "User-Agent",
-                        `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}, linear-github-sync`
-                    )
+                    .header("User-Agent", userAgentHeader)
                     .header(
                         "Authorization",
                         `token ${process.env.GITHUB_API_KEY}`
@@ -571,10 +555,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                     `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`,
                     "POST"
                 )
-                    .header(
-                        "User-Agent",
-                        `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}, linear-github-sync`
-                    )
+                    .header("User-Agent", userAgentHeader)
                     .header(
                         "Authorization",
                         `token ${process.env.GITHUB_API_KEY}`
@@ -921,10 +902,7 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                             `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${issue.number}`,
                             "PATCH"
                         )
-                            .header(
-                                "User-Agent",
-                                `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}, linear-github-sync`
-                            )
+                            .header("User-Agent", userAgentHeader)
                             .header(
                                 "Authorization",
                                 `token ${process.env.GITHUB_API_KEY}`
