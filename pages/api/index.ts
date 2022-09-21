@@ -11,7 +11,7 @@ import {
 import { LinearClient } from "@linear/sdk";
 import prisma from "../../prisma";
 import { NextApiRequest, NextApiResponse } from "next";
-import { getAttachmentQuery } from "../../utils";
+import { getAttachmentQuery, isIssue } from "../../utils";
 import { LINEAR } from "../../utils/constants";
 
 const LINEAR_PUBLIC_LABEL_ID = process.env.LINEAR_PUBLIC_LABEL_ID || "";
@@ -630,7 +630,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             }
         }
     } else {
-        const { repository, sender } = req.body;
+        const { repository, sender, action } = req.body;
 
         const sync = await prisma.sync.findFirst({
             where: {
@@ -662,7 +662,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             });
         }
 
-        if (req.body.sender.login === "spacedrive-bot") {
+        if (sender.login === "spacedrive-bot") {
             console.log(`Skipping over request as it is created by sync.`);
 
             return res.status(200).send({
@@ -673,10 +673,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         if (
             req.headers["x-github-event"] === "issue_comment" &&
-            req.body.action === "created"
+            action === "created"
         ) {
-            const { issue, sender, comment }: IssueCommentCreatedEvent =
-                req.body;
+            const { issue, comment }: IssueCommentCreatedEvent = req.body;
 
             const syncedIssue = await prisma.syncedIssue.findFirst({
                 where: {
@@ -716,10 +715,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         });
                     });
                 });
-        } else if (
-            req.headers["x-github-event"] === "issues" &&
-            req.body.action === "edited"
-        ) {
+        } else if (isIssue(req) && action === "edited") {
             const { issue }: IssuesEditedEvent = req.body;
 
             const syncedIssue = await prisma.syncedIssue.findFirst({
@@ -766,10 +762,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         });
                     });
                 });
-        } else if (
-            req.headers["x-github-event"] === "issues" &&
-            ["closed", "reopened"].includes(req.body.action)
-        ) {
+        } else if (isIssue(req) && ["closed", "reopened"].includes(action)) {
             const { issue }: IssuesClosedEvent = req.body;
 
             const syncedIssue = await prisma.syncedIssue.findFirst({
@@ -819,10 +812,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         });
                     });
                 });
-        } else if (
-            req.headers["x-github-event"] === "issues" &&
-            req.body.action === "opened"
-        ) {
+        } else if (isIssue(req) && action === "opened") {
             const {
                 issue
             }: IssuesOpenedEvent & {

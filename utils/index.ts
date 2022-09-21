@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import { NextApiRequest } from "next";
 import {
     GitHubContext,
     GitHubRepo,
@@ -301,3 +302,6 @@ export const getAttachmentQuery = (
     }`;
 };
 
+export const isIssue = (req: NextApiRequest): boolean => {
+    return req.headers["x-github-event"] === "issues";
+};
