@@ -17,6 +17,10 @@ model SyncedIssue {
     linearIssueId String
 
     linearTeamId String
+    LinearTeam   LinearTeam @relation(fields: [linearTeamId], references: [teamId])
+
+    githubRepoId Int
+    GitHubRepo   GitHubRepo @relation(fields: [githubRepoId], references: [repoId])
 
     @@map("synced_issues")
 }
@@ -24,21 +28,18 @@ model SyncedIssue {
 model LinearTeam {
     id String @id @default(cuid())
 
-    teamId   String
+    teamId   String @unique
     teamName String
-
-    userId   String
-    userName String
 
     publicLabelId String
 
-    canceledStateId   String
-    doneStateId       String
-    toDoStateId       String
-    inProgressStateId String
+    canceledStateId String
+    doneStateId     String
+    toDoStateId     String
 
-    apiKey           String
-    apiKeyInitVector String
+    Sync Sync[]
+
+    SyncedIssue SyncedIssue[]
 
     @@map("linear_teams")
 }
@@ -46,13 +47,32 @@ model LinearTeam {
 model GitHubRepo {
     id String @id @default(cuid())
 
-    repoId Int
-    name   String
+    repoId   Int    @unique
+    repoName String
 
-    apiKey           String
-    apiKeyInitVector String
+    Sync Sync[]
 
-    webhookSecret String
+    SyncedIssue SyncedIssue[]
 
     @@map("github_repos")
+}
+
+model Sync {
+    id String @id @default(cuid())
+
+    githubUserId Int
+    linearUserId String
+
+    GitHubRepo          GitHubRepo @relation(fields: [githubRepoId], references: [repoId])
+    githubRepoId        Int
+    githubWebhookSecret String
+    githubApiKey        String
+    githubApiKeyIV      String
+
+    LinearTeam     LinearTeam @relation(fields: [linearTeamId], references: [teamId])
+    linearTeamId   String
+    linearApiKey   String
+    linearApiKeyIV String
+
+    @@map("syncs")
 }
