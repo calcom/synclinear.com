@@ -11,8 +11,9 @@ import {
 import { LinearClient } from "@linear/sdk";
 import prisma from "../../prisma";
 import { NextApiRequest, NextApiResponse } from "next";
-import { getAttachmentQuery, isIssue } from "../../utils";
+import { formatJSON, getAttachmentQuery, isIssue } from "../../utils";
 import { LINEAR } from "../../utils/constants";
+import { getIssueUpdateError, getOtherUpdateError } from "../../utils/errors";
 
 const LINEAR_PUBLIC_LABEL_ID = process.env.LINEAR_PUBLIC_LABEL_ID || "";
 const LINEAR_CANCELED_STATE_ID = process.env.LINEAR_CANCELED_STATE_ID || "";
@@ -102,10 +103,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             data.number
                         }, received status code ${
                             createdIssueResponse.statusCode
-                        }, body of ${JSON.stringify(
-                            await createdIssueResponse.json(),
-                            null,
-                            4
+                        }, body of ${formatJSON(
+                            await createdIssueResponse.json()
                         )}.`
                     );
 
@@ -157,21 +156,13 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             } = attachmentResponse.json();
                             if (attachmentResponse.statusCode !== 201)
                                 console.log(
-                                    `Failed to create attachment for ${
-                                        data.team.key
-                                    }-${data.number} [${
-                                        data.id
-                                    }] for GitHub issue #${
-                                        createdIssueData.number
-                                    } [${
-                                        createdIssueData.id
-                                    }], received status code ${
-                                        createdIssueResponse.statusCode
-                                    }, body of ${JSON.stringify(
-                                        attachmentData,
-                                        null,
-                                        4
-                                    )}.`
+                                    getOtherUpdateError(
+                                        "attachment",
+                                        data,
+                                        createdIssueData,
+                                        createdIssueResponse,
+                                        attachmentData
+                                    )
                                 );
                             else if (!attachmentData.success)
                                 console.log(
@@ -212,21 +203,13 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         .then(commentResponse => {
                             if (commentResponse.statusCode !== 201)
                                 console.log(
-                                    `Failed to create GitHub comment for ${
-                                        data.team.key
-                                    }-${data.number} [${
-                                        data.id
-                                    }] on GitHub issue #${
-                                        createdIssueData.number
-                                    } [${
-                                        createdIssueData.id
-                                    }], received status code ${
-                                        createdIssueResponse.statusCode
-                                    }, body of ${JSON.stringify(
-                                        commentResponse.json(),
-                                        null,
-                                        4
-                                    )}.`
+                                    getOtherUpdateError(
+                                        "comment",
+                                        data,
+                                        createdIssueData,
+                                        createdIssueResponse,
+                                        commentResponse.json()
+                                    )
                                 );
                             else
                                 console.log(
@@ -268,21 +251,12 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .then(updatedIssueResponse => {
                         if (updatedIssueResponse.statusCode !== 200)
                             console.log(
-                                `Failed to update GitHub issue title for ${
-                                    data.team.key
-                                }-${data.number} [${
-                                    data.id
-                                }] on GitHub issue #${
-                                    syncedIssue.githubIssueNumber
-                                } [${
-                                    syncedIssue.githubIssueId
-                                }], received status code ${
-                                    updatedIssueResponse.statusCode
-                                }, body of ${JSON.stringify(
-                                    updatedIssueResponse,
-                                    null,
-                                    4
-                                )}.`
+                                getIssueUpdateError(
+                                    "title",
+                                    data,
+                                    syncedIssue,
+                                    updatedIssueResponse
+                                )
                             );
                         else
                             console.log(
@@ -329,21 +303,12 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .then(updatedIssueResponse => {
                         if (updatedIssueResponse.statusCode !== 200)
                             console.log(
-                                `Failed to update GitHub issue description for ${
-                                    data.team.key
-                                }-${data.number} [${
-                                    data.id
-                                }] on GitHub issue #${
-                                    syncedIssue.githubIssueNumber
-                                } [${
-                                    syncedIssue.githubIssueId
-                                }], received status code ${
-                                    updatedIssueResponse.statusCode
-                                }, body of ${JSON.stringify(
-                                    updatedIssueResponse.json(),
-                                    null,
-                                    4
-                                )}.`
+                                getIssueUpdateError(
+                                    "description",
+                                    data,
+                                    syncedIssue,
+                                    updatedIssueResponse
+                                )
                             );
                         else
                             console.log(
@@ -404,21 +369,12 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .then(updatedIssueResponse => {
                         if (updatedIssueResponse.statusCode !== 200)
                             console.log(
-                                `Failed to update GitHub issue state for ${
-                                    data.team.key
-                                }-${data.number} [${
-                                    data.id
-                                }] on GitHub issue #${
-                                    syncedIssue.githubIssueNumber
-                                } [${
-                                    syncedIssue.githubIssueId
-                                }], received status code ${
-                                    updatedIssueResponse.statusCode
-                                }, body of ${JSON.stringify(
-                                    updatedIssueResponse.json(),
-                                    null,
-                                    4
-                                )}.`
+                                getIssueUpdateError(
+                                    "state",
+                                    data,
+                                    syncedIssue,
+                                    updatedIssueResponse
+                                )
                             );
                         else
                             console.log(
@@ -483,10 +439,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                     syncedIssue.githubIssueId
                                 }], received status code ${
                                     commentResponse.statusCode
-                                }, body of ${JSON.stringify(
-                                    commentResponse.json(),
-                                    null,
-                                    4
+                                }, body of ${formatJSON(
+                                    commentResponse.json()
                                 )}.`
                             );
                         else
@@ -551,11 +505,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             data.number
                         }, received status code ${
                             createdIssueResponse.statusCode
-                        }, body of ${JSON.stringify(
-                            await createdIssueResponse.json(),
-                            null,
-                            4
-                        )}.`
+                        }, body of ${formatJSON(createdIssueResponse.json())}.`
                     );
 
                     return res.status(500).send({
@@ -601,11 +551,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                         createdIssueData.id
                                     }], received status code ${
                                         createdIssueResponse.statusCode
-                                    }, body of ${JSON.stringify(
-                                        attachmentData,
-                                        null,
-                                        4
-                                    )}.`
+                                    }, body of ${formatJSON(attachmentData)}.`
                                 );
                             else if (!attachmentData.success)
                                 console.log(
@@ -825,7 +771,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 title: issue.title,
                 description: issue.body,
                 teamId: process.env.LINEAR_TEAM_ID || "",
-                labelIds: [process.env.LINEAR_PUBLIC_LABEL_ID || ""]
+                labelIds: [LINEAR_PUBLIC_LABEL_ID || ""]
             });
 
             if (!createdIssueData.success) {
@@ -872,10 +818,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                             issue.id
                                         }], received status code ${
                                             titleRenameResponse.statusCode
-                                        }, body of ${JSON.stringify(
-                                            titleRenameResponse.json(),
-                                            null,
-                                            4
+                                        }, body of ${formatJSON(
+                                            titleRenameResponse.json()
                                         )}.`
                                     );
                                 else
@@ -914,10 +858,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                             issue.id
                                         }], received status code ${
                                             attachmentResponse.statusCode
-                                        }, body of ${JSON.stringify(
-                                            attachmentData,
-                                            null,
-                                            4
+                                        }, body of ${formatJSON(
+                                            attachmentData
                                         )}.`
                                     );
                                 else if (!attachmentData.success)

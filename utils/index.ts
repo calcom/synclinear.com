@@ -24,6 +24,10 @@ export const copyToClipboard = (text: string) => {
     navigator?.clipboard?.writeText(text);
 };
 
+export const formatJSON = (body: Object): string => {
+    return JSON.stringify(body, null, 4);
+};
+
 export const encrypt = (text: string): { hash: string; initVector: string } => {
     const algorithm = "aes-256-ctr";
     const secret = process.env.ENCRYPTION_KEY;
@@ -305,3 +309,4 @@ export const getAttachmentQuery = (
 export const isIssue = (req: NextApiRequest): boolean => {
     return req.headers["x-github-event"] === "issues";
 };
+
