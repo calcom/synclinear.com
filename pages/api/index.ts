@@ -1,4 +1,3 @@
-import { VercelRequest, VercelResponse } from "@vercel/node";
 import petitio from "petitio";
 import { components } from "@octokit/openapi-types";
 import { LinearWebhookPayload } from "../../typings";
@@ -11,6 +10,7 @@ import {
 } from "@octokit/webhooks-types";
 import { LinearClient } from "@linear/sdk";
 import prisma from "../../prisma";
+import { NextApiRequest, NextApiResponse } from "next";
 
 const LINEAR_PUBLIC_LABEL_ID = process.env.LINEAR_PUBLIC_LABEL_ID || "";
 const LINEAR_CANCELED_STATE_ID = process.env.LINEAR_CANCELED_STATE_ID || "";
@@ -23,7 +23,7 @@ const githubBaseURL = `https://api.github.com/repos/${process.env.GITHUB_OWNER}/
 
 const linear = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
 
-export default async (req: VercelRequest, res: VercelResponse) => {
+export default async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method !== "POST")
         return res.status(405).send({
             success: false,
