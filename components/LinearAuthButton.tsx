@@ -1,6 +1,6 @@
 import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
-import { LinearObject, LinearTeam } from "../typings";
+import { LinearContext, LinearObject, LinearTeam } from "../typings";
 import {
     getLinearAuthURL,
     getLinearContext,
@@ -11,11 +11,11 @@ import {
 import { v4 as uuid } from "uuid";
 
 interface IProps {
-    onPasteToken: () => void;
-    onDeployWebhook: () => void;
+    onAuth: (apiKey: string) => void;
+    onDeployWebhook: (context: LinearContext) => void;
 }
 
-const LinearAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
+const LinearAuthButton = ({ onAuth, onDeployWebhook }: IProps) => {
     const [accessToken, setAccessToken] = useState("");
     const [teams, setTeams] = useState<Array<LinearTeam>>([]);
     const [user, setUser] = useState<LinearObject>();
@@ -58,6 +58,8 @@ const LinearAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
     useEffect(() => {
         if (!accessToken) return;
 
+        onAuth(accessToken);
+
         getLinearContext(accessToken)
             .then(res => {
                 if (!res?.data?.teams || !res.data?.viewer)
@@ -65,7 +67,6 @@ const LinearAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
 
                 setTeams(res.data.teams.nodes);
                 setUser(res.data.viewer);
-                onPasteToken();
             })
             .catch(err => alert(err));
     }, [accessToken]);
@@ -80,14 +81,16 @@ const LinearAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
     const deployWebhook = useCallback(() => {
         if (!chosenTeam || deployed) return;
 
-        saveLinearContext(accessToken, chosenTeam, user).catch(err =>
-            alert(err)
-        );
+        saveLinearContext(accessToken, chosenTeam).catch(err => alert(err));
 
         setLinearWebhook(accessToken, getWebhookURL(), chosenTeam.id)
             .then(() => {
                 setDeployed(true);
-                onDeployWebhook();
+                onDeployWebhook({
+                    userId: user.id,
+                    teamId: chosenTeam.id,
+                    apiKey: accessToken
+                });
             })
             .catch(err => alert(err));
 

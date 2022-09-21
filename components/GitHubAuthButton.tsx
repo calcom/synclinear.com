@@ -1,19 +1,20 @@
 import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
-import { GitHubRepo } from "../typings";
+import { GitHubContext, GitHubRepo } from "../typings";
 import { getGitHubAuthURL, saveGitHubContext, setGitHubWebook } from "../utils";
 import { v4 as uuid } from "uuid";
 import { GITHUB } from "../utils/constants";
 
 interface IProps {
-    onPasteToken: () => void;
-    onDeployWebhook: () => void;
+    onAuth: (apiKey: string) => void;
+    onDeployWebhook: (context: GitHubContext) => void;
 }
 
-const GitHubAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
+const GitHubAuthButton = ({ onAuth, onDeployWebhook }: IProps) => {
     const [accessToken, setAccessToken] = useState("");
     const [repos, setRepos] = useState<GitHubRepo[]>([]);
     const [chosenRepo, setChosenRepo] = useState<GitHubRepo>();
+    const [user, setUser] = useState<GitHubRepo>();
     const [deployed, setDeployed] = useState(false);
 
     const openAuthPage = () => {
@@ -61,6 +62,8 @@ const GitHubAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
     useEffect(() => {
         if (!accessToken) return;
 
+        onAuth(accessToken);
+
         fetch(GITHUB.LIST_REPOS_ENDPOINT, {
             headers: { Authorization: `Bearer ${accessToken}` }
         })
@@ -71,8 +74,14 @@ const GitHubAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
                         return { id: repo.id, name: repo.full_name };
                     })
                 );
-                onPasteToken();
             })
+            .catch(err => alert(err));
+
+        fetch(GITHUB.USER_ENDPOINT, {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        })
+            .then(res => res.json())
+            .then(res => setUser({ id: res.id, name: res.login }))
             .catch(err => alert(err));
     }, [accessToken]);
 
@@ -80,9 +89,7 @@ const GitHubAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
         if (!chosenRepo || deployed) return;
 
         const webhookSecret = `${uuid()}`;
-        saveGitHubContext(chosenRepo, webhookSecret, accessToken).catch(err =>
-            alert(err)
-        );
+        saveGitHubContext(chosenRepo).catch(err => alert(err));
 
         setGitHubWebook(accessToken, chosenRepo, webhookSecret)
             .then(res => res.json())
@@ -92,7 +99,12 @@ const GitHubAuthButton = ({ onPasteToken, onDeployWebhook }: IProps) => {
                     return;
                 }
                 setDeployed(true);
-                onDeployWebhook();
+                onDeployWebhook({
+                    userId: user.id,
+                    repoId: chosenRepo.id,
+                    webhookSecret,
+                    apiKey: accessToken
+                });
             })
             .catch(err => alert(err));
     }, [accessToken, chosenRepo, deployed]);
