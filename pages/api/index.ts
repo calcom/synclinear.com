@@ -16,6 +16,8 @@ import {
     formatJSON,
     getAttachmentQuery,
     getGitHubFooter,
+    getLinearFooter,
+    getSyncFooter,
     isIssue
 } from "../../utils";
 import { LINEAR } from "../../utils/constants";
@@ -127,12 +129,12 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         body: `${data.description}${
                             issueCreator.id !== linearUserId
                                 ? getGitHubFooter(issueCreator.name)
-                                : ""
+                                : getSyncFooter()
                         }`
                     })
                     .send();
 
-                if (createdIssueResponse.statusCode !== 201) {
+                if (createdIssueResponse.statusCode > 299) {
                     console.log(
                         `Failed to create GitHub issue for ${data.team.key}-${
                             data.number
@@ -233,7 +235,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         })
                         .send()
                         .then(commentResponse => {
-                            if (commentResponse.statusCode !== 201)
+                            if (commentResponse.statusCode > 299)
                                 console.log(
                                     getOtherUpdateError(
                                         "comment",
@@ -281,7 +283,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     })
                     .send()
                     .then(updatedIssueResponse => {
-                        if (updatedIssueResponse.statusCode !== 200)
+                        if (updatedIssueResponse.statusCode > 299)
                             console.log(
                                 getIssueUpdateError(
                                     "title",
@@ -328,12 +330,12 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         body: `${data.description}${
                             issueCreator.id !== linearUserId
                                 ? getGitHubFooter(issueCreator.name)
-                                : ""
+                                : getSyncFooter()
                         }`
                     })
                     .send()
                     .then(updatedIssueResponse => {
-                        if (updatedIssueResponse.statusCode !== 200)
+                        if (updatedIssueResponse.statusCode > 299)
                             console.log(
                                 getIssueUpdateError(
                                     "description",
@@ -398,7 +400,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     })
                     .send()
                     .then(updatedIssueResponse => {
-                        if (updatedIssueResponse.statusCode !== 200)
+                        if (updatedIssueResponse.statusCode > 299)
                             console.log(
                                 getIssueUpdateError(
                                     "state",
@@ -484,7 +486,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 actionType === "Issue" &&
                 data.labelIds.includes(publicLabelId)
             ) {
-                if (data.creatorId === linearUserId) {
+                if (
+                    data.creatorId === linearUserId &&
+                    data.body.includes("Linear-GitHub Sync")
+                ) {
                     console.log(
                         `Skipping over issue creation for ${data.id} as it is caused by sync.`
                     );
@@ -516,22 +521,20 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 const issueCreator = await linear.user(data.creatorId);
 
                 const createdIssueResponse = await petitio(
-                    `${githubBaseURL}`,
+                    githubBaseURL,
                     "POST"
                 )
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
-                        body: `${data.description}${
-                            issueCreator.id !== linearUserId
-                                ? getGitHubFooter(issueCreator.name)
-                                : ""
-                        }`
+                        body: `${data.description}${getGitHubFooter(
+                            issueCreator.name
+                        )}`
                     })
                     .send();
 
-                if (createdIssueResponse.statusCode !== 201) {
+                if (createdIssueResponse.statusCode > 299) {
                     console.log(
                         `Failed to create GitHub issue for ${data.team.key}-${
                             data.number
@@ -570,17 +573,13 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             } = attachmentResponse.json();
                             if (attachmentResponse.statusCode !== 201)
                                 console.log(
-                                    `Failed to create attachment for ${
-                                        data.team.key
-                                    }-${data.number} [${
-                                        data.id
-                                    }] for GitHub issue #${
-                                        createdIssueData.number
-                                    } [${
-                                        createdIssueData.id
-                                    }], received status code ${
-                                        createdIssueResponse.statusCode
-                                    }, body of ${formatJSON(attachmentData)}.`
+                                    getOtherUpdateError(
+                                        "attachment",
+                                        data,
+                                        createdIssueData,
+                                        createdIssueResponse,
+                                        attachmentData
+                                    )
                                 );
                             else if (!attachmentData.success)
                                 console.log(
@@ -640,19 +639,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             GitHubRepo: { repoName: repoFullName }
         } = sync;
 
-        const linearKeyDecrypted = decrypt(linearApiKey, linearApiKeyIV);
-        const linear = new LinearClient({
-            apiKey: linearKeyDecrypted
-        });
-
-        const githubAuthHeader = `token ${decrypt(
-            githubApiKey,
-            githubApiKeyIV
-        )}`;
-
-        const userAgentHeader = `${repoFullName}, linear-github-sync`;
-        const githubBaseURL = `https://api.github.com/repos/${repoFullName}/issues`;
-
         const webhookSecret = sync.githubWebhookSecret ?? "";
         const HMAC = createHmac("sha256", webhookSecret);
         const digest = Buffer.from(
@@ -673,20 +659,35 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             });
         }
 
-        if (sender.login === "spacedrive-bot") {
-            console.log(`Skipping over request as it is created by sync.`);
+        const linearKeyDecrypted = decrypt(linearApiKey, linearApiKeyIV);
+        const linear = new LinearClient({
+            apiKey: linearKeyDecrypted
+        });
 
-            return res.status(200).send({
-                success: true,
-                message: `Skipping over request as it is created by sync.`
-            });
-        }
+        const githubAuthHeader = `token ${decrypt(
+            githubApiKey,
+            githubApiKeyIV
+        )}`;
+
+        const userAgentHeader = `${repoFullName}, linear-github-sync`;
+        const githubBaseURL = `https://api.github.com/repos/${repoFullName}/issues`;
 
         if (
             req.headers["x-github-event"] === "issue_comment" &&
             action === "created"
         ) {
             const { issue, comment }: IssueCommentCreatedEvent = req.body;
+
+            if (comment.body.includes("on Linear")) {
+                console.log(
+                    `Skipping over comment creation for GitHub issue #${issue.number} as it is caused by sync.`
+                );
+
+                return res.status(200).send({
+                    success: true,
+                    message: `Skipping over comment as it is created by sync.`
+                });
+            }
 
             const syncedIssue = await prisma.syncedIssue.findFirst({
                 where: {
@@ -708,7 +709,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             await linear
                 .commentCreate({
                     issueId: syncedIssue.linearIssueId,
-                    body: `${comment.body}\n— [${sender.login}](${sender.html_url}) on GitHub`
+                    body: `${comment.body}${getLinearFooter(sender)}`
                 })
                 .then(comment => {
                     comment.comment?.then(commentData => {
@@ -808,9 +809,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             : toDoStateId
                 })
                 .then(updatedIssue => {
-                    console.log(-1);
                     updatedIssue.issue?.then(updatedIssueData => {
-                        console.log(-2);
                         updatedIssueData.team?.then(teamData => {
                             if (!updatedIssue.success)
                                 console.log(
@@ -834,7 +833,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
             const createdIssueData = await linear.issueCreate({
                 title: issue.title,
-                description: issue.body,
+                description: `${issue.body}${getSyncFooter()}`,
                 teamId: linearTeamId,
                 labelIds: [publicLabelId]
             });
@@ -873,7 +872,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             })
                             .send()
                             .then(titleRenameResponse => {
-                                if (titleRenameResponse.statusCode !== 200)
+                                if (titleRenameResponse.statusCode > 299)
                                     console.log(
                                         `Failed to update GitHub issue title for ${
                                             team.key
@@ -913,19 +912,19 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                         id: string;
                                     };
                                 } = attachmentResponse.json();
-                                if (attachmentResponse.statusCode !== 200)
+                                if (attachmentResponse.statusCode > 299)
                                     console.log(
-                                        `Failed to create attachment for ${
-                                            team.key
-                                        }-${createdIssue.number} [${
-                                            createdIssue.id
-                                        }] for GitHub issue #${issue.number} [${
-                                            issue.id
-                                        }], received status code ${
-                                            attachmentResponse.statusCode
-                                        }, body of ${formatJSON(
+                                        getOtherUpdateError(
+                                            "attachment",
+                                            {
+                                                team: team,
+                                                id: createdIssue.id,
+                                                number: createdIssue.number
+                                            },
+                                            issue,
+                                            attachmentResponse,
                                             attachmentData
-                                        )}.`
+                                        )
                                     );
                                 else if (!attachmentData.success)
                                     console.log(

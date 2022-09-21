@@ -199,8 +199,19 @@ export const saveLinearContext = async (token: string, team: LinearTeam) => {
     return response.json();
 };
 
+export const getLinearFooter = (sender: {
+    login: string;
+    html_url: string;
+}): string => {
+    return `\n[${sender.login}](${sender.html_url}) on GitHub`;
+};
+
 export const getGitHubFooter = (userName: string): string => {
     return `\n<sub>${userName} on Linear</sub>`;
+};
+
+export const getSyncFooter = (): string => {
+    return `\nFrom Linear-GitHub Sync`;
 };
 
 export const getGitHubTokenURL = (): string => {
