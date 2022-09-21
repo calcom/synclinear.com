@@ -39,10 +39,14 @@ export default async function handle(
         linearApiKeyIV
     };
 
-    const result = await prisma.sync.create({
-        data
-    });
+    try {
+        const result = await prisma.sync.create({
+            data
+        });
 
-    res.status(200).json(result);
+        return res.status(200).json(result);
+    } catch (err) {
+        return res.status(404).send({ error: err });
+    }
 }
 

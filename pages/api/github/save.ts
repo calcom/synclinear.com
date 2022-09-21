@@ -15,15 +15,19 @@ export default async function handle(
 
     const { repoId, repoName } = JSON.parse(req.body);
 
-    const result = await prisma.gitHubRepo.upsert({
-        where: { repoId: repoId },
-        update: { repoName },
-        create: {
-            repoId,
-            repoName
-        }
-    });
+    try {
+        const result = await prisma.gitHubRepo.upsert({
+            where: { repoId: repoId },
+            update: { repoName },
+            create: {
+                repoId,
+                repoName
+            }
+        });
 
-    res.status(200).json(result);
+        return res.status(200).json(result);
+    } catch (err) {
+        return res.status(404).send({ error: err });
+    }
 }
 

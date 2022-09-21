@@ -22,25 +22,29 @@ export default async function handle(
         toDoStateId
     } = JSON.parse(req.body);
 
-    const result = await prisma.linearTeam.upsert({
-        where: { teamId: teamId },
-        update: {
-            teamName,
-            publicLabelId,
-            canceledStateId,
-            doneStateId,
-            toDoStateId
-        },
-        create: {
-            teamId,
-            teamName,
-            publicLabelId,
-            canceledStateId,
-            doneStateId,
-            toDoStateId
-        }
-    });
+    try {
+        const result = await prisma.linearTeam.upsert({
+            where: { teamId: teamId },
+            update: {
+                teamName,
+                publicLabelId,
+                canceledStateId,
+                doneStateId,
+                toDoStateId
+            },
+            create: {
+                teamId,
+                teamName,
+                publicLabelId,
+                canceledStateId,
+                doneStateId,
+                toDoStateId
+            }
+        });
 
-    res.json(result);
+        return res.status(200).json(result);
+    } catch (err) {
+        return res.status(404).send({ error: err });
+    }
 }
 
