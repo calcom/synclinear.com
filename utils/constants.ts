@@ -17,7 +17,9 @@ export const GITHUB = {
     TOKEN_NOTE: "Linear-GitHub Sync",
     WEBHOOK_EVENTS: ["issues", "issue_comment", "label"],
     LIST_REPOS_ENDPOINT: "https://api.github.com/user/repos?per_page=100",
-    USER_ENDPOINT: "https://api.github.com/user"
+    USER_ENDPOINT: "https://api.github.com/user",
+    ICON_URL:
+        "https://cdn.discordapp.com/attachments/937628023497297930/988735284504043520/github.png"
 };
 
 export const TIMEOUTS = {

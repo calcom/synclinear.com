@@ -11,15 +11,17 @@ import {
 import { LinearClient } from "@linear/sdk";
 import prisma from "../../prisma";
 import { NextApiRequest, NextApiResponse } from "next";
+import { getAttachmentQuery } from "../../utils";
 
 const LINEAR_PUBLIC_LABEL_ID = process.env.LINEAR_PUBLIC_LABEL_ID || "";
 const LINEAR_CANCELED_STATE_ID = process.env.LINEAR_CANCELED_STATE_ID || "";
 const LINEAR_DONE_STATE_ID = process.env.LINEAR_DONE_STATE_ID || "";
 const LINEAR_TODO_STATE_ID = process.env.LINEAR_TODO_STATE_ID || "";
 
-const userAgentHeader = `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}, linear-github-sync`;
+const repoFullName = `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}`;
+const userAgentHeader = `${repoFullName}, linear-github-sync`;
 const githubAuthHeader = `token ${process.env.GITHUB_API_KEY}`;
-const githubBaseURL = `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`;
+const githubBaseURL = `https://api.github.com/repos/${repoFullName}/issues`;
 
 const linear = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
 
@@ -138,20 +140,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         )
                         .header("Content-Type", "application/json")
                         .body({
-                            query: `mutation {
-                                attachmentCreate(input:{
-                                    issueId: "${data.id}"
-                                    title: "GitHub Issue #${createdIssueData.number}"
-                                    subtitle: "Synchronized"
-                                    url: "https://github.com/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${createdIssueData.number}"
-                                    iconUrl: "https://cdn.discordapp.com/attachments/937628023497297930/988735284504043520/github.png"
-                                }) {
-                                    success
-                                    attachment {
-                                        id
-                                    }
-                                }
-                            }`
+                            query: getAttachmentQuery(
+                                data.id,
+                                createdIssueData.number,
+                                repoFullName
+                            )
                         })
                         .send()
                         .then(attachmentResponse => {
@@ -581,20 +574,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         )
                         .header("Content-Type", "application/json")
                         .body({
-                            query: `mutation {
-                        attachmentCreate(input:{
-                            issueId: "${data.id}"
-                            title: "GitHub Issue #${createdIssueData.number}"
-                            subtitle: "Synchronized"
-                            url: "https://github.com/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${createdIssueData.number}"
-                            iconUrl: "https://cdn.discordapp.com/attachments/937628023497297930/988735284504043520/github.png"
-                        }) {
-                            success
-                            attachment {
-                                id
-                            }
-                        }
-                    }`
+                            query: getAttachmentQuery(
+                                data.id,
+                                createdIssueData.number,
+                                repoFullName
+                            )
                         })
                         .send()
                         .then(attachmentResponse => {
@@ -915,20 +899,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             )
                             .header("Content-Type", "application/json")
                             .body({
-                                query: `mutation {
-                        attachmentCreate(input:{
-                            issueId: "${createdIssue.id}"
-                            title: "GitHub Issue #${issue.number}"
-                            subtitle: "Synchronized"
-                            url: "https://github.com/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${issue.number}"
-                            iconUrl: "https://cdn.discordapp.com/attachments/937628023497297930/988735284504043520/github.png"
-                        }) {
-                            success
-                            attachment {
-                                id
-                            }
-                        }
-                    }`
+                                query: getAttachmentQuery(
+                                    createdIssue.id,
+                                    issue.number,
+                                    repoFullName
+                                )
                             })
                             .send()
                             .then(attachmentResponse => {

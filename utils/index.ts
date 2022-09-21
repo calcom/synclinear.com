@@ -280,3 +280,24 @@ export const saveSync = async (
     return response.json();
 };
 
+export const getAttachmentQuery = (
+    issueId: string,
+    issueNumber: number,
+    repoFullName: string
+): string => {
+    return `mutation {
+        attachmentCreate(input:{
+            issueId: "${issueId}"
+            title: "GitHub Issue #${issueNumber}"
+            subtitle: "Synchronized"
+            url: "https://github.com/${repoFullName}/issues/${issueNumber}"
+            iconUrl: "${GITHUB.ICON_URL}"
+        }) {
+            success
+            attachment {
+                id
+            }
+        }
+    }`;
+};
+
