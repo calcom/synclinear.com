@@ -63,3 +63,17 @@ export interface GitHubRepo {
     id: string;
     name: string;
 }
+
+export interface LinearContext {
+    userId: string;
+    teamId: string;
+    apiKey: string;
+}
+
+export interface GitHubContext {
+    userId: string;
+    repoId: string;
+    webhookSecret: string;
+    apiKey: string;
+}
+

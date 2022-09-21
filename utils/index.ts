@@ -1,5 +1,10 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
-import { GitHubRepo, LinearObject, LinearTeam } from "../typings";
+import {
+    GitHubContext,
+    GitHubRepo,
+    LinearContext,
+    LinearTeam
+} from "../typings";
 import { linearQuery } from "./apollo";
 import { GITHUB, LINEAR } from "./constants";
 
@@ -157,11 +162,7 @@ export const createLinearPublicLabel = async (
     return await linearQuery(mutation, token, { teamID });
 };
 
-export const saveLinearContext = async (
-    token: string,
-    team: LinearTeam,
-    user: LinearObject
-) => {
+export const saveLinearContext = async (token: string, team: LinearTeam) => {
     const labels = [
         ...(team.states?.nodes ?? []),
         ...(team.labels?.nodes ?? [])
@@ -177,16 +178,12 @@ export const saveLinearContext = async (
     }
 
     const data = {
-        userId: user.id,
-        userName: user.name,
         teamId: team.id,
         teamName: team.name,
-        apiKey: token,
         publicLabelId: labels.find(n => n.name === "Public")?.id,
         canceledStateId: labels.find(n => n.name === "Canceled")?.id,
         doneStateId: labels.find(n => n.name === "Done")?.id,
-        toDoStateId: labels.find(n => n.name === "Todo")?.id,
-        inProgressStateId: labels.find(n => n.name === "In Progress")?.id
+        toDoStateId: labels.find(n => n.name === "Todo")?.id
     };
 
     const response = await fetch("/api/linear/save", {
@@ -224,16 +221,10 @@ export const getGitHubAuthURL = (verificationCode: string): string => {
     return authURL;
 };
 
-export const saveGitHubContext = async (
-    repo: GitHubRepo,
-    webhookSecret: string,
-    apiKey: string
-) => {
+export const saveGitHubContext = async (repo: GitHubRepo) => {
     const data = {
         repoId: repo.id,
-        name: repo.name,
-        webhookSecret,
-        apiKey
+        repoName: repo.name
     };
 
     const response = await fetch("/api/github/save", {
@@ -270,5 +261,22 @@ export const setGitHubWebook = async (
         },
         body: JSON.stringify(webhookData)
     });
+};
+
+export const saveSync = async (
+    linearContext: LinearContext,
+    githubContext: GitHubContext
+) => {
+    const data = {
+        github: { ...githubContext },
+        linear: { ...linearContext }
+    };
+
+    const response = await fetch("/api/save", {
+        method: "POST",
+        body: JSON.stringify(data)
+    });
+
+    return response.json();
 };
 

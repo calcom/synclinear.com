@@ -16,7 +16,8 @@ export const GITHUB = {
     NEW_TOKEN_URL: "https://github.com/settings/tokens/new",
     TOKEN_NOTE: "Linear-GitHub Sync",
     WEBHOOK_EVENTS: ["issues", "issue_comment", "label"],
-    LIST_REPOS_ENDPOINT: "https://api.github.com/user/repos?per_page=100"
+    LIST_REPOS_ENDPOINT: "https://api.github.com/user/repos?per_page=100",
+    USER_ENDPOINT: "https://api.github.com/user"
 };
 
 export const TIMEOUTS = {
