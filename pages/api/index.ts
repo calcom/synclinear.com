@@ -12,6 +12,7 @@ import { LinearClient } from "@linear/sdk";
 import prisma from "../../prisma";
 import { NextApiRequest, NextApiResponse } from "next";
 import { getAttachmentQuery } from "../../utils";
+import { LINEAR } from "../../utils/constants";
 
 const LINEAR_PUBLIC_LABEL_ID = process.env.LINEAR_PUBLIC_LABEL_ID || "";
 const LINEAR_CANCELED_STATE_ID = process.env.LINEAR_CANCELED_STATE_ID || "";
@@ -133,7 +134,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     );
 
                 await Promise.all([
-                    petitio("https://api.linear.app/graphql", "POST")
+                    petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
                         .header(
                             "Authorization",
                             `Bearer ${process.env.LINEAR_API_KEY}`
@@ -567,7 +568,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     await createdIssueResponse.json();
 
                 await Promise.all([
-                    petitio("https://api.linear.app/graphql", "POST")
+                    petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
                         .header(
                             "Authorization",
                             `Bearer ${process.env.LINEAR_API_KEY}`
@@ -892,7 +893,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                         `Created comment on GitHub issue #${issue.number} [${issue.id}] for Linear issue ${team.key}-${createdIssue.number}.`
                                     );
                             }),
-                        petitio("https://api.linear.app/graphql", "POST")
+                        petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
                             .header(
                                 "Authorization",
                                 `Bearer ${process.env.LINEAR_API_KEY}`
