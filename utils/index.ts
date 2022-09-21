@@ -199,6 +199,10 @@ export const saveLinearContext = async (token: string, team: LinearTeam) => {
     return response.json();
 };
 
+export const getGitHubFooter = (userName: string): string => {
+    return `\n<sub>${userName} on Linear</sub>`;
+};
+
 export const getGitHubTokenURL = (): string => {
     const scopes = GITHUB.SCOPES.join(",");
     const description = GITHUB.TOKEN_NOTE.split(" ").join("%20");

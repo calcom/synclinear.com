@@ -11,12 +11,15 @@ import {
 import { LinearClient } from "@linear/sdk";
 import prisma from "../../prisma";
 import { NextApiRequest, NextApiResponse } from "next";
-import { formatJSON, getAttachmentQuery, isIssue } from "../../utils";
+import {
+    decrypt,
+    formatJSON,
+    getAttachmentQuery,
+    getGitHubFooter,
+    isIssue
+} from "../../utils";
 import { LINEAR } from "../../utils/constants";
 import { getIssueUpdateError, getOtherUpdateError } from "../../utils/errors";
-
-const githubAuthHeader = `token ${process.env.GITHUB_API_KEY}`;
-const linear = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method !== "POST")
@@ -63,9 +66,23 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         const {
             linearUserId,
+            linearApiKey,
+            linearApiKeyIV,
+            githubApiKey,
+            githubApiKeyIV,
             LinearTeam: { publicLabelId, doneStateId, canceledStateId },
             GitHubRepo: { repoName: repoFullName }
         } = sync;
+
+        const linearKeyDecrypted = decrypt(linearApiKey, linearApiKeyIV);
+        const linear = new LinearClient({
+            apiKey: linearKeyDecrypted
+        });
+
+        const githubAuthHeader = `token ${decrypt(
+            githubApiKey,
+            githubApiKeyIV
+        )}`;
 
         const userAgentHeader = `${repoFullName}, linear-github-sync`;
         const githubBaseURL = `https://api.github.com/repos/${repoFullName}/issues`;
@@ -109,7 +126,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
                         body: `${data.description}${
                             issueCreator.id !== linearUserId
-                                ? `\n<sub>${issueCreator.name} on Linear</sub>`
+                                ? getGitHubFooter(issueCreator.name)
                                 : ""
                         }`
                     })
@@ -152,10 +169,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 await Promise.all([
                     petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
-                        .header(
-                            "Authorization",
-                            `Bearer ${process.env.LINEAR_API_KEY}`
-                        )
+                        .header("Authorization", `Bearer ${linearKeyDecrypted}`)
                         .header("Content-Type", "application/json")
                         .body({
                             query: getAttachmentQuery(
@@ -172,7 +186,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                     id: string;
                                 };
                             } = attachmentResponse.json();
-                            if (attachmentResponse.statusCode !== 201)
+                            if (attachmentResponse.statusCode > 299)
                                 console.log(
                                     getOtherUpdateError(
                                         "attachment",
@@ -215,7 +229,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         .header("User-Agent", userAgentHeader)
                         .header("Authorization", githubAuthHeader)
                         .body({
-                            body: `${comment.body}\n<sub>${user.name} on Linear</sub>`
+                            body: `${comment.body}${getGitHubFooter(user.name)}`
                         })
                         .send()
                         .then(commentResponse => {
@@ -313,7 +327,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .body({
                         body: `${data.description}${
                             issueCreator.id !== linearUserId
-                                ? `\n<sub>${issueCreator.name} on Linear</sub>`
+                                ? getGitHubFooter(issueCreator.name)
                                 : ""
                         }`
                     })
@@ -403,7 +417,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         if (action === "create") {
             if (actionType === "Comment") {
-                if (data.user?.id === linearUserId) {
+                if (
+                    data.user?.id === linearUserId &&
+                    data.body.includes("on GitHub")
+                ) {
                     console.log(
                         `Skipping over comment creation for ${
                             data.issue!.id
@@ -440,9 +457,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        body: `${data.body}\n<sub>${
-                            data.user!.name
-                        } on Linear</sub>`
+                        body: `${data.body}${getGitHubFooter(data.user!.name)}`
                     })
                     .send()
                     .then(commentResponse => {
@@ -510,7 +525,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
                         body: `${data.description}${
                             issueCreator.id !== linearUserId
-                                ? `\n<sub>${issueCreator.name} on Linear</sub>`
+                                ? getGitHubFooter(issueCreator.name)
                                 : ""
                         }`
                     })
@@ -536,10 +551,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 await Promise.all([
                     petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
-                        .header(
-                            "Authorization",
-                            `Bearer ${process.env.LINEAR_API_KEY}`
-                        )
+                        .header("Authorization", `Bearer ${linearKeyDecrypted}`)
                         .header("Content-Type", "application/json")
                         .body({
                             query: getAttachmentQuery(
@@ -614,6 +626,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         }
 
         const {
+            linearApiKey,
+            linearApiKeyIV,
+            githubApiKey,
+            githubApiKeyIV,
             LinearTeam: {
                 publicLabelId,
                 doneStateId,
@@ -623,6 +639,16 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             },
             GitHubRepo: { repoName: repoFullName }
         } = sync;
+
+        const linearKeyDecrypted = decrypt(linearApiKey, linearApiKeyIV);
+        const linear = new LinearClient({
+            apiKey: linearKeyDecrypted
+        });
+
+        const githubAuthHeader = `token ${decrypt(
+            githubApiKey,
+            githubApiKeyIV
+        )}`;
 
         const userAgentHeader = `${repoFullName}, linear-github-sync`;
         const githubBaseURL = `https://api.github.com/repos/${repoFullName}/issues`;
@@ -869,7 +895,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
                             .header(
                                 "Authorization",
-                                `Bearer ${process.env.LINEAR_API_KEY}`
+                                `Bearer ${linearKeyDecrypted}`
                             )
                             .header("Content-Type", "application/json")
                             .body({
