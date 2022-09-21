@@ -18,6 +18,8 @@ const LINEAR_DONE_STATE_ID = process.env.LINEAR_DONE_STATE_ID || "";
 const LINEAR_TODO_STATE_ID = process.env.LINEAR_TODO_STATE_ID || "";
 
 const userAgentHeader = `${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}, linear-github-sync`;
+const githubAuthHeader = `token ${process.env.GITHUB_API_KEY}`;
+const githubBaseURL = `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`;
 
 const linear = new LinearClient({ apiKey: process.env.LINEAR_API_KEY });
 
@@ -76,14 +78,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                 const issueCreator = await linear.user(data.creatorId);
 
                 const createdIssueResponse = await petitio(
-                    `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`,
+                    `${githubBaseURL}`,
                     "POST"
                 )
                     .header("User-Agent", userAgentHeader)
-                    .header(
-                        "Authorization",
-                        `token ${process.env.GITHUB_API_KEY}`
-                    )
+                    .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
                         body: `${data.description}${
@@ -207,14 +206,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                     const { comment, user } = linearComment;
 
                     await petitio(
-                        `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${createdIssueData.number}/comments`,
+                        `${githubBaseURL}/${createdIssueData.number}/comments`,
                         "POST"
                     )
                         .header("User-Agent", userAgentHeader)
-                        .header(
-                            "Authorization",
-                            `token ${process.env.GITHUB_API_KEY}`
-                        )
+                        .header("Authorization", githubAuthHeader)
                         .body({
                             body: `${comment.body}\n<sub>${user.name} on Linear</sub>`
                         })
@@ -266,14 +262,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                 }
 
                 await petitio(
-                    `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${syncedIssue.githubIssueNumber}`,
+                    `${githubBaseURL}/${syncedIssue.githubIssueNumber}`,
                     "PATCH"
                 )
                     .header("User-Agent", userAgentHeader)
-                    .header(
-                        "Authorization",
-                        `token ${process.env.GITHUB_API_KEY}`
-                    )
+                    .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`
                     })
@@ -326,14 +319,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                 const issueCreator = await linear.user(data.creatorId);
 
                 await petitio(
-                    `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${syncedIssue.githubIssueNumber}`,
+                    `${githubBaseURL}/${syncedIssue.githubIssueNumber}`,
                     "PATCH"
                 )
                     .header("User-Agent", userAgentHeader)
-                    .header(
-                        "Authorization",
-                        `token ${process.env.GITHUB_API_KEY}`
-                    )
+                    .header("Authorization", githubAuthHeader)
                     .body({
                         body: `${data.description}${
                             issueCreator.id !== process.env.LINEAR_USER_ID
@@ -399,14 +389,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                 }
 
                 await petitio(
-                    `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${syncedIssue.githubIssueNumber}`,
+                    `${githubBaseURL}/${syncedIssue.githubIssueNumber}`,
                     "PATCH"
                 )
                     .header("User-Agent", userAgentHeader)
-                    .header(
-                        "Authorization",
-                        `token ${process.env.GITHUB_API_KEY}`
-                    )
+                    .header("Authorization", githubAuthHeader)
                     .body({
                         state: [
                             LINEAR_DONE_STATE_ID,
@@ -480,14 +467,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                 }
 
                 await petitio(
-                    `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${syncedIssue.githubIssueNumber}/comments`,
+                    `${githubBaseURL}/${syncedIssue.githubIssueNumber}/comments`,
                     "POST"
                 )
                     .header("User-Agent", userAgentHeader)
-                    .header(
-                        "Authorization",
-                        `token ${process.env.GITHUB_API_KEY}`
-                    )
+                    .header("Authorization", githubAuthHeader)
                     .body({
                         body: `${data.body}\n<sub>${
                             data.user!.name
@@ -552,14 +536,11 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                 const issueCreator = await linear.user(data.creatorId);
 
                 const createdIssueResponse = await petitio(
-                    `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`,
+                    `${githubBaseURL}`,
                     "POST"
                 )
                     .header("User-Agent", userAgentHeader)
-                    .header(
-                        "Authorization",
-                        `token ${process.env.GITHUB_API_KEY}`
-                    )
+                    .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
                         body: `${data.description}${
@@ -898,15 +879,9 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                     );
                 } else {
                     await Promise.all([
-                        petitio(
-                            `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${issue.number}`,
-                            "PATCH"
-                        )
+                        petitio(`${githubBaseURL}/${issue.number}`, "PATCH")
                             .header("User-Agent", userAgentHeader)
-                            .header(
-                                "Authorization",
-                                `token ${process.env.GITHUB_API_KEY}`
-                            )
+                            .header("Authorization", githubAuthHeader)
                             .body({
                                 title: `[${team.key}-${createdIssue.number}] ${issue.title}`
                             })
