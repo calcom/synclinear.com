@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "../../../prisma";
-import { encrypt } from "../../../utils";
 
 // POST /api/linear/save
 export default async function handle(
@@ -15,35 +14,30 @@ export default async function handle(
         });
 
     const {
-        userId,
-        userName,
         teamId,
         teamName,
-        apiKey,
         publicLabelId,
         canceledStateId,
         doneStateId,
-        toDoStateId,
-        inProgressStateId
+        toDoStateId
     } = JSON.parse(req.body);
 
-    // Encrypt the API key
-    const { hash: apiKeyEncrypted, initVector: apiKeyInitVector } =
-        encrypt(apiKey);
-
-    const result = await prisma.linearTeam.create({
-        data: {
-            userId,
-            userName,
-            teamId,
+    const result = await prisma.linearTeam.upsert({
+        where: { teamId: teamId },
+        update: {
             teamName,
-            apiKey: apiKeyEncrypted,
-            apiKeyInitVector,
             publicLabelId,
             canceledStateId,
             doneStateId,
-            toDoStateId,
-            inProgressStateId
+            toDoStateId
+        },
+        create: {
+            teamId,
+            teamName,
+            publicLabelId,
+            canceledStateId,
+            doneStateId,
+            toDoStateId
         }
     });
 

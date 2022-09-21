@@ -196,7 +196,8 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                             linearIssueId: data.id,
                             linearTeamId: data.teamId,
                             githubIssueNumber: createdIssueData.number,
-                            linearIssueNumber: data.number
+                            linearIssueNumber: data.number,
+                            githubRepoId: createdIssueData.repository.id
                         }
                     })
                 ] as Promise<any>[]);
@@ -674,15 +675,25 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                             linearIssueId: data.id,
                             linearTeamId: data.teamId,
                             githubIssueNumber: createdIssueData.number,
-                            linearIssueNumber: data.number
+                            linearIssueNumber: data.number,
+                            githubRepoId: createdIssueData.repository.id
                         }
                     })
                 ]);
             }
         }
     } else {
-        const githubRepo = await prisma.gitHubRepo.findFirst();
-        const webhookSecret = githubRepo.webhookSecret ?? "";
+        const { repository, sender } = req.body;
+
+        const sync = await prisma.sync.findFirst({
+            where: {
+                githubRepoId: repository.id,
+                githubUserId: sender.id
+            }
+        });
+
+        const webhookSecret = sync.githubWebhookSecret ?? "";
+
         const HMAC = createHmac("sha256", webhookSecret);
 
         const digest = Buffer.from(
@@ -1006,7 +1017,8 @@ export default async (req: VercelRequest, res: VercelResponse) => {
                                 githubIssueId: issue.id,
                                 linearIssueId: createdIssue.id,
                                 linearIssueNumber: createdIssue.number,
-                                linearTeamId: team.id
+                                linearTeamId: team.id,
+                                githubRepoId: repository.id
                             }
                         })
                     ]);

@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import prisma from "../../../prisma";
-import { encrypt } from "../../../utils";
 
 // POST /api/github/save
 export default async function handle(
@@ -14,19 +13,14 @@ export default async function handle(
             message: "Only POST requests are accepted."
         });
 
-    const { repoId, name, webhookSecret, apiKey } = JSON.parse(req.body);
+    const { repoId, repoName } = JSON.parse(req.body);
 
-    // Encrypt the API key
-    const { hash: apiKeyEncrypted, initVector: apiKeyInitVector } =
-        encrypt(apiKey);
-
-    const result = await prisma.gitHubRepo.create({
-        data: {
+    const result = await prisma.gitHubRepo.upsert({
+        where: { repoId: repoId },
+        update: { repoName },
+        create: {
             repoId,
-            name,
-            webhookSecret,
-            apiKey: apiKeyEncrypted,
-            apiKeyInitVector
+            repoName
         }
     });
 
