@@ -31,8 +31,6 @@ const index = () => {
     // Save the context to localStorage or server
     useEffect(() => {
         if (linearContext.apiKey) {
-            console.log("saving linearContext", linearContext);
-
             localStorage.setItem(
                 "linearContext",
                 JSON.stringify(linearContext)
@@ -45,24 +43,18 @@ const index = () => {
             );
         }
 
-        console.log(gitHubContext);
-        console.log(linearContext);
-
         if (linearContext.teamId && gitHubContext.repoId) {
-            console.log("saving to server");
-
             saveSync(linearContext, gitHubContext);
             localStorage.clear();
         }
-
-        return () => {
-            console.log("navving away");
-        };
     }, [gitHubContext, linearContext]);
 
     return (
-        <div className="w-screen h-screen center gap-40">
-            <h1>Linear-GitHub Sync</h1>
+        <div className="w-screen h-screen center gap-28">
+            <div className="space-y-8 text-center">
+                <h1>Linear-GitHub Sync</h1>
+                <h2>End-to-end sync of Linear tickets and GitHub issues</h2>
+            </div>
             <div className="w-full flex justify-center items-start gap-20">
                 <LinearAuthButton
                     onAuth={(apiKey: string) =>
