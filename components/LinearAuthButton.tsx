@@ -13,9 +13,10 @@ import { v4 as uuid } from "uuid";
 interface IProps {
     onAuth: (apiKey: string) => void;
     onDeployWebhook: (context: LinearContext) => void;
+    restored: boolean;
 }
 
-const LinearAuthButton = ({ onAuth, onDeployWebhook }: IProps) => {
+const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
     const [accessToken, setAccessToken] = useState("");
     const [teams, setTeams] = useState<Array<LinearTeam>>([]);
     const [user, setUser] = useState<LinearObject>();
@@ -99,7 +100,10 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook }: IProps) => {
 
     return (
         <div className="center space-y-8 w-80">
-            <button onClick={openLinearAuth} disabled={!!accessToken}>
+            <button
+                onClick={openLinearAuth}
+                disabled={!!accessToken || restored}
+            >
                 <span>Connect Linear</span>
                 {accessToken && <CheckIcon className="w-6 h-6" />}
             </button>

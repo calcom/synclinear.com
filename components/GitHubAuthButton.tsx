@@ -8,9 +8,10 @@ import { GITHUB } from "../utils/constants";
 interface IProps {
     onAuth: (apiKey: string) => void;
     onDeployWebhook: (context: GitHubContext) => void;
+    restored: boolean;
 }
 
-const GitHubAuthButton = ({ onAuth, onDeployWebhook }: IProps) => {
+const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
     const [accessToken, setAccessToken] = useState("");
     const [repos, setRepos] = useState<GitHubRepo[]>([]);
     const [chosenRepo, setChosenRepo] = useState<GitHubRepo>();
@@ -111,7 +112,7 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook }: IProps) => {
 
     return (
         <div className="center space-y-8 w-80">
-            <button onClick={openAuthPage} disabled={!!accessToken}>
+            <button onClick={openAuthPage} disabled={!!accessToken || restored}>
                 <span>Connect GitHub</span>
                 {accessToken && <CheckIcon className="w-6 h-6" />}
             </button>

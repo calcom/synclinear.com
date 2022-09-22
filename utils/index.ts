@@ -14,7 +14,7 @@ export const isDev = (): boolean => {
 };
 
 export const getWebhookURL = (): string => {
-    if (isDev()) return "https://example.com";
+    if (window.location.hostname === "localhost") return "https://example.com";
     return `${window.location.origin}/api`;
 };
 
@@ -334,3 +334,4 @@ export const skipReason = (
         causedBySync ? "caused by sync" : "not synced"
     }.`;
 };
+

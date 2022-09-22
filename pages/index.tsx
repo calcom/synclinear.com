@@ -57,6 +57,7 @@ const index = () => {
             </div>
             <div className="w-full flex justify-center items-start gap-20">
                 <LinearAuthButton
+                    restored={!!linearContext.teamId}
                     onAuth={(apiKey: string) =>
                         setLinearContext({ ...linearContext, apiKey })
                     }
@@ -77,6 +78,7 @@ const index = () => {
                     />
                 </div>
                 <GitHubAuthButton
+                    restored={!!gitHubContext.repoId}
                     onAuth={(apiKey: string) =>
                         setGitHubContext({ ...gitHubContext, apiKey })
                     }
