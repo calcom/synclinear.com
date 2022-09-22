@@ -326,7 +326,7 @@ export const isIssue = (req: NextApiRequest): boolean => {
 };
 
 export const skipReason = (
-    event: "issue" | "edit" | "comment" | "state change",
+    event: "issue" | "edit" | "comment" | "state change" | "label",
     issueNumber: number | string,
     causedBySync: boolean = false
 ): string => {

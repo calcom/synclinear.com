@@ -94,6 +94,91 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             data.labelIds.includes(publicLabelId)
         ) {
             if (
+                data.labelIds.length > 1 &&
+                updatedFrom.labelIds.includes(publicLabelId)
+            ) {
+                const syncedIssue = await prisma.syncedIssue.findFirst({
+                    where: {
+                        linearIssueId: data.id,
+                        linearTeamId: data.teamId
+                    }
+                });
+
+                if (!syncedIssue) {
+                    console.log(
+                        skipReason("label", `${data.team.key}-${data.number}`)
+                    );
+
+                    return res.status(200).send({
+                        success: true,
+                        message: skipReason(
+                            "label",
+                            `${data.team.key}-${data.number}`
+                        )
+                    });
+                }
+
+                const addedLabel = data.labelIds
+                    .filter(labelId => !updatedFrom.labelIds.includes(labelId))
+                    .filter(labelId => labelId !== publicLabelId)[0];
+
+                const label = await linear.issueLabel(addedLabel);
+
+                if (!label) {
+                    return res.status(403).send({
+                        success: false,
+                        message: "Could not find label."
+                    });
+                }
+
+                const createdLabelResponse = await petitio(
+                    `https://api.github.com/repos/${repoFullName}/labels`,
+                    "POST"
+                )
+                    .header("User-Agent", userAgentHeader)
+                    .header("Authorization", githubAuthHeader)
+                    .body({
+                        name: label.name,
+                        color: label.color.replace("#", ""),
+                        description: "Created by Linear-GitHub Sync"
+                    })
+                    .send();
+
+                if (createdLabelResponse.statusCode > 299) {
+                    console.log("Could not create label.");
+                    return res.status(403).send({
+                        success: false,
+                        message: "Could not create label."
+                    });
+                }
+
+                const createdLabelData = await createdLabelResponse.json();
+
+                const appliedLabelResponse = await petitio(
+                    `${githubBaseURL}/${syncedIssue.githubIssueNumber}/labels`,
+                    "POST"
+                )
+                    .header("User-Agent", userAgentHeader)
+                    .header("Authorization", githubAuthHeader)
+                    .body({
+                        labels: [createdLabelData.name]
+                    })
+                    .send();
+
+                if (appliedLabelResponse.statusCode > 299) {
+                    console.log("Could not apply label.");
+                    return res.status(403).send({
+                        success: false,
+                        message: "Could not apply label."
+                    });
+                } else {
+                    console.log(
+                        `Applied label "${createdLabelData.name}" to issue #${syncedIssue.githubIssueNumber}.`
+                    );
+                }
+            }
+
+            if (
                 updatedFrom.labelIds &&
                 !updatedFrom.labelIds.includes(publicLabelId)
             ) {
