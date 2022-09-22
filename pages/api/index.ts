@@ -72,7 +72,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             githubApiKey,
             githubApiKeyIV,
             LinearTeam: { publicLabelId, doneStateId, canceledStateId },
-            GitHubRepo: { repoName: repoFullName }
+            GitHubRepo: { repoName: repoFullName, repoId }
         } = sync;
 
         const linearKeyDecrypted = decrypt(linearApiKey, linearApiKeyIV);
@@ -328,7 +328,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             linearTeamId: data.teamId,
                             githubIssueNumber: createdIssueData.number,
                             linearIssueNumber: data.number,
-                            githubRepoId: createdIssueData.repository.id
+                            githubRepoId: repoId
                         }
                     })
                 ] as Promise<any>[]);
@@ -571,14 +571,17 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 if (!syncedIssue) {
                     console.log(
-                        skipReason("comment", `${data.team.key}-${data.number}`)
+                        skipReason(
+                            "comment",
+                            `${data.team?.key}-${data.number}`
+                        )
                     );
 
                     return res.status(200).send({
                         success: true,
                         message: skipReason(
                             "comment",
-                            `${data.team.key}-${data.number}`
+                            `${data.team?.key}-${data.number}`
                         )
                     });
                 }
@@ -617,7 +620,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 actionType === "Issue" &&
                 data.labelIds.includes(publicLabelId)
             ) {
-                if (data.description.includes(getSyncFooter())) {
+                if (data.description?.includes(getSyncFooter())) {
                     console.log(skipReason("issue", data.id, true));
 
                     return res.status(200).send({
@@ -719,7 +722,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             linearTeamId: data.teamId,
                             githubIssueNumber: createdIssueData.number,
                             linearIssueNumber: data.number,
-                            githubRepoId: createdIssueData.repository.id
+                            githubRepoId: repoId
                         }
                     })
                 ]);
@@ -945,7 +948,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 };
             } = req.body;
 
-            if (issue.body.includes(getSyncFooter())) {
+            if (issue.body?.includes(getSyncFooter())) {
                 console.log(skipReason("edit", issue.number, true));
 
                 return res.status(200).send({
