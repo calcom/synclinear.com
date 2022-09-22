@@ -5,7 +5,8 @@ export const LINEAR = {
     SCOPES: ["write"],
     NEW_TOKEN_URL: "https://linear.app/settings/api",
     TOKEN_SECTION_HEADER: "Personal API keys",
-    GRAPHQL_ENDPOINT: "https://api.linear.app/graphql"
+    GRAPHQL_ENDPOINT: "https://api.linear.app/graphql",
+    IP_ORIGINS: ["35.231.147.226", "35.243.134.228"]
 };
 
 export const GITHUB = {

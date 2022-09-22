@@ -325,3 +325,12 @@ export const isIssue = (req: NextApiRequest): boolean => {
     return req.headers["x-github-event"] === "issues";
 };
 
+export const skipReason = (
+    event: "issue" | "edit" | "comment" | "state change",
+    issueNumber: number | string,
+    causedBySync: boolean = false
+): string => {
+    return `Skipping over ${event} for issue #${issueNumber} as it is ${
+        causedBySync ? "caused by sync" : "not synced"
+    }.`;
+};

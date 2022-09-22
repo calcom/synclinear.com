@@ -18,7 +18,8 @@ import {
     getGitHubFooter,
     getLinearFooter,
     getSyncFooter,
-    isIssue
+    isIssue,
+    skipReason
 } from "../../utils";
 import { LINEAR } from "../../utils/constants";
 import { getIssueUpdateError, getOtherUpdateError } from "../../utils/errors";
@@ -30,9 +31,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             message: "Only POST requests are accepted."
         });
     else if (
-        ["35.231.147.226", "35.243.134.228"].includes(
-            req.socket.remoteAddress || ""
-        ) &&
+        LINEAR.IP_ORIGINS.includes(req.socket.remoteAddress || "") &&
         !req.headers["x-hub-signature-256"]
     )
         return res.status(403).send({
@@ -126,11 +125,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
-                        body: `${data.description}${
-                            issueCreator.id !== linearUserId
-                                ? getGitHubFooter(issueCreator.name)
-                                : getSyncFooter()
-                        }`
+                        body: `${data.description}${getGitHubFooter(
+                            issueCreator.name
+                        )}`
                     })
                     .send();
 
@@ -263,12 +260,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 if (!syncedIssue) {
                     console.log(
-                        `Skipping over title change for ${data.team.key}-${data.number} [${data.id}] as it is not synced.`
+                        skipReason("edit", `${data.team.key}-${data.number}`)
                     );
 
                     return res.status(200).send({
                         success: true,
-                        message: `This is not a synced issue.`
+                        message: skipReason(
+                            "edit",
+                            `${data.team.key}-${data.number}`
+                        )
                     });
                 }
 
@@ -309,12 +309,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 if (!syncedIssue) {
                     console.log(
-                        `Skipping over description change for ${data.team.key}-${data.number} [${data.id}] as it is not synced.`
+                        skipReason("edit", `${data.team.key}-${data.number}`)
                     );
 
                     return res.status(200).send({
                         success: true,
-                        message: `This is not a synced issue.`
+                        message: skipReason(
+                            "edit",
+                            `${data.team.key}-${data.number}`
+                        )
                     });
                 }
 
@@ -327,11 +330,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        body: `${data.description}${
-                            issueCreator.id !== linearUserId
-                                ? getGitHubFooter(issueCreator.name)
-                                : getSyncFooter()
-                        }`
+                        body: `${data.description}${getGitHubFooter(
+                            issueCreator.name
+                        )}`
                     })
                     .send()
                     .then(updatedIssueResponse => {
@@ -354,12 +355,20 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             if (updatedFrom.stateId) {
                 if (data.user?.id === linearUserId) {
                     console.log(
-                        `Skipping over state change for ${data.team.key}-${data.number} as it is caused by sync.`
+                        skipReason(
+                            "state change",
+                            `${data.team.key}-${data.number}`,
+                            true
+                        )
                     );
 
                     return res.status(200).send({
                         success: true,
-                        message: `Skipping over state change as it is created by sync.`
+                        message: skipReason(
+                            "state change",
+                            `${data.team.key}-${data.number}`,
+                            true
+                        )
                     });
                 }
 
@@ -372,12 +381,18 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 if (!syncedIssue) {
                     console.log(
-                        `Skipping over state change for ${data.team.key}-${data.number} [${data.id}] as it is not synced.`
+                        skipReason(
+                            "state change",
+                            `${data.team.key}-${data.number}`
+                        )
                     );
 
                     return res.status(200).send({
                         success: true,
-                        message: `This is not a synced issue.`
+                        message: skipReason(
+                            "state change",
+                            `${data.team.key}-${data.number}`
+                        )
                     });
                 }
 
@@ -423,15 +438,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     data.user?.id === linearUserId &&
                     data.body.includes("on GitHub")
                 ) {
-                    console.log(
-                        `Skipping over comment creation for ${
-                            data.issue!.id
-                        } as it is caused by sync.`
-                    );
+                    console.log(skipReason("comment", data.issue!.id, true));
 
                     return res.status(200).send({
                         success: true,
-                        message: `Skipping over comment as it is created by sync.`
+                        message: skipReason("comment", data.issue!.id, true)
                     });
                 }
 
@@ -443,12 +454,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 if (!syncedIssue) {
                     console.log(
-                        `Skipping over comment for ${data.team.key}-${data.number} [${data.id}] as it is not synced.`
+                        skipReason("comment", `${data.team.key}-${data.number}`)
                     );
 
                     return res.status(200).send({
                         success: true,
-                        message: `This is not a synced issue.`
+                        message: skipReason(
+                            "comment",
+                            `${data.team.key}-${data.number}`
+                        )
                     });
                 }
 
@@ -486,17 +500,12 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 actionType === "Issue" &&
                 data.labelIds.includes(publicLabelId)
             ) {
-                if (
-                    data.creatorId === linearUserId &&
-                    data.body.includes("Linear-GitHub Sync")
-                ) {
-                    console.log(
-                        `Skipping over issue creation for ${data.id} as it is caused by sync.`
-                    );
+                if (data.description.includes(getSyncFooter())) {
+                    console.log(skipReason("issue", data.id, true));
 
                     return res.status(200).send({
                         success: true,
-                        message: `Skipping over issue as it is created by sync.`
+                        message: skipReason("issue", data.id, true)
                     });
                 }
 
@@ -518,8 +527,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
-                const issueCreator = await linear.user(data.creatorId);
-
                 const createdIssueResponse = await petitio(
                     githubBaseURL,
                     "POST"
@@ -528,9 +535,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
-                        body: `${data.description}${getGitHubFooter(
-                            issueCreator.name
-                        )}`
+                        body: `${data.description}${getSyncFooter()}`
                     })
                     .send();
 
@@ -679,13 +684,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             const { issue, comment }: IssueCommentCreatedEvent = req.body;
 
             if (comment.body.includes("on Linear")) {
-                console.log(
-                    `Skipping over comment creation for GitHub issue #${issue.number} as it is caused by sync.`
-                );
+                console.log(skipReason("comment", issue.number, true));
 
                 return res.status(200).send({
                     success: true,
-                    message: `Skipping over comment as it is created by sync.`
+                    message: skipReason("comment", issue.number, true)
                 });
             }
 
@@ -696,13 +699,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             });
 
             if (!syncedIssue) {
-                console.log(
-                    `Skipping over comment for GitHub issue #${issue.number} as it is not synced.`
-                );
+                console.log(skipReason("comment", issue.number));
 
                 return res.status(200).send({
                     success: true,
-                    message: `This is not a synced issue.`
+                    message: skipReason("comment", issue.number)
                 });
             }
 
@@ -737,13 +738,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             });
 
             if (!syncedIssue) {
-                console.log(
-                    `Skipping over issue edit for GitHub issue #${issue.number} as it is not synced.`
-                );
+                console.log(skipReason("edit", issue.number));
 
                 return res.status(200).send({
                     success: true,
-                    message: `This is not a synced issue.`
+                    message: skipReason("edit", issue.number)
                 });
             }
 
@@ -784,13 +783,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             });
 
             if (!syncedIssue) {
-                console.log(
-                    `Skipping over issue edit for GitHub issue #${issue.number} as it is not synced.`
-                );
+                console.log(skipReason("edit", issue.number));
 
                 return res.status(200).send({
                     success: true,
-                    message: `This is not a synced issue.`
+                    message: skipReason("edit", issue.number)
                 });
             }
 
@@ -830,6 +827,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     closed_at: never;
                 };
             } = req.body;
+
+            if (issue.body.includes(getSyncFooter())) {
+                console.log(skipReason("edit", issue.number, true));
+
+                return res.status(200).send({
+                    success: true,
+                    message: skipReason("edit", issue.number, true)
+                });
+            }
 
             const createdIssueData = await linear.issueCreate({
                 title: issue.title,
