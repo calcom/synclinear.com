@@ -82,6 +82,7 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
     const deployWebhook = useCallback(() => {
         if (!chosenTeam || deployed) return;
 
+        // TODO here: check if team already exists. Skip both if true.
         saveLinearContext(accessToken, chosenTeam).catch(err => alert(err));
 
         setLinearWebhook(accessToken, getWebhookURL(), chosenTeam.id)
@@ -96,7 +97,7 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
             .catch(err => alert(err));
 
         setDeployed(true);
-    }, [accessToken, chosenTeam, deployed]);
+    }, [accessToken, chosenTeam, deployed, user]);
 
     return (
         <div className="center space-y-8 w-80">
