@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
+import Footer from "../components/Footer";
 import GitHubAuthButton from "../components/GitHubAuthButton";
+import Landing from "../components/Landing";
 import LinearAuthButton from "../components/LinearAuthButton";
 import PageHead from "../components/PageHead";
 import SyncArrow from "../components/SyncArrow";
@@ -53,10 +55,10 @@ const index = () => {
     return (
         <div>
             <PageHead />
-            <div className="w-screen h-screen center gap-28">
+            <section className="w-screen h-screen center gap-28">
                 <div className="space-y-4 text-center">
                     <h1>Linear-GitHub Sync</h1>
-                    <h2>End-to-end sync of Linear tickets and GitHub issues</h2>
+                    <h3>End-to-end sync of Linear tickets and GitHub issues</h3>
                 </div>
                 <div className="w-full flex justify-center items-start gap-20">
                     <LinearAuthButton
@@ -88,7 +90,9 @@ const index = () => {
                         onDeployWebhook={setGitHubContext}
                     />
                 </div>
-            </div>
+            </section>
+            <Landing />
+            <Footer />
         </div>
     );
 };
