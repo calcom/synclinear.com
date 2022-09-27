@@ -17,6 +17,7 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
     const [chosenRepo, setChosenRepo] = useState<GitHubRepo>();
     const [user, setUser] = useState<GitHubRepo>();
     const [deployed, setDeployed] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const openAuthPage = () => {
         // Generate random code to validate against CSRF attack
@@ -31,11 +32,11 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
     useEffect(() => {
         if (accessToken) return;
 
-        // If the URL params have an auth code, we're returning from the GitHub auth page.
-        // Ensure the verification code is unchanged.
+        // If the URL params have an auth code, we're returning from the GitHub auth page
         const authResponse = new URLSearchParams(window.location.search);
         if (!authResponse.has("code")) return;
 
+        // Ensure the verification code is unchanged
         const verificationCode = localStorage.getItem("github-verification");
         if (!authResponse.get("state")?.includes("github")) return;
         if (authResponse.get("state") !== verificationCode) {
@@ -60,6 +61,7 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
             .catch(err => alert(err));
     }, []);
 
+    // Fetch the user's repos when a token is available
     useEffect(() => {
         if (!accessToken) return;
 
@@ -86,6 +88,28 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
             .catch(err => alert(err));
     }, [accessToken]);
 
+    // Disable webhook deployment button if the repo already exists
+    useEffect(() => {
+        if (!chosenRepo) return;
+
+        setLoading(true);
+
+        fetch(`/api/github/repo/${chosenRepo.id}`)
+            .then(res => res.json())
+            .then(res => {
+                if (res?.exists) {
+                    setDeployed(true);
+                } else {
+                    setDeployed(false);
+                }
+                setLoading(false);
+            })
+            .catch(err => {
+                alert(err);
+                setLoading(false);
+            });
+    }, [chosenRepo]);
+
     const deployWebhook = useCallback(() => {
         if (!chosenRepo || deployed) return;
 
@@ -108,7 +132,7 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                 });
             })
             .catch(err => alert(err));
-    }, [accessToken, chosenRepo, deployed]);
+    }, [accessToken, chosenRepo, deployed, user]);
 
     return (
         <div className="center space-y-8 w-80">
@@ -119,7 +143,7 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
             {repos.length > 0 && (
                 <div className="flex flex-col items-center space-y-4">
                     <select
-                        disabled={deployed}
+                        disabled={deployed || loading}
                         onChange={e => {
                             setChosenRepo(
                                 repos.find(repo => repo.id == e.target.value)
@@ -136,7 +160,11 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                         ))}
                     </select>
                     {chosenRepo && (
-                        <button onClick={deployWebhook} disabled={deployed}>
+                        <button
+                            onClick={deployWebhook}
+                            disabled={deployed || loading}
+                            className={`${loading ? "animate-pulse" : ""}`}
+                        >
                             <span>Deploy webhook</span>
                             {deployed ? (
                                 <CheckIcon className="w-6 h-6" />

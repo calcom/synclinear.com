@@ -2,6 +2,7 @@ import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { LinearContext, LinearObject, LinearTeam } from "../typings";
 import {
+    clearURLParams,
     getLinearAuthURL,
     getLinearContext,
     getWebhookURL,
@@ -19,17 +20,20 @@ interface IProps {
 const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
     const [accessToken, setAccessToken] = useState("");
     const [teams, setTeams] = useState<Array<LinearTeam>>([]);
-    const [user, setUser] = useState<LinearObject>();
     const [chosenTeam, setChosenTeam] = useState<LinearTeam>();
+    const [user, setUser] = useState<LinearObject>();
     const [deployed, setDeployed] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     // If present, exchange the temporary auth code for an access token
     useEffect(() => {
-        // If the URL params have an auth code, we're returning from the Linear auth page.
-        // Ensure the verification code is unchanged.
+        if (accessToken) return;
+
+        // If the URL params have an auth code, we're returning from the Linear auth page
         const authResponse = new URLSearchParams(window.location.search);
         if (!authResponse.has("code")) return;
 
+        // Ensure the verification code is unchanged
         const verificationCode = localStorage.getItem("linear-verification");
         if (!authResponse.get("state")?.includes("linear")) return;
         if (authResponse.get("state") !== verificationCode) {
@@ -49,8 +53,10 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
             .then(res => res.json())
             .then(body => {
                 if (body.access_token) setAccessToken(body.access_token);
-                else
+                else {
                     alert("No Linear access token returned. Please try again.");
+                    clearURLParams();
+                }
             })
             .catch(err => alert(err));
     }, []);
@@ -72,6 +78,28 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
             .catch(err => alert(err));
     }, [accessToken]);
 
+    // Disable webhook deployment button if the team already exists
+    useEffect(() => {
+        if (!chosenTeam) return;
+
+        setLoading(true);
+
+        fetch(`/api/linear/team/${chosenTeam.id}`)
+            .then(res => res.json())
+            .then(res => {
+                if (res?.exists) {
+                    setDeployed(true);
+                } else {
+                    setDeployed(false);
+                }
+                setLoading(false);
+            })
+            .catch(err => {
+                alert(err);
+                setLoading(false);
+            });
+    }, [chosenTeam]);
+
     const openLinearAuth = () => {
         // Generate random code to validate against CSRF attack
         const verificationCode = `linear-${uuid()}`;
@@ -82,7 +110,6 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
     const deployWebhook = useCallback(() => {
         if (!chosenTeam || deployed) return;
 
-        // TODO here: check if team already exists. Skip both if true.
         saveLinearContext(accessToken, chosenTeam).catch(err => alert(err));
 
         setLinearWebhook(accessToken, getWebhookURL(), chosenTeam.id)
@@ -111,7 +138,7 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
             {teams.length > 0 && (
                 <div className="flex flex-col items-center w-full space-y-4">
                     <select
-                        disabled={deployed}
+                        disabled={deployed || loading}
                         onChange={e =>
                             setChosenTeam(
                                 teams.find(team => team.id === e.target.value)
@@ -128,7 +155,11 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                         ))}
                     </select>
                     {chosenTeam && (
-                        <button onClick={deployWebhook} disabled={deployed}>
+                        <button
+                            onClick={deployWebhook}
+                            disabled={deployed || loading}
+                            className={`${loading ? "animate-pulse" : ""}`}
+                        >
                             <span>Deploy webhook</span>
                             {deployed ? (
                                 <CheckIcon className="w-6 h-6" />
