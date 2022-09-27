@@ -28,6 +28,11 @@ export const formatJSON = (body: Object): string => {
     return JSON.stringify(body, null, 4);
 };
 
+export const clearURLParams = () => {
+    const baseURL = window.location.href.split("?")[0];
+    window.history.replaceState({}, document.title, baseURL);
+};
+
 export const encrypt = (text: string): { hash: string; initVector: string } => {
     const algorithm = "aes-256-ctr";
     const secret = process.env.ENCRYPTION_KEY;
