@@ -140,7 +140,9 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
         <div className="center space-y-8 w-80">
             <button onClick={openAuthPage} disabled={!!accessToken || restored}>
                 <span>Connect GitHub</span>
-                {accessToken && <CheckIcon className="w-6 h-6" />}
+                {(!!accessToken || restored) && (
+                    <CheckIcon className="w-6 h-6" />
+                )}
             </button>
             {repos.length > 0 && (
                 <div className="flex flex-col items-center space-y-4">

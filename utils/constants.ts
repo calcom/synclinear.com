@@ -6,7 +6,8 @@ export const LINEAR = {
     NEW_TOKEN_URL: "https://linear.app/settings/api",
     TOKEN_SECTION_HEADER: "Personal API keys",
     GRAPHQL_ENDPOINT: "https://api.linear.app/graphql",
-    IP_ORIGINS: ["35.231.147.226", "35.243.134.228"]
+    IP_ORIGINS: ["35.231.147.226", "35.243.134.228"],
+    STORAGE_KEY: "linear-context"
 };
 
 export const GITHUB = {
@@ -20,7 +21,8 @@ export const GITHUB = {
     LIST_REPOS_ENDPOINT: "https://api.github.com/user/repos?per_page=100",
     USER_ENDPOINT: "https://api.github.com/user",
     ICON_URL:
-        "https://cdn.discordapp.com/attachments/937628023497297930/988735284504043520/github.png"
+        "https://cdn.discordapp.com/attachments/937628023497297930/988735284504043520/github.png",
+    STORAGE_KEY: "github-context"
 };
 
 export const TIMEOUTS = {

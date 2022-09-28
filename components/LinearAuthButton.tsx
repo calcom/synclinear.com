@@ -135,7 +135,9 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                 disabled={!!accessToken || restored}
             >
                 <span>Connect Linear</span>
-                {accessToken && <CheckIcon className="w-6 h-6" />}
+                {(!!accessToken || restored) && (
+                    <CheckIcon className="w-6 h-6" />
+                )}
             </button>
             {teams.length > 0 && (
                 <div className="flex flex-col items-center w-full space-y-4">

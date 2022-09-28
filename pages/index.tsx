@@ -6,7 +6,8 @@ import LinearAuthButton from "../components/LinearAuthButton";
 import PageHead from "../components/PageHead";
 import SyncArrow from "../components/SyncArrow";
 import { GitHubContext, LinearContext } from "../typings";
-import { makeSerializable, saveSync } from "../utils";
+import { saveSync } from "../utils";
+import { GITHUB, LINEAR } from "../utils/constants";
 
 const index = () => {
     const [linearContext, setLinearContext] = useState<LinearContext>({
@@ -23,18 +24,14 @@ const index = () => {
 
     // Load the saved context from localStorage
     useEffect(() => {
-        if (localStorage.getItem("linearContext")) {
+        if (localStorage.getItem(LINEAR.STORAGE_KEY)) {
             setLinearContext(
-                makeSerializable<LinearContext>(
-                    localStorage.getItem("linearContext")
-                )
+                JSON.parse(localStorage.getItem(LINEAR.STORAGE_KEY))
             );
         }
-        if (localStorage.getItem("gitHubContext")) {
+        if (localStorage.getItem(GITHUB.STORAGE_KEY)) {
             setGitHubContext(
-                makeSerializable<GitHubContext>(
-                    localStorage.getItem("gitHubContext")
-                )
+                JSON.parse(localStorage.getItem(GITHUB.STORAGE_KEY))
             );
         }
     }, []);
@@ -43,13 +40,13 @@ const index = () => {
     useEffect(() => {
         if (linearContext.apiKey) {
             localStorage.setItem(
-                "linearContext",
+                LINEAR.STORAGE_KEY,
                 JSON.stringify(linearContext)
             );
         }
         if (gitHubContext.apiKey) {
             localStorage.setItem(
-                "gitHubContext",
+                GITHUB.STORAGE_KEY,
                 JSON.stringify(gitHubContext)
             );
         }
@@ -70,7 +67,7 @@ const index = () => {
                 </div>
                 <div className="w-full flex justify-center items-start gap-20">
                     <LinearAuthButton
-                        restored={!!linearContext.teamId}
+                        restored={!!linearContext.apiKey}
                         onAuth={(apiKey: string) =>
                             setLinearContext({ ...linearContext, apiKey })
                         }
@@ -91,7 +88,7 @@ const index = () => {
                         />
                     </div>
                     <GitHubAuthButton
-                        restored={!!gitHubContext.repoId}
+                        restored={!!gitHubContext.apiKey}
                         onAuth={(apiKey: string) =>
                             setGitHubContext({ ...gitHubContext, apiKey })
                         }
