@@ -24,7 +24,11 @@ const Footer = () => {
                         Cal.com
                     </a>
                     <span>and</span>
-                    <a href="https://neat.run" rel="noreferrer" target="_blank">
+                    <a
+                        href="https://studio.neat.run"
+                        rel="noreferrer"
+                        target="_blank"
+                    >
                         Neat.run
                     </a>
                 </div>
