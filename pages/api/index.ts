@@ -18,6 +18,7 @@ import {
     getGitHubFooter,
     getLinearFooter,
     getSyncFooter,
+    inviteMember,
     isIssue,
     skipReason
 } from "../../utils";
@@ -47,9 +48,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             type: actionType
         }: LinearWebhookPayload = req.body;
 
-        const sync = await prisma.sync.findFirst({
+        const syncs = await prisma.sync.findMany({
             where: {
-                linearUserId: data.creatorId,
                 linearTeamId: data.teamId
             },
             include: {
@@ -57,6 +57,17 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 GitHubRepo: true
             }
         });
+
+        if (syncs.length === 0) {
+            return res.status(404).send({
+                success: false,
+                message: "Could not find synced user."
+            });
+        }
+
+        const sync =
+            syncs.find(sync => sync.linearUserId === data.creatorId) ??
+            syncs[0];
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
             return res.status(404).send({
@@ -88,6 +99,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         const userAgentHeader = `${repoFullName}, linear-github-sync`;
         const githubBaseURL = `https://api.github.com/repos/${repoFullName}/issues`;
 
+        // Label updated on an already-public issue
         if (
             action === "update" &&
             updatedFrom &&
@@ -210,6 +222,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 }
             }
 
+            // Public label added to an issue
             if (
                 updatedFrom.labelIds &&
                 !updatedFrom.labelIds.includes(publicLabelId)
@@ -247,6 +260,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         )}`
                     })
                     .send();
+
+                if (!syncs.some(sync => sync.linearUserId === data.creatorId)) {
+                    inviteMember(
+                        data.creatorId,
+                        data.teamId,
+                        repoFullName,
+                        linear
+                    );
+                }
 
                 if (createdIssueResponse.statusCode > 299) {
                     console.log(
@@ -658,6 +680,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         body: `${data.description}${getSyncFooter()}`
                     })
                     .send();
+
+                if (!syncs.some(sync => sync.linearUserId === data.creatorId)) {
+                    inviteMember(
+                        data.creatorId,
+                        data.teamId,
+                        repoFullName,
+                        linear
+                    );
+                }
 
                 if (createdIssueResponse.statusCode > 299) {
                     console.log(

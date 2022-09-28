@@ -1,3 +1,4 @@
+import { LinearClient } from "@linear/sdk";
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 import { NextApiRequest } from "next";
 import {
@@ -7,7 +8,7 @@ import {
     LinearTeam
 } from "../typings";
 import { linearQuery } from "./apollo";
-import { GITHUB, LINEAR } from "./constants";
+import { GENERAL, GITHUB, LINEAR } from "./constants";
 
 export const isDev = (): boolean => {
     return process.env.NODE_ENV === "development";
@@ -202,6 +203,30 @@ export const saveLinearContext = async (token: string, team: LinearTeam) => {
     });
 
     return response.json();
+};
+
+// Open a Linear ticket for the creator to authenticate with this app
+export const inviteMember = async (
+    memberId: string,
+    teamId: string,
+    repoName,
+    linearClient: LinearClient
+) => {
+    const issueCreator = await linearClient.user(memberId);
+    const message = [
+        `Hey @${issueCreator.displayName}!`,
+        `Someone on your team signed up for [Linear-GitHub Sync](${GENERAL.APP_URL}).`,
+        `To mirror issues you tag as Public in ${repoName}, simply follow the auth flow [here](${GENERAL.APP_URL}).`,
+        `If you'd like to stop seeing these messages, please ask your workspace admin to let us know!`,
+        getSyncFooter()
+    ].join("\n");
+
+    linearClient.issueCreate({
+        title: `GitHub Sync — ${issueCreator.name}, please join our workspace`,
+        description: message,
+        teamId: teamId,
+        assigneeId: memberId
+    });
 };
 
 export const getLinearFooter = (sender: {
