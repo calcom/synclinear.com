@@ -89,6 +89,11 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
             .then(res => {
                 if (res?.exists) {
                     setDeployed(true);
+                    onDeployWebhook({
+                        userId: user.id,
+                        teamId: chosenTeam.id,
+                        apiKey: accessToken
+                    });
                 } else {
                     setDeployed(false);
                 }

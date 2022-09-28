@@ -99,6 +99,11 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
             .then(res => {
                 if (res?.exists) {
                     setDeployed(true);
+                    onDeployWebhook({
+                        userId: user.id,
+                        repoId: chosenRepo.id,
+                        apiKey: accessToken
+                    });
                 } else {
                     setDeployed(false);
                 }
@@ -114,7 +119,7 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
         if (!chosenRepo || deployed) return;
 
         const webhookSecret = `${uuid()}`;
-        saveGitHubContext(chosenRepo).catch(err =>
+        saveGitHubContext(chosenRepo, webhookSecret).catch(err =>
             alert(`Error saving repo to DB: ${err}`)
         );
 
@@ -129,7 +134,6 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                 onDeployWebhook({
                     userId: user.id,
                     repoId: chosenRepo.id,
-                    webhookSecret,
                     apiKey: accessToken
                 });
             })

@@ -246,10 +246,14 @@ export const getGitHubAuthURL = (verificationCode: string): string => {
     return authURL;
 };
 
-export const saveGitHubContext = async (repo: GitHubRepo) => {
+export const saveGitHubContext = async (
+    repo: GitHubRepo,
+    webhookSecret: string
+) => {
     const data = {
         repoId: repo.id,
-        repoName: repo.name
+        repoName: repo.name,
+        webhookSecret
     };
 
     const response = await fetch("/api/github/save", {

@@ -13,7 +13,7 @@ export default async function handle(
             message: "Only POST requests are accepted."
         });
 
-    const { repoId, repoName } = JSON.parse(req.body);
+    const { repoId, repoName, webhookSecret } = JSON.parse(req.body);
 
     try {
         const result = await prisma.gitHubRepo.upsert({
@@ -21,7 +21,8 @@ export default async function handle(
             update: { repoName },
             create: {
                 repoId,
-                repoName
+                repoName,
+                webhookSecret
             }
         });
 

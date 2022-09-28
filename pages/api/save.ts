@@ -8,11 +8,12 @@ export default async function handle(
     res: NextApiResponse
 ) {
     if (!req.body)
-        return res.status(400).send({ error: "Request is missing body" });
-    if (req.method !== "POST")
+        return res.status(400).send({ message: "Request is missing body" });
+    if (req.method !== "POST") {
         return res.status(405).send({
             message: "Only POST requests are accepted."
         });
+    }
 
     const body = JSON.parse(req.body);
 
@@ -24,29 +25,26 @@ export default async function handle(
         body.github.apiKey
     );
 
-    const data = {
-        // GitHub
-        githubUserId: body.github.userId,
-        githubRepoId: body.github.repoId,
-        githubWebhookSecret: body.github.webhookSecret,
-        githubApiKey,
-        githubApiKeyIV,
-
-        // Linear
-        linearUserId: body.linear.userId,
-        linearTeamId: body.linear.teamId,
-        linearApiKey,
-        linearApiKeyIV
-    };
-
     try {
         const result = await prisma.sync.create({
-            data
+            data: {
+                // GitHub
+                githubUserId: body.github.userId,
+                githubRepoId: body.github.repoId,
+                githubApiKey,
+                githubApiKeyIV,
+
+                // Linear
+                linearUserId: body.linear.userId,
+                linearTeamId: body.linear.teamId,
+                linearApiKey,
+                linearApiKeyIV
+            }
         });
 
         return res.status(200).json(result);
     } catch (err) {
-        return res.status(404).send({ error: err });
+        return res.status(404).send({ message: err });
     }
 }
 

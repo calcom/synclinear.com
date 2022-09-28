@@ -761,11 +761,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 canceledStateId,
                 teamId: linearTeamId
             },
-            GitHubRepo: { repoName: repoFullName }
+            GitHubRepo: { repoName: repoFullName, webhookSecret }
         } = sync;
 
-        const webhookSecret = sync.githubWebhookSecret ?? "";
-        const HMAC = createHmac("sha256", webhookSecret);
+        const HMAC = createHmac("sha256", webhookSecret ?? "");
         const digest = Buffer.from(
             `sha256=${HMAC.update(JSON.stringify(req.body)).digest("hex")}`,
             "utf-8"

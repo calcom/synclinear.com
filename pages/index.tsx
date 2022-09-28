@@ -18,7 +18,6 @@ const index = () => {
     const [gitHubContext, setGitHubContext] = useState<GitHubContext>({
         userId: "",
         repoId: "",
-        webhookSecret: "",
         apiKey: ""
     });
 

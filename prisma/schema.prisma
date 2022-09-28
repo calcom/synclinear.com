@@ -50,6 +50,8 @@ model GitHubRepo {
     repoId   Int    @unique
     repoName String
 
+    webhookSecret String
+
     Sync Sync[]
 
     SyncedIssue SyncedIssue[]
@@ -63,11 +65,10 @@ model Sync {
     githubUserId Int
     linearUserId String
 
-    GitHubRepo          GitHubRepo @relation(fields: [githubRepoId], references: [repoId])
-    githubRepoId        Int
-    githubWebhookSecret String
-    githubApiKey        String
-    githubApiKeyIV      String
+    GitHubRepo     GitHubRepo @relation(fields: [githubRepoId], references: [repoId])
+    githubRepoId   Int
+    githubApiKey   String
+    githubApiKeyIV String
 
     LinearTeam     LinearTeam @relation(fields: [linearTeamId], references: [teamId])
     linearTeamId   String

@@ -73,7 +73,6 @@ export interface LinearContext {
 export interface GitHubContext {
     userId: string;
     repoId: string;
-    webhookSecret: string;
     apiKey: string;
 }
 
