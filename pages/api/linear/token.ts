@@ -17,6 +17,10 @@ export default async function handle(
 
     const { refreshToken, redirectURI } = req.body;
 
+    if (!refreshToken || !redirectURI) {
+        return res.status(400).send({ error: "Missing token or redirect URI" });
+    }
+
     // Exchange auth code for access token
     const tokenParams = new URLSearchParams({
         code: refreshToken,
@@ -36,7 +40,7 @@ export default async function handle(
         return res.status(200).json(body);
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ error: err });
+        return res.status(500).send({ error: err });
     }
 }
 
