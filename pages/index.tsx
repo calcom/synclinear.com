@@ -6,7 +6,7 @@ import LinearAuthButton from "../components/LinearAuthButton";
 import PageHead from "../components/PageHead";
 import SyncArrow from "../components/SyncArrow";
 import { GitHubContext, LinearContext } from "../typings";
-import { saveSync } from "../utils";
+import { makeSerializable, saveSync } from "../utils";
 
 const index = () => {
     const [linearContext, setLinearContext] = useState<LinearContext>({
@@ -24,10 +24,18 @@ const index = () => {
     // Load the saved context from localStorage
     useEffect(() => {
         if (localStorage.getItem("linearContext")) {
-            setLinearContext(JSON.parse(localStorage.getItem("linearContext")));
+            setLinearContext(
+                makeSerializable<LinearContext>(
+                    localStorage.getItem("linearContext")
+                )
+            );
         }
         if (localStorage.getItem("gitHubContext")) {
-            setLinearContext(JSON.parse(localStorage.getItem("gitHubContext")));
+            setGitHubContext(
+                makeSerializable<GitHubContext>(
+                    localStorage.getItem("gitHubContext")
+                )
+            );
         }
     }, []);
 

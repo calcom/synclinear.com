@@ -33,6 +33,10 @@ export const clearURLParams = () => {
     window.history.replaceState({}, document.title, baseURL);
 };
 
+export function makeSerializable<Type>(json: string | Object): Type {
+    return JSON.parse(JSON.stringify(json));
+}
+
 export const encrypt = (text: string): { hash: string; initVector: string } => {
     const algorithm = "aes-256-ctr";
     const secret = process.env.ENCRYPTION_KEY;
