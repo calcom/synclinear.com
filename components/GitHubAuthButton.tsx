@@ -58,7 +58,7 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                 if (body.access_token) setAccessToken(body.access_token);
                 else alert("No access token returned. Please try again.");
             })
-            .catch(err => alert(err));
+            .catch(err => alert(`Error fetching access token: ${err}`));
     }, []);
 
     // Fetch the user's repos when a token is available
@@ -78,14 +78,14 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                     })
                 );
             })
-            .catch(err => alert(err));
+            .catch(err => alert(`Error fetching repos: ${err}`));
 
         fetch(GITHUB.USER_ENDPOINT, {
             headers: { Authorization: `Bearer ${accessToken}` }
         })
             .then(res => res.json())
             .then(res => setUser({ id: res.id, name: res.login }))
-            .catch(err => alert(err));
+            .catch(err => alert(`Error fetching user profile: ${err}`));
     }, [accessToken]);
 
     // Disable webhook deployment button if the repo already exists
@@ -105,7 +105,7 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                 setLoading(false);
             })
             .catch(err => {
-                alert(err);
+                alert(`Error checking for existing repo: ${err}`);
                 setLoading(false);
             });
     }, [chosenRepo]);
@@ -114,7 +114,9 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
         if (!chosenRepo || deployed) return;
 
         const webhookSecret = `${uuid()}`;
-        saveGitHubContext(chosenRepo).catch(err => alert(err));
+        saveGitHubContext(chosenRepo).catch(err =>
+            alert(`Error saving repo to DB: ${err}`)
+        );
 
         setGitHubWebook(accessToken, chosenRepo, webhookSecret)
             .then(res => res.json())
@@ -131,7 +133,7 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                     apiKey: accessToken
                 });
             })
-            .catch(err => alert(err));
+            .catch(err => alert(`Error deploying webhook: ${err}`));
     }, [accessToken, chosenRepo, deployed, user]);
 
     return (

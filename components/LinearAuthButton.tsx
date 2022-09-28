@@ -58,7 +58,7 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                     clearURLParams();
                 }
             })
-            .catch(err => alert(err));
+            .catch(err => alert(`Error fetching access token: ${err}`));
     }, []);
 
     // Fetch the user ID and available teams when the token is available
@@ -75,7 +75,7 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                 setTeams(res.data.teams.nodes);
                 setUser(res.data.viewer);
             })
-            .catch(err => alert(err));
+            .catch(err => alert(`Error fetching labels: ${err}`));
     }, [accessToken]);
 
     // Disable webhook deployment button if the team already exists
@@ -95,7 +95,7 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                 setLoading(false);
             })
             .catch(err => {
-                alert(err);
+                alert(`Error checking for existing labels: ${err}`);
                 setLoading(false);
             });
     }, [chosenTeam]);
@@ -110,7 +110,9 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
     const deployWebhook = useCallback(() => {
         if (!chosenTeam || deployed) return;
 
-        saveLinearContext(accessToken, chosenTeam).catch(err => alert(err));
+        saveLinearContext(accessToken, chosenTeam).catch(err =>
+            alert(`Error saving labels to DB: ${err}`)
+        );
 
         setLinearWebhook(accessToken, getWebhookURL(), chosenTeam.id)
             .then(() => {
@@ -121,7 +123,7 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                     apiKey: accessToken
                 });
             })
-            .catch(err => alert(err));
+            .catch(err => alert(`Error deploying webhook: ${err}`));
 
         setDeployed(true);
     }, [accessToken, chosenTeam, deployed, user]);
