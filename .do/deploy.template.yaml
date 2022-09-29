@@ -1,0 +1,18 @@
+
+spec:
+  name: linear-github-sync
+  services:
+    - name: app
+      git:
+        branch: main
+        repo_clone_url: https://github.com/calcom/linear-to-github.git
+      envs:
+      - key: LINEAR_API_KEY
+        type: SECRET
+      - key: GITHUB_API_KEY
+        type: SECRET
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        value: ${db.DATABASE_URL}
+    databases:
+    - name: db

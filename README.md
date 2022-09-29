@@ -4,13 +4,19 @@ Initially created by [Spacedrive](https://github.com/spacedriveapp/linear-github
 
 # Linear to GitHub Sync
 
-This is a system to synchronize Linear issues to GitHub issues when a specific tag is added to the Linear issue. This allows contributors to work with open source projects without having to give them access to your internal Linear team.
+This is a system to synchronize Linear tickets to GitHub issues when a specific tag is added to the Linear issue. This allows contributors to work with open source projects without having to give them access to your internal Linear team.
 
-# Setup
+Visit [SyncLinear.com](https://synclinear.com) to get started.
 
-Simply one-click deploy on Railway (or clone and deploy on Heroku, DigitalOcean, etc.).
+# Self-hosting
+
+The simplest way to host your own instance of Linear-GitHub Sync is to one-click deploy on Railway or DigitalOcean:
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/L__0PR)
 
-See [Setup.md](Setup.md) for dev instructions. If you need any help, please feel free to raise an [issue](https://github.com/calcom/linear-to-github/issues/new)!
+[![Deploy to DO](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/calcom/linear-to-github/tree/main)
+
+Want more control? See the full [setup instructions](Setup.md).
+
+If you need any help, please feel free to raise an [issue](https://github.com/calcom/linear-to-github/issues/new)!
 
