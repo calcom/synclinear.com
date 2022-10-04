@@ -5,13 +5,12 @@ import GitHubLogo from "./icons/GitHubLogo";
 
 const Landing = () => {
     return (
-        <section className="w-screen min-h-screen center gap-40 pb-40">
+        <section className="w-screen min-h-screen center gap-40 py-40">
             <div className="space-y-12 text-center max-w-xl">
                 <h2>What does it do?</h2>
                 <h3>
-                    Linear-GitHub Sync lets you mirror tickets from a Linear
-                    team to a public repo by adding a special{" "}
-                    <code>Public</code> tag.
+                    Linear-GitHub Sync lets you mirror Linear tickets in a
+                    public repo by adding a special <code>Public</code> tag.
                 </h3>
                 <h3>Comments on the mirrored issue sync back.</h3>
                 <h3>

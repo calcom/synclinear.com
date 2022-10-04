@@ -125,7 +125,9 @@ const LinearAuthButton = ({
         // Generate random code to validate against CSRF attack
         const verificationCode = `linear-${uuid()}`;
         localStorage.setItem("linear-verification", verificationCode);
-        window.location.replace(getLinearAuthURL(verificationCode));
+
+        const authURL = getLinearAuthURL(verificationCode);
+        window.location.replace(authURL);
     };
 
     const deployWebhook = useCallback(() => {
@@ -155,7 +157,7 @@ const LinearAuthButton = ({
                 onClick={openLinearAuth}
                 disabled={!!accessToken || !!restoredApiKey}
             >
-                <span>Connect Linear</span>
+                <span>1. Connect Linear</span>
                 {(!!accessToken || !!restoredApiKey) && (
                     <CheckIcon className="w-6 h-6" />
                 )}

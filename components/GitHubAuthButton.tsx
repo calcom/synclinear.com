@@ -1,7 +1,12 @@
 import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { GitHubContext, GitHubRepo } from "../typings";
-import { getGitHubAuthURL, saveGitHubContext, setGitHubWebook } from "../utils";
+import {
+    clearURLParams,
+    getGitHubAuthURL,
+    saveGitHubContext,
+    setGitHubWebook
+} from "../utils";
 import { v4 as uuid } from "uuid";
 import { GITHUB } from "../utils/constants";
 
@@ -22,15 +27,6 @@ const GitHubAuthButton = ({
     const [user, setUser] = useState<GitHubRepo>();
     const [deployed, setDeployed] = useState(false);
     const [loading, setLoading] = useState(false);
-
-    const openAuthPage = () => {
-        // Generate random code to validate against CSRF attack
-        const verificationCode = `github-${uuid()}`;
-        localStorage.setItem("github-verification", verificationCode);
-
-        const authURL = getGitHubAuthURL(verificationCode);
-        window.location.replace(authURL);
-    };
 
     // If present, exchange the temporary auth code for an access token
     useEffect(() => {
@@ -62,7 +58,10 @@ const GitHubAuthButton = ({
             .then(res => res.json())
             .then(body => {
                 if (body.access_token) setAccessToken(body.access_token);
-                else alert("No access token returned. Please try again.");
+                else {
+                    alert("No access token returned. Please try again.");
+                    clearURLParams();
+                }
                 setLoading(false);
             })
             .catch(err => {
@@ -131,6 +130,15 @@ const GitHubAuthButton = ({
             });
     }, [chosenRepo]);
 
+    const openAuthPage = () => {
+        // Generate random code to validate against CSRF attack
+        const verificationCode = `github-${uuid()}`;
+        localStorage.setItem("github-verification", verificationCode);
+
+        const authURL = getGitHubAuthURL(verificationCode);
+        window.location.replace(authURL);
+    };
+
     const deployWebhook = useCallback(() => {
         if (!chosenRepo || deployed) return;
 
@@ -162,7 +170,7 @@ const GitHubAuthButton = ({
                 onClick={openAuthPage}
                 disabled={!!accessToken || !!restoredApiKey}
             >
-                <span>Connect GitHub</span>
+                <span>2. Connect GitHub</span>
                 {(!!accessToken || !!restoredApiKey) && (
                     <CheckIcon className="w-6 h-6" />
                 )}

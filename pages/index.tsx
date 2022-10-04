@@ -80,7 +80,7 @@ const index = () => {
     return (
         <div>
             <PageHead />
-            <section className="w-screen h-screen center gap-28">
+            <section className="w-screen min-h-screen center gap-28">
                 <div className="space-y-4 text-center">
                     <h1>Linear-GitHub Sync</h1>
                     <h3>End-to-end sync of Linear tickets and GitHub issues</h3>
