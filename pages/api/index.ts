@@ -50,7 +50,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         const syncs = await prisma.sync.findMany({
             where: {
-                linearTeamId: data.teamId
+                linearUserId: data.user.id
             },
             include: {
                 LinearTeam: true,
@@ -58,16 +58,17 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             }
         });
 
-        if (syncs.length === 0) {
-            return res.status(404).send({
-                success: false,
-                message: "Could not find synced user."
+        if (
+            syncs.length === 0 ||
+            !syncs.find(sync => sync.linearUserId === data.user.id)
+        ) {
+            return res.status(200).send({
+                success: true,
+                message: "Could not find Linear user in syncs."
             });
         }
 
-        const sync =
-            syncs.find(sync => sync.linearUserId === data.creatorId) ??
-            syncs[0];
+        const sync = syncs.find(sync => sync.linearUserId === data.user.id);
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
             return res.status(404).send({
