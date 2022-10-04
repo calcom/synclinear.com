@@ -147,7 +147,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         .header("Authorization", githubAuthHeader)
                         .send();
 
-                    if (removedLabelResponse.statusCode > 299) {
+                    if (removedLabelResponse.statusCode > 201) {
                         console.log(`Could not remove "${label.name}".`);
                         return res.status(403).send({
                             success: false,
@@ -187,7 +187,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     const createdLabelData = await createdLabelResponse.json();
 
                     if (
-                        createdLabelResponse.statusCode > 299 &&
+                        createdLabelResponse.statusCode > 201 &&
                         createdLabelData.errors[0]?.code !== "already_exists"
                     ) {
                         console.log("Could not create label.");
@@ -208,7 +208,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         })
                         .send();
 
-                    if (appliedLabelResponse.statusCode > 299) {
+                    if (appliedLabelResponse.statusCode > 201) {
                         console.log("Could not apply label.");
                         return res.status(403).send({
                             success: false,
@@ -270,7 +270,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     );
                 }
 
-                if (createdIssueResponse.statusCode > 299) {
+                if (createdIssueResponse.statusCode > 201) {
                     console.log(
                         `Failed to create GitHub issue for ${data.team.key}-${
                             data.number
@@ -324,7 +324,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                     id: string;
                                 };
                             } = attachmentResponse.json();
-                            if (attachmentResponse.statusCode > 299)
+                            if (attachmentResponse.statusCode > 201)
                                 console.log(
                                     getOtherUpdateError(
                                         "attachment",
@@ -371,7 +371,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         })
                         .send()
                         .then(commentResponse => {
-                            if (commentResponse.statusCode > 299)
+                            if (commentResponse.statusCode > 201)
                                 console.log(
                                     getOtherUpdateError(
                                         "comment",
@@ -422,7 +422,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     })
                     .send()
                     .then(updatedIssueResponse => {
-                        if (updatedIssueResponse.statusCode > 299)
+                        if (updatedIssueResponse.statusCode > 201)
                             console.log(
                                 getIssueUpdateError(
                                     "title",
@@ -475,7 +475,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     })
                     .send()
                     .then(updatedIssueResponse => {
-                        if (updatedIssueResponse.statusCode > 299)
+                        if (updatedIssueResponse.statusCode > 201)
                             console.log(
                                 getIssueUpdateError(
                                     "description",
@@ -554,7 +554,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     })
                     .send()
                     .then(updatedIssueResponse => {
-                        if (updatedIssueResponse.statusCode > 299)
+                        if (updatedIssueResponse.statusCode > 201)
                             console.log(
                                 getIssueUpdateError(
                                     "state",
@@ -619,7 +619,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     })
                     .send()
                     .then(commentResponse => {
-                        if (commentResponse.statusCode > 299)
+                        if (commentResponse.statusCode > 201)
                             console.log(
                                 `Failed to update GitHub issue state for ${
                                     data.issue?.id
@@ -690,7 +690,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     );
                 }
 
-                if (createdIssueResponse.statusCode > 299) {
+                if (createdIssueResponse.statusCode > 201) {
                     console.log(
                         `Failed to create GitHub issue for ${data.team.key}-${
                             data.number
@@ -727,7 +727,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                     id: string;
                                 };
                             } = attachmentResponse.json();
-                            if (attachmentResponse.statusCode > 299)
+                            if (attachmentResponse.statusCode > 201)
                                 console.log(
                                     getOtherUpdateError(
                                         "attachment",
@@ -1028,7 +1028,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             })
                             .send()
                             .then(titleRenameResponse => {
-                                if (titleRenameResponse.statusCode > 299)
+                                if (titleRenameResponse.statusCode > 201)
                                     console.log(
                                         `Failed to update GitHub issue title for ${
                                             team.key
@@ -1068,7 +1068,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                         id: string;
                                     };
                                 } = attachmentResponse.json();
-                                if (attachmentResponse.statusCode > 299)
+                                if (attachmentResponse.statusCode > 201)
                                     console.log(
                                         getOtherUpdateError(
                                             "attachment",
