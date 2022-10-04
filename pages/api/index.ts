@@ -619,7 +619,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     })
                     .send()
                     .then(commentResponse => {
-                        if (commentResponse.statusCode !== 201)
+                        if (commentResponse.statusCode > 299)
                             console.log(
                                 `Failed to update GitHub issue state for ${
                                     data.issue?.id
@@ -727,7 +727,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                     id: string;
                                 };
                             } = attachmentResponse.json();
-                            if (attachmentResponse.statusCode !== 201)
+                            if (attachmentResponse.statusCode > 299)
                                 console.log(
                                     getOtherUpdateError(
                                         "attachment",
