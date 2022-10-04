@@ -14,10 +14,14 @@ import { v4 as uuid } from "uuid";
 interface IProps {
     onAuth: (apiKey: string) => void;
     onDeployWebhook: (context: LinearContext) => void;
-    restored: boolean;
+    restoredApiKey: string;
 }
 
-const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
+const LinearAuthButton = ({
+    onAuth,
+    onDeployWebhook,
+    restoredApiKey
+}: IProps) => {
     const [accessToken, setAccessToken] = useState("");
     const [teams, setTeams] = useState<Array<LinearTeam>>([]);
     const [chosenTeam, setChosenTeam] = useState<LinearTeam>();
@@ -44,6 +48,8 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
         const refreshToken = authResponse.get("code");
         const redirectURI = window.location.origin;
 
+        setLoading(true);
+
         // Exchange auth code for access token
         fetch("/api/linear/token", {
             method: "POST",
@@ -57,13 +63,23 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
                     alert("No Linear access token returned. Please try again.");
                     clearURLParams();
                 }
+                setLoading(false);
             })
-            .catch(err => alert(`Error fetching access token: ${err}`));
+            .catch(err => {
+                alert(`Error fetching access token: ${err}`);
+                setLoading(false);
+            });
     }, []);
+
+    // Restore the Linear context from local storage
+    useEffect(() => {
+        if (restoredApiKey) setAccessToken(restoredApiKey);
+    }, [restoredApiKey]);
 
     // Fetch the user ID and available teams when the token is available
     useEffect(() => {
         if (!accessToken) return;
+        if (user?.id) return;
 
         onAuth(accessToken);
 
@@ -137,10 +153,10 @@ const LinearAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
         <div className="center space-y-8 w-80">
             <button
                 onClick={openLinearAuth}
-                disabled={!!accessToken || restored}
+                disabled={!!accessToken || !!restoredApiKey}
             >
                 <span>Connect Linear</span>
-                {(!!accessToken || restored) && (
+                {(!!accessToken || !!restoredApiKey) && (
                     <CheckIcon className="w-6 h-6" />
                 )}
             </button>

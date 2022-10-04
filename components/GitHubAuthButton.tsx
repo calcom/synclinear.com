@@ -8,10 +8,14 @@ import { GITHUB } from "../utils/constants";
 interface IProps {
     onAuth: (apiKey: string) => void;
     onDeployWebhook: (context: GitHubContext) => void;
-    restored: boolean;
+    restoredApiKey: string;
 }
 
-const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
+const GitHubAuthButton = ({
+    onAuth,
+    onDeployWebhook,
+    restoredApiKey
+}: IProps) => {
     const [accessToken, setAccessToken] = useState("");
     const [repos, setRepos] = useState<GitHubRepo[]>([]);
     const [chosenRepo, setChosenRepo] = useState<GitHubRepo>();
@@ -44,6 +48,8 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
             return;
         }
 
+        setLoading(true);
+
         const refreshToken = authResponse.get("code");
         const redirectURI = window.location.origin;
 
@@ -57,13 +63,23 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
             .then(body => {
                 if (body.access_token) setAccessToken(body.access_token);
                 else alert("No access token returned. Please try again.");
+                setLoading(false);
             })
-            .catch(err => alert(`Error fetching access token: ${err}`));
+            .catch(err => {
+                alert(`Error fetching access token: ${err}`);
+                setLoading(false);
+            });
     }, []);
+
+    // Restore the GitHub context from local storage
+    useEffect(() => {
+        if (restoredApiKey) setAccessToken(restoredApiKey);
+    }, [restoredApiKey]);
 
     // Fetch the user's repos when a token is available
     useEffect(() => {
         if (!accessToken) return;
+        if (user?.id) return;
 
         onAuth(accessToken);
 
@@ -142,9 +158,12 @@ const GitHubAuthButton = ({ onAuth, onDeployWebhook, restored }: IProps) => {
 
     return (
         <div className="center space-y-8 w-80">
-            <button onClick={openAuthPage} disabled={!!accessToken || restored}>
+            <button
+                onClick={openAuthPage}
+                disabled={!!accessToken || !!restoredApiKey}
+            >
                 <span>Connect GitHub</span>
-                {(!!accessToken || restored) && (
+                {(!!accessToken || !!restoredApiKey) && (
                     <CheckIcon className="w-6 h-6" />
                 )}
             </button>
