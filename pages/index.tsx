@@ -7,6 +7,7 @@ import PageHead from "../components/PageHead";
 import SyncArrow from "../components/SyncArrow";
 import { GitHubContext, LinearContext } from "../typings";
 import { saveSync } from "../utils";
+import confetti from "canvas-confetti";
 import { GITHUB, LINEAR } from "../utils/constants";
 
 const index = () => {
@@ -20,6 +21,7 @@ const index = () => {
         repoId: "",
         apiKey: ""
     });
+    const [synced, setSynced] = useState(false);
 
     // Load the saved context from localStorage
     useEffect(() => {
@@ -51,8 +53,26 @@ const index = () => {
         }
 
         if (linearContext.teamId && gitHubContext.repoId) {
-            saveSync(linearContext, gitHubContext);
-            localStorage.clear();
+            saveSync(linearContext, gitHubContext)
+                .then(res => {
+                    if (res.error) alert(res.error);
+
+                    setSynced(true);
+
+                    confetti({
+                        disableForReducedMotion: true,
+                        particleCount: 250,
+                        spread: 360,
+                        ticks: 500,
+                        decay: 0.95
+                    });
+
+                    localStorage.clear();
+                })
+                .catch(err => {
+                    alert(err);
+                    setSynced(false);
+                });
         }
     }, [gitHubContext, linearContext]);
 
@@ -94,6 +114,13 @@ const index = () => {
                         onDeployWebhook={setGitHubContext}
                     />
                 </div>
+                <h3
+                    className={`text-green-600 ${
+                        synced ? "visible" : "invisible"
+                    }`}
+                >
+                    Synced!
+                </h3>
             </section>
             <Landing />
             <Footer />
