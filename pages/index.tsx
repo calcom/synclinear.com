@@ -9,6 +9,7 @@ import { GitHubContext, LinearContext } from "../typings";
 import { saveSync } from "../utils";
 import confetti from "canvas-confetti";
 import { GITHUB, LINEAR } from "../utils/constants";
+import { ExternalLinkIcon } from "@radix-ui/react-icons";
 
 const index = () => {
     const [linearContext, setLinearContext] = useState<LinearContext>({
@@ -114,13 +115,21 @@ const index = () => {
                         onDeployWebhook={setGitHubContext}
                     />
                 </div>
-                <h3
-                    className={`text-green-600 ${
+                <div
+                    className={`space-y-4 text-center ${
                         synced ? "visible" : "invisible"
                     }`}
                 >
-                    Synced!
-                </h3>
+                    <h3 className="text-green-600">Synced!</h3>
+                    <p>
+                        To test your connection, tag a Linear issue as{" "}
+                        <code>Public</code>:
+                    </p>
+                    <button onClick={() => window.open(LINEAR.APP_URL)}>
+                        <span>Open Linear</span>
+                        <ExternalLinkIcon className="w-6 h-6" />
+                    </button>
+                </div>
             </section>
             <Landing />
             <Footer />

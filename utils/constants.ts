@@ -7,7 +7,8 @@ export const LINEAR = {
     TOKEN_SECTION_HEADER: "Personal API keys",
     GRAPHQL_ENDPOINT: "https://api.linear.app/graphql",
     IP_ORIGINS: ["35.231.147.226", "35.243.134.228"],
-    STORAGE_KEY: "linear-context"
+    STORAGE_KEY: "linear-context",
+    APP_URL: "https://linear.app"
 };
 
 export const GITHUB = {
