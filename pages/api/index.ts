@@ -772,9 +772,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
     } else {
         const { repository, sender, action } = req.body;
 
-        console.log("repository", repository.id);
-        console.log("sender", sender.id);
-
         const sync = await prisma.sync.findFirst({
             where: {
                 githubRepoId: repository.id,
