@@ -22,7 +22,7 @@ import {
     isIssue,
     skipReason
 } from "../../utils";
-import { LINEAR } from "../../utils/constants";
+import { GITHUB, LINEAR } from "../../utils/constants";
 import { getIssueUpdateError, getOtherUpdateError } from "../../utils/errors";
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
@@ -98,7 +98,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         )}`;
 
         const userAgentHeader = `${repoFullName}, linear-github-sync`;
-        const githubBaseURL = `https://api.github.com/repos/${repoFullName}/issues`;
+        const issuesEndpoint = `https://api.github.com/repos/${repoFullName}/issues`;
 
         // Label updated on an already-public issue
         if (
@@ -111,7 +111,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     where: {
                         linearIssueId: data.id,
                         linearTeamId: data.teamId
-                    }
+                    },
+                    include: { GitHubRepo: true }
                 });
 
                 if (!syncedIssue) {
@@ -141,7 +142,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     }
 
                     const removedLabelResponse = await petitio(
-                        `${githubBaseURL}/${syncedIssue.githubIssueNumber}/labels/${label.name}`,
+                        `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels/${label.name}`,
                         "DELETE"
                     )
                         .header("User-Agent", userAgentHeader)
@@ -199,7 +200,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     }
 
                     const appliedLabelResponse = await petitio(
-                        `${githubBaseURL}/${syncedIssue.githubIssueNumber}/labels`,
+                        `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels`,
                         "POST"
                     )
                         .header("User-Agent", userAgentHeader)
@@ -249,7 +250,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 const issueCreator = await linear.user(data.creatorId);
 
                 const createdIssueResponse = await petitio(
-                    githubBaseURL,
+                    issuesEndpoint,
                     "POST"
                 )
                     .header("User-Agent", userAgentHeader)
@@ -362,7 +363,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     const { comment, user } = linearComment;
 
                     await petitio(
-                        `${githubBaseURL}/${createdIssueData.number}/comments`,
+                        `${issuesEndpoint}/${createdIssueData.number}/comments`,
                         "POST"
                     )
                         .header("User-Agent", userAgentHeader)
@@ -395,7 +396,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     where: {
                         linearTeamId: data.teamId,
                         linearIssueId: data.id
-                    }
+                    },
+                    include: { GitHubRepo: true }
                 });
 
                 if (!syncedIssue) {
@@ -413,7 +415,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 }
 
                 await petitio(
-                    `${githubBaseURL}/${syncedIssue.githubIssueNumber}`,
+                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
                     "PATCH"
                 )
                     .header("User-Agent", userAgentHeader)
@@ -444,7 +446,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     where: {
                         linearIssueId: data.id,
                         linearTeamId: data.teamId
-                    }
+                    },
+                    include: { GitHubRepo: true }
                 });
 
                 if (!syncedIssue) {
@@ -464,7 +467,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 const issueCreator = await linear.user(data.creatorId);
 
                 await petitio(
-                    `${githubBaseURL}/${syncedIssue.githubIssueNumber}`,
+                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
                     "PATCH"
                 )
                     .header("User-Agent", userAgentHeader)
@@ -516,7 +519,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     where: {
                         linearIssueId: data.id,
                         linearTeamId: data.teamId
-                    }
+                    },
+                    include: { GitHubRepo: true }
                 });
 
                 if (!syncedIssue) {
@@ -537,7 +541,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 }
 
                 await petitio(
-                    `${githubBaseURL}/${syncedIssue.githubIssueNumber}`,
+                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
                     "PATCH"
                 )
                     .header("User-Agent", userAgentHeader)
@@ -589,7 +593,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 const syncedIssue = await prisma.syncedIssue.findFirst({
                     where: {
                         linearIssueId: data.issueId
-                    }
+                    },
+                    include: { GitHubRepo: true }
                 });
 
                 if (!syncedIssue) {
@@ -610,7 +615,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 }
 
                 await petitio(
-                    `${githubBaseURL}/${syncedIssue.githubIssueNumber}/comments`,
+                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/comments`,
                     "POST"
                 )
                     .header("User-Agent", userAgentHeader)
@@ -671,7 +676,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 }
 
                 const createdIssueResponse = await petitio(
-                    githubBaseURL,
+                    issuesEndpoint,
                     "POST"
                 )
                     .header("User-Agent", userAgentHeader)
@@ -826,7 +831,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         )}`;
 
         const userAgentHeader = `${repoFullName}, linear-github-sync`;
-        const githubBaseURL = `https://api.github.com/repos/${repoFullName}/issues`;
+        const issuesEndpoint = `https://api.github.com/repos/${repoFullName}/issues`;
 
         if (
             req.headers["x-github-event"] === "issue_comment" &&
@@ -1021,7 +1026,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     );
                 } else {
                     await Promise.all([
-                        petitio(`${githubBaseURL}/${issue.number}`, "PATCH")
+                        petitio(`${issuesEndpoint}/${issue.number}`, "PATCH")
                             .header("User-Agent", userAgentHeader)
                             .header("Authorization", githubAuthHeader)
                             .body({
