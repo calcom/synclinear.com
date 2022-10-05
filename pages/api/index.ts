@@ -104,13 +104,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         const userAgentHeader = `${repoFullName}, linear-github-sync`;
         const issuesEndpoint = `https://api.github.com/repos/${repoFullName}/issues`;
 
-        // Label updated on an already-public issue
-        if (
-            action === "update" &&
-            updatedFrom &&
-            data.labelIds.includes(publicLabelId)
-        ) {
+        if (action === "update" && updatedFrom.labelIds) {
             if (updatedFrom.labelIds?.includes(publicLabelId)) {
+                // Label updated on an already-Public issue
                 const syncedIssue = await prisma.syncedIssue.findFirst({
                     where: {
                         linearIssueId: data.id,
@@ -136,6 +132,21 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     const removedLabelId = updatedFrom.labelIds.find(
                         id => !data.labelIds.includes(id)
                     );
+
+                    if (removedLabelId === publicLabelId) {
+                        await prisma.syncedIssue.delete({
+                            where: { id: syncedIssue.id }
+                        });
+
+                        console.log(
+                            "Deleted synced issue after Public label removed."
+                        );
+
+                        return res.status(200).send({
+                            success: true,
+                            message: `Deleted synced issue ${data.team.key}-${data.number} after Public label removed.`
+                        });
+                    }
 
                     const label = await linear.issueLabel(removedLabelId);
                     if (!label) {
@@ -229,13 +240,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         );
                     }
                 }
-            }
-
-            // Public label added to an issue
-            if (
-                updatedFrom.labelIds &&
-                !updatedFrom.labelIds.includes(publicLabelId)
+            } else if (
+                !updatedFrom.labelIds?.includes(publicLabelId) &&
+                data.labelIds?.includes(publicLabelId)
             ) {
+                // Public label added to an issue
                 const issueAlreadyExists = await prisma.syncedIssue.findFirst({
                     where: {
                         linearIssueId: data.id,
