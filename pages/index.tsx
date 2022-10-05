@@ -80,12 +80,12 @@ const index = () => {
     return (
         <div>
             <PageHead />
-            <section className="w-screen min-h-screen center gap-28">
+            <section className="w-screen min-h-screen center gap-28 px-6">
                 <div className="space-y-4 text-center">
                     <h1>Linear-GitHub Sync</h1>
                     <h3>End-to-end sync of Linear tickets and GitHub issues</h3>
                 </div>
-                <div className="w-full flex justify-center items-start gap-20">
+                <div className="w-full flex flex-col sm:flex-row justify-around items-center gap-4">
                     <LinearAuthButton
                         restoredApiKey={linearContext.apiKey}
                         onAuth={(apiKey: string) =>

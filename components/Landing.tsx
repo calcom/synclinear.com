@@ -5,7 +5,7 @@ import GitHubLogo from "./icons/GitHubLogo";
 
 const Landing = () => {
     return (
-        <section className="w-screen min-h-screen center gap-40 py-40">
+        <section className="w-screen min-h-screen center gap-40 py-40 px-6">
             <div className="space-y-12 text-center max-w-xl">
                 <h2>What does it do?</h2>
                 <h3>
