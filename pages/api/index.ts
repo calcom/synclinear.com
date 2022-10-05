@@ -263,8 +263,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
-                const issueCreator = await linear.user(data.creatorId);
-
                 const createdIssueResponse = await petitio(
                     issuesEndpoint,
                     "POST"
@@ -273,9 +271,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
-                        body: `${data.description}${getGitHubFooter(
-                            issueCreator.name
-                        )}`
+                        body: `${data.description}${getSyncFooter()}`
                     })
                     .send();
 
@@ -802,22 +798,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             });
         }
 
-        const {
-            linearApiKey,
-            linearApiKeyIV,
-            githubApiKey,
-            githubApiKeyIV,
-            LinearTeam: {
-                publicLabelId,
-                doneStateId,
-                toDoStateId,
-                canceledStateId,
-                teamId: linearTeamId
-            },
-            GitHubRepo: { repoName: repoFullName, webhookSecret }
-        } = sync;
-
-        const HMAC = createHmac("sha256", webhookSecret ?? "");
+        const HMAC = createHmac("sha256", sync.GitHubRepo?.webhookSecret ?? "");
         const digest = Buffer.from(
             `sha256=${HMAC.update(JSON.stringify(req.body)).digest("hex")}`,
             "utf-8"
@@ -836,6 +817,21 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             });
         }
 
+        const {
+            linearApiKey,
+            linearApiKeyIV,
+            githubApiKey,
+            githubApiKeyIV,
+            LinearTeam: {
+                publicLabelId,
+                doneStateId,
+                toDoStateId,
+                canceledStateId,
+                teamId: linearTeamId
+            },
+            GitHubRepo: { repoName }
+        } = sync;
+
         const linearKeyDecrypted = decrypt(linearApiKey, linearApiKeyIV);
         const linear = new LinearClient({
             apiKey: linearKeyDecrypted
@@ -846,8 +842,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             githubApiKeyIV
         )}`;
 
-        const userAgentHeader = `${repoFullName}, linear-github-sync`;
-        const issuesEndpoint = `https://api.github.com/repos/${repoFullName}/issues`;
+        const userAgentHeader = `${repoName}, linear-github-sync`;
+        const issuesEndpoint = `https://api.github.com/repos/${repoName}/issues`;
 
         if (
             req.headers["x-github-event"] === "issue_comment" &&
@@ -1082,7 +1078,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                 query: getAttachmentQuery(
                                     createdIssue.id,
                                     issue.number,
-                                    repoFullName
+                                    repoName
                                 )
                             })
                             .send()
