@@ -13,12 +13,12 @@ const SyncArrow = ({ direction, active }: IProps) => {
             }`}
         >
             <div
-                className={`w-4 h-4 border-l-4 border-b-4 rotate-45 ${
+                className={`w-4 h-4 border-l-4 border-b-4 rotate-45 translate-x-2 ${
                     active ? "border-green-600" : "border-gray-400"
                 }`}
             />
             <div
-                className={`grow h-1 -translate-x-4 ${
+                className={`grow h-1 -translate-x-2 ${
                     active ? "bg-green-600" : "bg-gray-400"
                 }`}
             />
