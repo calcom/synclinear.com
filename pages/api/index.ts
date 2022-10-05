@@ -850,7 +850,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
             const syncedIssue = await prisma.syncedIssue.findFirst({
                 where: {
-                    githubIssueNumber: issue.number
+                    githubIssueNumber: issue.number,
+                    githubRepoId: repository.id
                 }
             });
 
@@ -889,7 +890,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
             const syncedIssue = await prisma.syncedIssue.findFirst({
                 where: {
-                    githubIssueNumber: issue.number
+                    githubIssueNumber: issue.number,
+                    githubRepoId: repository.id
                 }
             });
 
@@ -934,7 +936,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
             const syncedIssue = await prisma.syncedIssue.findFirst({
                 where: {
-                    githubIssueNumber: issue.number
+                    githubIssueNumber: issue.number,
+                    githubRepoId: repository.id
                 }
             });
 
