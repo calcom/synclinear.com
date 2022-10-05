@@ -205,6 +205,28 @@ export const saveLinearContext = async (token: string, team: LinearTeam) => {
     return response.json();
 };
 
+export const exchangeLinearToken = async (
+    refreshToken: string
+): Promise<any> => {
+    const redirectURI = window.location.origin;
+
+    const response = await fetch("/api/linear/token", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken, redirectURI }),
+        headers: { "Content-Type": "application/json" }
+    });
+
+    return await response.json();
+};
+
+export const checkForExistingTeam = async (teamId: string): Promise<any> => {
+    const response = await fetch(`/api/linear/team/${teamId}`, {
+        method: "GET"
+    });
+
+    return await response.json();
+};
+
 // Open a Linear ticket for the creator to authenticate with this app
 export const inviteMember = async (
     memberId: string,
@@ -293,7 +315,7 @@ export const setGitHubWebook = async (
     token: string,
     repo: GitHubRepo,
     webhookSecret: string
-) => {
+): Promise<any> => {
     const webhookURL = getWebhookURL();
     const webhookData = {
         name: "web",
@@ -307,14 +329,57 @@ export const setGitHubWebook = async (
         }
     };
 
-    return await fetch(`https://api.github.com/repos/${repo.name}/hooks`, {
+    const response = await fetch(
+        `https://api.github.com/repos/${repo.name}/hooks`,
+        {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/vnd.github+json"
+            },
+            body: JSON.stringify(webhookData)
+        }
+    );
+
+    return await response.json();
+};
+
+export const exchangeGitHubToken = async (
+    refreshToken: string
+): Promise<any> => {
+    const redirectURI = window.location.origin;
+
+    const response = await fetch("/api/github/token", {
         method: "POST",
-        headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json"
-        },
-        body: JSON.stringify(webhookData)
+        body: JSON.stringify({ refreshToken, redirectURI }),
+        headers: { "Content-Type": "application/json" }
     });
+
+    return await response.json();
+};
+
+export const getGitHubRepos = async (token: string): Promise<any> => {
+    const response = await fetch(GITHUB.LIST_REPOS_ENDPOINT, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    return await response.json();
+};
+
+export const getGitHubUser = async (token: string): Promise<any> => {
+    const response = await fetch(GITHUB.USER_ENDPOINT, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    return await response.json();
+};
+
+export const checkForExistingRepo = async (repoId: string): Promise<any> => {
+    const response = await fetch(`/api/github/repo/${repoId}`, {
+        method: "GET"
+    });
+
+    return await response.json();
 };
 
 export const saveSync = async (

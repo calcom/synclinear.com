@@ -2,13 +2,16 @@ import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { GitHubContext, GitHubRepo } from "../typings";
 import {
+    checkForExistingRepo,
     clearURLParams,
+    exchangeGitHubToken,
     getGitHubAuthURL,
+    getGitHubRepos,
+    getGitHubUser,
     saveGitHubContext,
     setGitHubWebook
 } from "../utils";
 import { v4 as uuid } from "uuid";
-import { GITHUB } from "../utils/constants";
 
 interface IProps {
     onAuth: (apiKey: string) => void;
@@ -46,16 +49,9 @@ const GitHubAuthButton = ({
 
         setLoading(true);
 
-        const refreshToken = authResponse.get("code");
-        const redirectURI = window.location.origin;
-
         // Exchange auth code for access token
-        fetch("/api/github/token", {
-            method: "POST",
-            body: JSON.stringify({ refreshToken, redirectURI }),
-            headers: { "Content-Type": "application/json" }
-        })
-            .then(res => res.json())
+        const refreshToken = authResponse.get("code");
+        exchangeGitHubToken(refreshToken)
             .then(body => {
                 if (body.access_token) setAccessToken(body.access_token);
                 else {
@@ -82,10 +78,7 @@ const GitHubAuthButton = ({
 
         onAuth(accessToken);
 
-        fetch(GITHUB.LIST_REPOS_ENDPOINT, {
-            headers: { Authorization: `Bearer ${accessToken}` }
-        })
-            .then(res => res.json())
+        getGitHubRepos(accessToken)
             .then(res => {
                 setRepos(
                     res.map(repo => {
@@ -95,10 +88,7 @@ const GitHubAuthButton = ({
             })
             .catch(err => alert(`Error fetching repos: ${err}`));
 
-        fetch(GITHUB.USER_ENDPOINT, {
-            headers: { Authorization: `Bearer ${accessToken}` }
-        })
-            .then(res => res.json())
+        getGitHubUser(accessToken)
             .then(res => setUser({ id: res.id, name: res.login }))
             .catch(err => alert(`Error fetching user profile: ${err}`));
     }, [accessToken]);
@@ -109,8 +99,7 @@ const GitHubAuthButton = ({
 
         setLoading(true);
 
-        fetch(`/api/github/repo/${chosenRepo.id}`)
-            .then(res => res.json())
+        checkForExistingRepo(chosenRepo.id)
             .then(res => {
                 if (res?.exists) {
                     setDeployed(true);
@@ -148,7 +137,6 @@ const GitHubAuthButton = ({
         );
 
         setGitHubWebook(accessToken, chosenRepo, webhookSecret)
-            .then(res => res.json())
             .then(res => {
                 if (res.errors) {
                     alert(res.errors[0].message);

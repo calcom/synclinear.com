@@ -2,7 +2,9 @@ import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { LinearContext, LinearObject, LinearTeam } from "../typings";
 import {
+    checkForExistingTeam,
     clearURLParams,
+    exchangeLinearToken,
     getLinearAuthURL,
     getLinearContext,
     getWebhookURL,
@@ -10,6 +12,7 @@ import {
     setLinearWebhook
 } from "../utils";
 import { v4 as uuid } from "uuid";
+import { LINEAR } from "../utils/constants";
 
 interface IProps {
     onAuth: (apiKey: string) => void;
@@ -45,23 +48,17 @@ const LinearAuthButton = ({
             return;
         }
 
-        const refreshToken = authResponse.get("code");
-        const redirectURI = window.location.origin;
-
         setLoading(true);
 
         // Exchange auth code for access token
-        fetch("/api/linear/token", {
-            method: "POST",
-            body: JSON.stringify({ refreshToken, redirectURI }),
-            headers: { "Content-Type": "application/json" }
-        })
-            .then(res => res.json())
+        const refreshToken = authResponse.get("code");
+        exchangeLinearToken(refreshToken)
             .then(body => {
                 if (body.access_token) setAccessToken(body.access_token);
                 else {
                     alert("No Linear access token returned. Please try again.");
                     clearURLParams();
+                    localStorage.removeItem(LINEAR.STORAGE_KEY);
                 }
                 setLoading(false);
             })
@@ -100,8 +97,7 @@ const LinearAuthButton = ({
 
         setLoading(true);
 
-        fetch(`/api/linear/team/${chosenTeam.id}`)
-            .then(res => res.json())
+        checkForExistingTeam(chosenTeam.id)
             .then(res => {
                 if (res?.exists) {
                     setDeployed(true);
