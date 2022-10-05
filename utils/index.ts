@@ -233,15 +233,15 @@ export const getLinearFooter = (sender: {
     login: string;
     html_url: string;
 }): string => {
-    return `\n[${sender.login}](${sender.html_url}) on GitHub`;
+    return `\n\n> From [${sender.login}](${sender.html_url}) on GitHub`;
 };
 
 export const getGitHubFooter = (userName: string): string => {
-    return `\n<sub>${userName} on Linear</sub>`;
+    return `\n\n> From ${userName} on Linear`;
 };
 
 export const getSyncFooter = (): string => {
-    return `\nFrom Linear-GitHub Sync`;
+    return `\n\n> From [Linear-GitHub Sync](https://synclinear.com)`;
 };
 
 export const getGitHubTokenURL = (): string => {
