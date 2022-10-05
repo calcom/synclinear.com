@@ -22,6 +22,7 @@ interface LinearData {
     projectId: string;
     // previousIdentifiers: string[];
     creatorId: string;
+    userId: string;
     assigneeId: string;
     stateId: string;
     priorityLabel: string;

@@ -50,7 +50,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         const syncs = await prisma.sync.findMany({
             where: {
-                linearUserId: data.user.id
+                linearUserId: data.userId
             },
             include: {
                 LinearTeam: true,
@@ -60,7 +60,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         if (
             syncs.length === 0 ||
-            !syncs.find(sync => sync.linearUserId === data.user.id)
+            !syncs.find(sync => sync.linearUserId === data.userId)
         ) {
             return res.status(200).send({
                 success: true,
@@ -68,7 +68,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             });
         }
 
-        const sync = syncs.find(sync => sync.linearUserId === data.user.id);
+        const sync = syncs.find(sync => sync.linearUserId === data.userId);
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
             return res.status(404).send({
