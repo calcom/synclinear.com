@@ -12,6 +12,7 @@ import {
     setGitHubWebook
 } from "../utils";
 import { v4 as uuid } from "uuid";
+import { GITHUB } from "../utils/constants";
 
 interface IProps {
     onAuth: (apiKey: string) => void;
@@ -57,6 +58,7 @@ const GitHubAuthButton = ({
                 else {
                     alert("No access token returned. Please try again.");
                     clearURLParams();
+                    localStorage.removeItem(GITHUB.STORAGE_KEY);
                 }
                 setLoading(false);
             })
