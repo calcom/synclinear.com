@@ -50,7 +50,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         const syncs = await prisma.sync.findMany({
             where: {
-                linearUserId: data.userId
+                linearUserId: data.userId ?? data.creatorId
             },
             include: {
                 LinearTeam: true,
@@ -60,7 +60,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         if (
             syncs.length === 0 ||
-            !syncs.find(sync => sync.linearUserId === data.userId)
+            !syncs.find(
+                sync => sync.linearUserId === (data.userId ?? data.creatorId)
+            )
         ) {
             return res.status(200).send({
                 success: true,
@@ -68,7 +70,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             });
         }
 
-        const sync = syncs.find(sync => sync.linearUserId === data.userId);
+        const sync = syncs.find(
+            sync => sync.linearUserId === (data.userId ?? data.creatorId)
+        );
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
             return res.status(404).send({
@@ -767,6 +771,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         }
     } else {
         const { repository, sender, action } = req.body;
+
+        console.log("repository", repository.id);
+        console.log("sender", sender.id);
 
         const sync = await prisma.sync.findFirst({
             where: {
