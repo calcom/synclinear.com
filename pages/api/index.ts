@@ -154,10 +154,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         .send();
 
                     if (removedLabelResponse.statusCode > 201) {
-                        console.log(`Could not remove "${label.name}".`);
+                        console.log(`Could not remove label "${label.name}".`);
                         return res.status(403).send({
                             success: false,
-                            message: `Could not remove "${label.name}".`
+                            message: `Could not remove label "${label.name}".`
                         });
                     } else {
                         console.log(
@@ -203,15 +203,18 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         });
                     }
 
+                    const labelName =
+                        createdLabelData.errors[0]?.code === "already_exists"
+                            ? label.name
+                            : createdLabelData.name;
+
                     const appliedLabelResponse = await petitio(
                         `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels`,
                         "POST"
                     )
                         .header("User-Agent", userAgentHeader)
                         .header("Authorization", githubAuthHeader)
-                        .body({
-                            labels: [createdLabelData.name]
-                        })
+                        .body({ labels: [labelName] })
                         .send();
 
                     if (appliedLabelResponse.statusCode > 201) {
@@ -222,7 +225,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         });
                     } else {
                         console.log(
-                            `Applied label "${createdLabelData.name}" to issue #${syncedIssue.githubIssueNumber}.`
+                            `Applied label "${labelName}" to issue #${syncedIssue.githubIssueNumber}.`
                         );
                     }
                 }
