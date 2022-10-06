@@ -125,11 +125,9 @@ export const getLinearContext = async (token: string) => {
     return await linearQuery(query, token);
 };
 
-export const setLinearWebhook = async (
-    token: string,
-    callbackURL: string,
-    teamID: string
-) => {
+export const setLinearWebhook = async (token: string, teamID: string) => {
+    const callbackURL = getWebhookURL();
+
     const mutation = `mutation CreateWebhook($callbackURL: String!, $teamID: String) {
         webhookCreate(
             input: {

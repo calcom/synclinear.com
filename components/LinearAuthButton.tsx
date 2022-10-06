@@ -1,4 +1,4 @@
-import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
+import { CheckIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { LinearContext, LinearObject, LinearTeam } from "../typings";
 import {
@@ -7,23 +7,25 @@ import {
     exchangeLinearToken,
     getLinearAuthURL,
     getLinearContext,
-    getWebhookURL,
     saveLinearContext,
     setLinearWebhook
 } from "../utils";
 import { v4 as uuid } from "uuid";
 import { LINEAR } from "../utils/constants";
+import DeployButton from "./DeployButton";
 
 interface IProps {
     onAuth: (apiKey: string) => void;
     onDeployWebhook: (context: LinearContext) => void;
     restoredApiKey: string;
+    restored: boolean;
 }
 
 const LinearAuthButton = ({
     onAuth,
     onDeployWebhook,
-    restoredApiKey
+    restoredApiKey,
+    restored
 }: IProps) => {
     const [accessToken, setAccessToken] = useState("");
     const [teams, setTeams] = useState<Array<LinearTeam>>([]);
@@ -133,7 +135,7 @@ const LinearAuthButton = ({
             alert(`Error saving labels to DB: ${err}`)
         );
 
-        setLinearWebhook(accessToken, getWebhookURL(), chosenTeam.id)
+        setLinearWebhook(accessToken, chosenTeam.id)
             .then(() => {
                 setDeployed(true);
                 onDeployWebhook({
@@ -158,7 +160,7 @@ const LinearAuthButton = ({
                     <CheckIcon className="w-6 h-6" />
                 )}
             </button>
-            {teams.length > 0 && (
+            {teams.length > 0 && restored && (
                 <div className="flex flex-col items-center w-full space-y-4">
                     <select
                         disabled={deployed || loading}
@@ -169,7 +171,7 @@ const LinearAuthButton = ({
                         }
                     >
                         <option value="" disabled selected>
-                            Select your team
+                            3. Select your team
                         </option>
                         {teams.map(team => (
                             <option key={team.id} value={team.id}>
@@ -178,18 +180,11 @@ const LinearAuthButton = ({
                         ))}
                     </select>
                     {chosenTeam && (
-                        <button
-                            onClick={deployWebhook}
-                            disabled={deployed || loading}
-                            className={`${loading ? "animate-pulse" : ""}`}
-                        >
-                            <span>Deploy webhook</span>
-                            {deployed ? (
-                                <CheckIcon className="w-6 h-6" />
-                            ) : (
-                                <DoubleArrowUpIcon className="w-6 h-6" />
-                            )}
-                        </button>
+                        <DeployButton
+                            loading={loading}
+                            deployed={deployed}
+                            onDeploy={deployWebhook}
+                        />
                     )}
                 </div>
             )}

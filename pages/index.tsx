@@ -23,6 +23,7 @@ const index = () => {
         apiKey: ""
     });
     const [synced, setSynced] = useState(false);
+    const [restored, setRestored] = useState(false);
 
     // Load the saved context from localStorage
     useEffect(() => {
@@ -30,11 +31,13 @@ const index = () => {
             setLinearContext(
                 JSON.parse(localStorage.getItem(LINEAR.STORAGE_KEY))
             );
+            setRestored(true);
         }
         if (localStorage.getItem(GITHUB.STORAGE_KEY)) {
             setGitHubContext(
                 JSON.parse(localStorage.getItem(GITHUB.STORAGE_KEY))
             );
+            setRestored(true);
         }
     }, []);
 
@@ -85,9 +88,10 @@ const index = () => {
                     <h1>Linear-GitHub Sync</h1>
                     <h3>End-to-end sync of Linear tickets and GitHub issues</h3>
                 </div>
-                <div className="w-full flex flex-col sm:flex-row justify-around items-center gap-4">
+                <div className="w-full flex flex-col sm:flex-row justify-around items-start gap-4">
                     <LinearAuthButton
                         restoredApiKey={linearContext.apiKey}
+                        restored={restored}
                         onAuth={(apiKey: string) =>
                             setLinearContext({ ...linearContext, apiKey })
                         }
@@ -109,6 +113,7 @@ const index = () => {
                     </div>
                     <GitHubAuthButton
                         restoredApiKey={gitHubContext.apiKey}
+                        restored={restored}
                         onAuth={(apiKey: string) =>
                             setGitHubContext({ ...gitHubContext, apiKey })
                         }

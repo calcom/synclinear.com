@@ -1,4 +1,4 @@
-import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
+import { CheckIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { GitHubContext, GitHubRepo } from "../typings";
 import {
@@ -13,17 +13,20 @@ import {
 } from "../utils";
 import { v4 as uuid } from "uuid";
 import { GITHUB } from "../utils/constants";
+import DeployButton from "./DeployButton";
 
 interface IProps {
     onAuth: (apiKey: string) => void;
     onDeployWebhook: (context: GitHubContext) => void;
     restoredApiKey: string;
+    restored: boolean;
 }
 
 const GitHubAuthButton = ({
     onAuth,
     onDeployWebhook,
-    restoredApiKey
+    restoredApiKey,
+    restored
 }: IProps) => {
     const [accessToken, setAccessToken] = useState("");
     const [repos, setRepos] = useState<GitHubRepo[]>([]);
@@ -165,7 +168,7 @@ const GitHubAuthButton = ({
                     <CheckIcon className="w-6 h-6" />
                 )}
             </button>
-            {repos.length > 0 && (
+            {repos.length > 0 && restored && (
                 <div className="flex flex-col items-center space-y-4">
                     <select
                         disabled={deployed || loading}
@@ -176,7 +179,7 @@ const GitHubAuthButton = ({
                         }}
                     >
                         <option value="" disabled selected>
-                            Select your repo
+                            4. Select your repo
                         </option>
                         {repos.map(repo => (
                             <option key={repo.id} value={repo.id}>
@@ -185,18 +188,11 @@ const GitHubAuthButton = ({
                         ))}
                     </select>
                     {chosenRepo && (
-                        <button
-                            onClick={deployWebhook}
-                            disabled={deployed || loading}
-                            className={`${loading ? "animate-pulse" : ""}`}
-                        >
-                            <span>Deploy webhook</span>
-                            {deployed ? (
-                                <CheckIcon className="w-6 h-6" />
-                            ) : (
-                                <DoubleArrowUpIcon className="w-6 h-6" />
-                            )}
-                        </button>
+                        <DeployButton
+                            loading={loading}
+                            deployed={deployed}
+                            onDeploy={deployWebhook}
+                        />
                     )}
                 </div>
             )}
