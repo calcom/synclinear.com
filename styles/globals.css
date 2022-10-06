@@ -4,7 +4,8 @@
 
 @font-face {
     font-family: "cal-sans";
-    src: url("/fonts/CalSans-SemiBold.woff");
+    src: url("/fonts/CalSans-SemiBold.woff2") format("woff2");
+    font-display: swap;
 }
 
 @layer base {
@@ -54,7 +55,7 @@
         @apply text-gray-500;
     }
     .font-cal-sans {
-        @apply font-[cal-sans];
+        font-family: "cal-sans", Arial, Helvetica, sans-serif;
     }
 }
 

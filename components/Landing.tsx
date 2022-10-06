@@ -53,6 +53,7 @@ const Landing = () => {
                     onClick={() =>
                         window.scrollTo({ top: 0, behavior: "smooth" })
                     }
+                    aria-label="Scroll to top"
                 >
                     <span>Get started</span>
                     <ArrowUpIcon className="w-6 h-6" />
@@ -65,7 +66,10 @@ const Landing = () => {
                     you're facing a problem or want to add a feature, please
                     open a pull request!
                 </h3>
-                <button onClick={() => window.open(GENERAL.CONTRIBUTE_URL)}>
+                <button
+                    onClick={() => window.open(GENERAL.CONTRIBUTE_URL)}
+                    aria-label="Visit codebase"
+                >
                     <span>Contribute</span>
                     <GitHubLogo />
                 </button>

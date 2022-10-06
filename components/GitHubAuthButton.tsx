@@ -163,6 +163,7 @@ const GitHubAuthButton = ({
                 onClick={openAuthPage}
                 disabled={!!accessToken || loading}
                 className={loading ? "animate-pulse" : ""}
+                aria-label="Authorize with GitHub"
             >
                 {loading ? (
                     <>
@@ -177,6 +178,7 @@ const GitHubAuthButton = ({
             {repos.length > 0 && restored && (
                 <div className="flex flex-col items-center space-y-4">
                     <select
+                        name="GitHub repository"
                         disabled={deployed || loading}
                         onChange={e => {
                             setChosenRepo(

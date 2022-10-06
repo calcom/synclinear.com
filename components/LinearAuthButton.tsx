@@ -155,6 +155,7 @@ const LinearAuthButton = ({
                 onClick={openLinearAuth}
                 disabled={!!accessToken || loading}
                 className={loading ? "animate-pulse" : ""}
+                arial-label="Authorize with Linear"
             >
                 {loading ? (
                     <>
@@ -169,6 +170,7 @@ const LinearAuthButton = ({
             {teams.length > 0 && restored && (
                 <div className="flex flex-col items-center w-full space-y-4">
                     <select
+                        name="Linear team"
                         disabled={deployed || loading}
                         onChange={e =>
                             setChosenTeam(

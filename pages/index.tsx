@@ -86,7 +86,9 @@ const index = () => {
             <section className="w-screen min-h-screen center gap-28 px-6">
                 <div className="space-y-4 text-center">
                     <h1>Linear-GitHub Sync</h1>
-                    <h3>End-to-end sync of Linear tickets and GitHub issues</h3>
+                    <p className="text-2xl font-tertiary">
+                        End-to-end sync of Linear tickets and GitHub issues
+                    </p>
                 </div>
                 <div className="w-full flex flex-col sm:flex-row justify-around items-center sm:items-start gap-4">
                     <LinearAuthButton

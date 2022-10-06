@@ -12,6 +12,7 @@ const Footer = () => {
                         className="font-cal-sans"
                         rel="noreferrer"
                         target="_blank"
+                        aria-label="Visit Cal.com"
                     >
                         Cal.com
                     </a>
@@ -20,6 +21,7 @@ const Footer = () => {
                         href="https://studio.neat.run"
                         rel="noreferrer"
                         target="_blank"
+                        aria-label="Visit Neat studio"
                     >
                         Neat.run
                     </a>
@@ -30,6 +32,7 @@ const Footer = () => {
                     rel="noreferrer"
                     target="_blank"
                     className="text-gray-400 hover:text-gray-100 sm:order-first"
+                    aria-label="Visit codebase"
                 >
                     <GitHubLogo />
                 </a>

@@ -17,6 +17,7 @@ const DeployButton = ({ loading, deployed, onDeploy }: IProps) => {
             onClick={onDeploy}
             disabled={deployed || loading}
             className={`${loading ? "animate-pulse" : ""}`}
+            aria-label="Deploy webhook"
         >
             {deployed ? (
                 <>
