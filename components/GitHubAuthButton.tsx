@@ -1,4 +1,4 @@
-import { CheckIcon } from "@radix-ui/react-icons";
+import { CheckIcon, DotsHorizontalIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { GitHubContext, GitHubRepo } from "../typings";
 import {
@@ -161,12 +161,18 @@ const GitHubAuthButton = ({
         <div className="center space-y-8 w-80">
             <button
                 onClick={openAuthPage}
-                disabled={!!accessToken || !!restoredApiKey}
+                disabled={!!accessToken || loading}
+                className={loading ? "animate-pulse" : ""}
             >
-                <span>2. Connect GitHub</span>
-                {(!!accessToken || !!restoredApiKey) && (
-                    <CheckIcon className="w-6 h-6" />
+                {loading ? (
+                    <>
+                        <span>Loading</span>
+                        <DotsHorizontalIcon className="w-6 h-6" />
+                    </>
+                ) : (
+                    <span>2. Connect GitHub</span>
                 )}
+                {!!accessToken && <CheckIcon className="w-6 h-6" />}
             </button>
             {repos.length > 0 && restored && (
                 <div className="flex flex-col items-center space-y-4">

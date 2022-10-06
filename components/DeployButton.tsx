@@ -1,4 +1,8 @@
-import { CheckIcon, DoubleArrowUpIcon } from "@radix-ui/react-icons";
+import {
+    CheckIcon,
+    DotsHorizontalIcon,
+    DoubleArrowUpIcon
+} from "@radix-ui/react-icons";
 import React from "react";
 
 interface IProps {
@@ -18,6 +22,11 @@ const DeployButton = ({ loading, deployed, onDeploy }: IProps) => {
                 <>
                     <span>Deployed</span>
                     <CheckIcon className="w-6 h-6" />
+                </>
+            ) : loading ? (
+                <>
+                    <span>Loading</span>
+                    <DotsHorizontalIcon className="w-6 h-6" />
                 </>
             ) : (
                 <>

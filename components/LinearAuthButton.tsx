@@ -1,4 +1,4 @@
-import { CheckIcon } from "@radix-ui/react-icons";
+import { CheckIcon, DotsHorizontalIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { LinearContext, LinearObject, LinearTeam } from "../typings";
 import {
@@ -153,12 +153,18 @@ const LinearAuthButton = ({
         <div className="center space-y-8 w-80">
             <button
                 onClick={openLinearAuth}
-                disabled={!!accessToken || !!restoredApiKey}
+                disabled={!!accessToken || loading}
+                className={loading ? "animate-pulse" : ""}
             >
-                <span>1. Connect Linear</span>
-                {(!!accessToken || !!restoredApiKey) && (
-                    <CheckIcon className="w-6 h-6" />
+                {loading ? (
+                    <>
+                        <span>Loading</span>
+                        <DotsHorizontalIcon className="w-6 h-6" />
+                    </>
+                ) : (
+                    <span>1. Connect Linear</span>
                 )}
+                {!!accessToken && <CheckIcon className="w-6 h-6" />}
             </button>
             {teams.length > 0 && restored && (
                 <div className="flex flex-col items-center w-full space-y-4">
