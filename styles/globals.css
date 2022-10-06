@@ -21,7 +21,7 @@
         @apply text-2xl font-tertiary;
     }
     button {
-        @apply border-2 border-gray-800 disabled:border-gray-500 font-primary disabled:font-tertiary font-medium text-xl py-3 px-6 h-14 w-full max-w-md rounded-3xl enabled:hover:rounded-2xl transition-rounded flex items-center justify-center space-x-4;
+        @apply border-2 border-gray-900 disabled:border-gray-400 font-primary disabled:font-tertiary font-medium text-xl py-3 px-6 h-14 w-full max-w-md rounded-3xl enabled:hover:rounded-2xl transition-rounded flex items-center justify-center space-x-4;
     }
     select {
         @apply rounded-xl bg-gray-300 hover:bg-gray-400 transition-colors p-3 max-w-xs w-full font-secondary text-ellipsis text-xl focus:outline-none;
