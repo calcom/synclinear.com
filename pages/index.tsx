@@ -88,7 +88,7 @@ const index = () => {
                     <h1>Linear-GitHub Sync</h1>
                     <h3>End-to-end sync of Linear tickets and GitHub issues</h3>
                 </div>
-                <div className="w-full flex flex-col sm:flex-row justify-around items-start gap-4">
+                <div className="w-full flex flex-col sm:flex-row justify-around items-center sm:items-start gap-4">
                     <LinearAuthButton
                         restoredApiKey={linearContext.apiKey}
                         restored={restored}
@@ -97,7 +97,7 @@ const index = () => {
                         }
                         onDeployWebhook={setLinearContext}
                     />
-                    <div className="center w-56 shrink gap-4">
+                    <div className="flex sm:center h-20 sm:h-fit sm:w-56 shrink gap-4">
                         <SyncArrow
                             direction="right"
                             active={
