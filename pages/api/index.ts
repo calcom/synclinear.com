@@ -64,6 +64,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 sync => sync.linearUserId === (data.userId ?? data.creatorId)
             )
         ) {
+            console.log("Could not find Linear user in syncs.");
+
             return res.status(200).send({
                 success: true,
                 message: "Could not find Linear user in syncs."
@@ -75,6 +77,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         );
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
+            console.log("Could not find synced repo or team.");
+
             return res.status(404).send({
                 success: false,
                 message: "Could not find synced repo or team."
@@ -1129,8 +1133,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         }
     }
 
+    console.log("Webhook received with no error or action taken.");
+
     return res.status(200).send({
-        success: true
+        success: true,
+        message: "Webhook received with no error or action taken."
     });
 };
 
