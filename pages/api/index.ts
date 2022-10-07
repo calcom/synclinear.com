@@ -209,7 +209,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                     if (
                         createdLabelResponse.statusCode > 201 &&
-                        createdLabelData.errors[0]?.code !== "already_exists"
+                        createdLabelData.errors?.[0]?.code !== "already_exists"
                     ) {
                         console.log("Could not create label.");
                         return res.status(403).send({
@@ -275,11 +275,17 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
-                        body: `${data.description}${getSyncFooter()}`
+                        body: `${data.description ?? ""}${getSyncFooter()}`
                     })
                     .send();
 
-                if (!syncs.some(sync => sync.linearUserId === data.creatorId)) {
+                if (
+                    !syncs.some(
+                        sync =>
+                            sync.linearUserId ===
+                            (data.userId ?? data.creatorId)
+                    )
+                ) {
                     inviteMember(
                         data.creatorId,
                         data.teamId,
@@ -1135,11 +1141,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         }
     }
 
-    console.log("Webhook received with no error or action taken.");
-
+    console.log("Webhook received.");
     return res.status(200).send({
         success: true,
-        message: "Webhook received with no error or action taken."
+        message: "Webhook received."
     });
 };
 
