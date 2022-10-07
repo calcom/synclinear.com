@@ -77,11 +77,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         );
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
-            console.log("Could not find synced repo or team.");
+            console.log("Could not find ticket's corresponding repo.");
 
             return res.status(404).send({
                 success: false,
-                message: "Could not find synced repo or team."
+                message: "Could not find ticket's corresponding repo."
             });
         }
 
@@ -796,9 +796,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         });
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
+            console.log("Could not find issue's corresponding team.");
+
             return res.status(404).send({
                 success: false,
-                message: "Could not find synced repo or team."
+                message: "Could not find issue's corresponding team."
             });
         }
 
@@ -813,7 +815,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         );
 
         if (sig.length !== digest.length || !timingSafeEqual(digest, sig)) {
-            console.log(`Failed to verify signature for webhook.`);
+            console.log("Failed to verify signature for webhook.");
 
             return res.status(403).send({
                 success: false,
