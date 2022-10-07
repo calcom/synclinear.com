@@ -394,7 +394,7 @@ export const saveSync = async (
         body: JSON.stringify(data)
     });
 
-    return response.json();
+    return await response.json();
 };
 
 export const getAttachmentQuery = (

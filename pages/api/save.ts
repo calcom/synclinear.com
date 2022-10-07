@@ -26,8 +26,22 @@ export default async function handle(
     );
 
     try {
-        const result = await prisma.sync.create({
-            data: {
+        await prisma.sync.upsert({
+            where: {
+                githubUserId_linearUserId_githubRepoId_linearTeamId: {
+                    githubUserId: body.github.userId,
+                    githubRepoId: body.github.repoId,
+                    linearUserId: body.linear.userId,
+                    linearTeamId: body.linear.teamId
+                }
+            },
+            update: {
+                githubApiKey,
+                githubApiKeyIV,
+                linearApiKey,
+                linearApiKeyIV
+            },
+            create: {
                 // GitHub
                 githubUserId: body.github.userId,
                 githubRepoId: body.github.repoId,
@@ -42,9 +56,10 @@ export default async function handle(
             }
         });
 
-        return res.status(200).json(result);
+        return res.status(200).send({ message: "Saved successfully" });
     } catch (err) {
-        return res.status(404).send({ message: err });
+        console.log("Error saving sync:", err.message);
+        return res.status(404).send({ error: "Failed to save sync" });
     }
 }
 

@@ -59,7 +59,10 @@ const index = () => {
         if (linearContext.teamId && gitHubContext.repoId) {
             saveSync(linearContext, gitHubContext)
                 .then(res => {
-                    if (res.error) alert(res.error);
+                    if (res.error) {
+                        alert(res.error);
+                        return;
+                    }
 
                     setSynced(true);
 
