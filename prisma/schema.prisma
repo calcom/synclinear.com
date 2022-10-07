@@ -75,5 +75,6 @@ model Sync {
     linearApiKey   String
     linearApiKeyIV String
 
+    @@unique([githubUserId, linearUserId, githubRepoId, linearTeamId])
     @@map("syncs")
 }
