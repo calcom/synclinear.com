@@ -257,7 +257,10 @@ export const getLinearFooter = (sender: {
 };
 
 export const getGitHubFooter = (userName: string): string => {
-    return `\n\n> From ${userName} on Linear`;
+    // To avoid exposing a user email if their username is an email address
+    const sanitizedUsername = userName.split("@")?.[0];
+
+    return `\n\n> From ${sanitizedUsername} on Linear`;
 };
 
 export const getSyncFooter = (): string => {

@@ -391,7 +391,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         .header("User-Agent", userAgentHeader)
                         .header("Authorization", githubAuthHeader)
                         .body({
-                            body: `${comment.body}${getGitHubFooter(user.name)}`
+                            body: `${comment.body ?? ""}${getGitHubFooter(
+                                user.displayName
+                            )}`
                         })
                         .send()
                         .then(commentResponse => {
@@ -495,8 +497,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        body: `${data.description}${getGitHubFooter(
-                            issueCreator.name
+                        body: `${data.description ?? ""}${getGitHubFooter(
+                            issueCreator.displayName
                         )}`
                     })
                     .send()
@@ -643,7 +645,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        body: `${data.body}${getGitHubFooter(data.user!.name)}`
+                        body: `${data.body ?? ""}${getGitHubFooter(
+                            data.user?.name
+                        )}`
                     })
                     .send()
                     .then(commentResponse => {
@@ -705,7 +709,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
-                        body: `${data.description}${getSyncFooter()}`
+                        body: `${data.description ?? ""}${getSyncFooter()}`
                     })
                     .send();
 
@@ -891,7 +895,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             await linear
                 .commentCreate({
                     issueId: syncedIssue.linearIssueId,
-                    body: `${comment.body}${getLinearFooter(sender)}`
+                    body: `${comment.body ?? ""}${getLinearFooter(sender)}`
                 })
                 .then(comment => {
                     comment.comment?.then(commentData => {
