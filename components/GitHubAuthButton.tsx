@@ -48,6 +48,7 @@ const GitHubAuthButton = ({
         if (!authResponse.get("state")?.includes("github")) return;
         if (authResponse.get("state") !== verificationCode) {
             alert("GitHub auth returned an invalid code. Please try again.");
+            clearURLParams();
             return;
         }
 
