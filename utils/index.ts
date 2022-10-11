@@ -9,6 +9,7 @@ import {
 } from "../typings";
 import { linearQuery } from "./apollo";
 import { GENERAL, GITHUB, LINEAR } from "./constants";
+import { v4 as uuid } from "uuid";
 
 export const isDev = (): boolean => {
     return process.env.NODE_ENV === "development";
@@ -249,18 +250,15 @@ export const inviteMember = async (
     });
 };
 
-export const getLinearFooter = (sender: {
-    login: string;
-    html_url: string;
-}): string => {
-    return `\n\n> From [${sender.login}](${sender.html_url}) on GitHub`;
+export const generateLinearUUID = (): string => {
+    return `${uuid().substring(0, 28)}${GITHUB.UUID_SUFFIX}`;
 };
 
 export const getGitHubFooter = (userName: string): string => {
     // To avoid exposing a user email if their username is an email address
     const sanitizedUsername = userName.split("@")?.[0];
 
-    return `\n\n> From ${sanitizedUsername} on Linear`;
+    return `\n\n<!-- From ${sanitizedUsername} on Linear -->`;
 };
 
 export const getSyncFooter = (): string => {

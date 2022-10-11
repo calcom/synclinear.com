@@ -26,7 +26,8 @@ export const GITHUB = {
     REPO_ENDPOINT: "https://api.github.com/repos",
     ICON_URL:
         "https://cdn.discordapp.com/attachments/937628023497297930/988735284504043520/github.png",
-    STORAGE_KEY: "github-context"
+    STORAGE_KEY: "github-context",
+    UUID_SUFFIX: "decafbad"
 };
 
 export const TIMEOUTS = {

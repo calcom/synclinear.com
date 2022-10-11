@@ -16,7 +16,7 @@ import {
     formatJSON,
     getAttachmentQuery,
     getGitHubFooter,
-    getLinearFooter,
+    generateLinearUUID,
     getSyncFooter,
     inviteMember,
     isIssue,
@@ -602,10 +602,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         if (action === "create") {
             if (actionType === "Comment") {
-                if (
-                    data.user?.id === linearUserId &&
-                    data.body.includes("on GitHub")
-                ) {
+                if (data.id.includes(GITHUB.UUID_SUFFIX)) {
                     console.log(skipReason("comment", data.issue!.id, true));
 
                     return res.status(200).send({
@@ -894,8 +891,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
             await linear
                 .commentCreate({
+                    id: generateLinearUUID(),
                     issueId: syncedIssue.linearIssueId,
-                    body: `${comment.body ?? ""}${getLinearFooter(sender)}`
+                    body: comment.body ?? ""
                 })
                 .then(comment => {
                     comment.comment?.then(commentData => {
@@ -1181,10 +1179,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 for (const comment of commentsSanitized) {
                     const commentData = await linear.commentCreate({
+                        id: generateLinearUUID(),
                         issueId: createdIssue.id,
-                        body: `${comment.body}${getLinearFooter(
-                            comment.sender
-                        )}`
+                        body: comment.body ?? ""
                     });
 
                     if (!commentData.success) {
