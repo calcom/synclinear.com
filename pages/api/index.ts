@@ -6,7 +6,7 @@ import {
     IssueCommentCreatedEvent,
     IssuesEditedEvent,
     IssuesClosedEvent,
-    IssuesOpenedEvent
+    IssuesEvent
 } from "@octokit/webhooks-types";
 import { LinearClient } from "@linear/sdk";
 import prisma from "../../prisma";
@@ -1006,14 +1006,13 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         });
                     });
                 });
-        } else if (isIssue(req) && action === "opened") {
-            const {
-                issue
-            }: IssuesOpenedEvent & {
-                issue: {
-                    closed_at: never;
-                };
-            } = req.body;
+        } else if (
+            isIssue(req) &&
+            (action === "opened" ||
+                (action === "labeled" &&
+                    req.body.label?.name === LINEAR.GITHUB_LABEL))
+        ) {
+            const { issue }: IssuesEvent = req.body;
 
             if (issue.body?.includes(getSyncFooter())) {
                 console.log(skipReason("edit", issue.number, true));
@@ -1142,10 +1141,68 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     ]);
                 }
             }
+
+            // Add issue comment history to newly-created Linear ticket
+            if (action === "labeled") {
+                const issueCommentsPayload = await petitio(
+                    `${issuesEndpoint}/${issue.number}/comments`,
+                    "GET"
+                )
+                    .header("User-Agent", userAgentHeader)
+                    .header("Authorization", githubAuthHeader)
+                    .send();
+
+                if (issueCommentsPayload.statusCode > 201) {
+                    console.log(
+                        `Failed to fetch comments for GitHub issue #${
+                            issue.number
+                        } [${issue.id}], received status code ${
+                            issueCommentsPayload.statusCode
+                        }, body of ${formatJSON(issueCommentsPayload.json())}.`
+                    );
+
+                    return res.status(403).send({
+                        message: `Could not fetch comments for GitHub issue #${issue.number} [${issue.id}]`
+                    });
+                }
+
+                const comments = await issueCommentsPayload.json();
+
+                const commentsSanitized = comments.map(comment => {
+                    return {
+                        body: comment.body,
+                        sender: {
+                            login: comment.user.login,
+                            html_url: comment.user.html_url
+                        }
+                    };
+                });
+
+                for (const comment of commentsSanitized) {
+                    const commentData = await linear.commentCreate({
+                        issueId: createdIssue.id,
+                        body: `${comment.body}${getLinearFooter(
+                            comment.sender
+                        )}`
+                    });
+
+                    if (!commentData.success) {
+                        console.log(
+                            `Failed to create comment on Linear ticket ${createdIssue.id} for GitHub issue #${issue.number}.`
+                        );
+
+                        return res.status(500).send({
+                            success: false,
+                            message: `Failed creating comment on Linear.`
+                        });
+                    }
+                }
+            }
         }
     }
 
     console.log("Webhook received.");
+
     return res.status(200).send({
         success: true,
         message: "Webhook received."
