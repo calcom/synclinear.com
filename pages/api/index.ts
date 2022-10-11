@@ -219,7 +219,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     }
 
                     const labelName =
-                        createdLabelData.errors[0]?.code === "already_exists"
+                        createdLabelData.errors?.[0]?.code === "already_exists"
                             ? label.name
                             : createdLabelData.name;
 
