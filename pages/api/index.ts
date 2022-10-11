@@ -1010,7 +1010,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             isIssue(req) &&
             (action === "opened" ||
                 (action === "labeled" &&
-                    req.body.label?.name === LINEAR.GITHUB_LABEL))
+                    req.body.label?.name?.toLowerCase() ===
+                        LINEAR.GITHUB_LABEL))
         ) {
             const { issue }: IssuesEvent = req.body;
 

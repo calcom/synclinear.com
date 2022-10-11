@@ -9,10 +9,9 @@ const Landing = () => {
             <div className="space-y-12 text-center max-w-xl">
                 <h2>What does it do?</h2>
                 <h3>
-                    Linear-GitHub Sync lets you mirror Linear tickets in a
-                    public repo by adding a special <code>Public</code> tag.
+                    This app lets you mirror Linear tickets to public GitHub
+                    issues, comments and all.
                 </h3>
-                <h3>Comments on the mirrored issue sync back.</h3>
                 <h3>
                     This way, open-source teams can chat with contributors
                     without giving access to an internal Linear team.
@@ -21,33 +20,31 @@ const Landing = () => {
             <div className="space-y-12 text-center max-w-xl">
                 <h2>How does it work?</h2>
                 <h3>
-                    Under the hood, webhooks ping the app from both Linear and
-                    GitHub when issues and comments are made.
+                    Under the hood, a webhook pings the app with new issues and
+                    comments.
                 </h3>
                 <h3>
-                    User tokens are encrypted at rest and in transit, accessible
-                    only by a team's webhook.
+                    Access tokens are encrypted at rest and in transit,
+                    accessible only by your team's webhook.
                 </h3>
             </div>
             <div className="space-y-12 center">
                 <h2 className="text-center">How do I set it up?</h2>
                 <ul className="text-xl font-tertiary">
                     <li>
-                        1. One member of your Linear team selects a GitHub repo
-                        to sync with
+                        1. If you're setting this up for your team, simply pick
+                        your Linear team and a GitHub repo
                     </li>
                     <li>
-                        2. All members of your team authorize the app to open
-                        issues as them
+                        2. If you're joining a team, simply authorize the app to
+                        open issues as you
                     </li>
                     <li>
-                        3. Add the <code>Public</code> tag to a Linear ticket to
-                        mirror it in the repo
+                        3. Label a Linear ticket as <code>Public</code> (or
+                        label a GitHub issue as <code>linear</code>) to mirror
+                        it
                     </li>
-                    <li>
-                        4. Public comments on that issue will sync back to the
-                        Linear ticket!
-                    </li>
+                    <li>4. Comments on that issue will sync back!</li>
                 </ul>
                 <button
                     onClick={() =>
