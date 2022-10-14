@@ -595,9 +595,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             );
                     });
             }
-        }
-
-        if (action === "create") {
+        } else if (action === "create") {
             if (actionType === "Comment") {
                 if (data.id.includes(GITHUB.UUID_SUFFIX)) {
                     console.log(skipReason("comment", data.issue!.id, true));
@@ -664,10 +662,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                 `Synced comment [${data.id}] for ${data.issue?.id} on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                             );
                     });
-            } else if (
-                actionType === "Issue" &&
-                data.labelIds.includes(publicLabelId)
-            ) {
+            } else if (actionType === "Issue") {
+                if (!data.labelIds?.includes(publicLabelId)) {
+                    return res.status(200).send({
+                        success: true,
+                        message: "Issue is not labeled as public"
+                    });
+                }
+
                 if (data.description?.includes(getSyncFooter())) {
                     console.log(skipReason("issue", data.id, true));
 
@@ -707,15 +709,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     })
                     .send();
 
-                if (!syncs.some(sync => sync.linearUserId === data.creatorId)) {
-                    inviteMember(
-                        data.creatorId,
-                        data.teamId,
-                        repoFullName,
-                        linear
-                    );
-                }
-
                 if (createdIssueResponse.statusCode > 201) {
                     console.log(
                         `Failed to create GitHub issue for ${data.team.key}-${
@@ -731,7 +724,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
-                let createdIssueData: components["schemas"]["issue"] =
+                const createdIssueData: components["schemas"]["issue"] =
                     await createdIssueResponse.json();
 
                 await Promise.all([
@@ -780,6 +773,83 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         }
                     })
                 ]);
+
+                // Apply all labels to newly-created issue
+                const labelIds = data.labelIds.filter(
+                    id => id != publicLabelId
+                );
+                const labelNames: string[] = [];
+                for (const labelId of labelIds) {
+                    if (labelId === publicLabelId) continue;
+
+                    const label = await linear.issueLabel(labelId);
+                    if (!label) {
+                        console.log(
+                            `Could not find label ${labelId} for ${data.team.key}-${data.number}.`
+                        );
+                        continue;
+                    }
+
+                    const createdLabelResponse = await petitio(
+                        `https://api.github.com/repos/${repoFullName}/labels`,
+                        "POST"
+                    )
+                        .header("User-Agent", userAgentHeader)
+                        .header("Authorization", githubAuthHeader)
+                        .body({
+                            name: label.name,
+                            color: label.color?.replace("#", ""),
+                            description: "Created by Linear-GitHub Sync"
+                        })
+                        .send();
+
+                    const createdLabelData = await createdLabelResponse.json();
+
+                    if (
+                        createdLabelResponse.statusCode > 201 &&
+                        createdLabelData.errors?.[0]?.code !== "already_exists"
+                    ) {
+                        console.log(
+                            `Could not create GH label "${label.name}" in ${repoFullName}.`
+                        );
+                        continue;
+                    }
+
+                    const labelName =
+                        createdLabelData.errors?.[0]?.code === "already_exists"
+                            ? label.name
+                            : createdLabelData.name;
+
+                    labelNames.push(labelName);
+                }
+
+                const appliedLabelResponse = await petitio(
+                    `${issuesEndpoint}/${createdIssueData.number}/labels`,
+                    "POST"
+                )
+                    .header("User-Agent", userAgentHeader)
+                    .header("Authorization", githubAuthHeader)
+                    .body({ labels: labelNames })
+                    .send();
+
+                if (appliedLabelResponse.statusCode > 201) {
+                    console.log(
+                        `Could not apply labels to #${createdIssueData.number} in ${repoFullName}.`
+                    );
+                } else {
+                    console.log(
+                        `Applied labels to #${createdIssueData.number} in ${repoFullName}.`
+                    );
+                }
+
+                if (!syncs.some(sync => sync.linearUserId === data.creatorId)) {
+                    await inviteMember(
+                        data.creatorId,
+                        data.teamId,
+                        repoFullName,
+                        linear
+                    );
+                }
             }
         }
     } else {
