@@ -108,7 +108,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         const userAgentHeader = `${repoFullName}, linear-github-sync`;
         const issuesEndpoint = `https://api.github.com/repos/${repoFullName}/issues`;
 
-        if (action === "update" && updatedFrom.labelIds) {
+        if (action === "update") {
             if (updatedFrom.labelIds?.includes(publicLabelId)) {
                 // Label updated on an already-Public issue
                 const syncedIssue = await prisma.syncedIssue.findFirst({
@@ -245,6 +245,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     }
                 }
             } else if (
+                updatedFrom.labelIds &&
                 !updatedFrom.labelIds?.includes(publicLabelId) &&
                 data.labelIds?.includes(publicLabelId)
             ) {
@@ -376,6 +377,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     })
                 ] as Promise<any>[]);
 
+                // Sync all comments on the issue
                 for (const linearComment of linearComments) {
                     if (!linearComment) continue;
 
@@ -485,7 +487,24 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
-                const issueCreator = await linear.user(data.creatorId);
+                if (data.description?.includes(getSyncFooter())) {
+                    console.log(
+                        skipReason(
+                            "edit",
+                            `${data.team.key}-${data.number}`,
+                            true
+                        )
+                    );
+
+                    return res.status(200).send({
+                        success: true,
+                        message: skipReason(
+                            "edit",
+                            `${data.team.key}-${data.number}`,
+                            true
+                        )
+                    });
+                }
 
                 await petitio(
                     `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
@@ -494,9 +513,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        body: `${data.description ?? ""}${getGitHubFooter(
-                            issueCreator.displayName
-                        )}`
+                        body: `${data.description ?? ""}${getSyncFooter()}`
                     })
                     .send()
                     .then(updatedIssueResponse => {
