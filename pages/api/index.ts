@@ -86,7 +86,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         }
 
         const {
-            linearUserId,
             linearApiKey,
             linearApiKeyIV,
             githubApiKey,
@@ -534,25 +533,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             }
 
             if (updatedFrom.stateId) {
-                if (data.user?.id === linearUserId) {
-                    console.log(
-                        skipReason(
-                            "state change",
-                            `${data.team.key}-${data.number}`,
-                            true
-                        )
-                    );
-
-                    return res.status(200).send({
-                        success: true,
-                        message: skipReason(
-                            "state change",
-                            `${data.team.key}-${data.number}`,
-                            true
-                        )
-                    });
-                }
-
                 const syncedIssue = await prisma.syncedIssue.findFirst({
                     where: {
                         linearIssueId: data.id,
