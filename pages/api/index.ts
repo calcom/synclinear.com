@@ -342,12 +342,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         })
                         .send()
                         .then(attachmentResponse => {
-                            const attachmentData: {
-                                success: boolean;
-                                attachment: {
-                                    id: string;
-                                };
-                            } = attachmentResponse.json();
+                            const attachment = attachmentResponse.json();
                             if (attachmentResponse.statusCode > 201)
                                 console.log(
                                     getOtherUpdateError(
@@ -355,10 +350,12 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                         data,
                                         createdIssueData,
                                         createdIssueResponse,
-                                        attachmentData
+                                        attachment
                                     )
                                 );
-                            else if (!attachmentData.success)
+                            else if (
+                                !attachment?.data?.attachmentCreate?.success
+                            )
                                 console.log(
                                     `Failed to create attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
                                 );
@@ -750,12 +747,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         })
                         .send()
                         .then(attachmentResponse => {
-                            const attachmentData: {
-                                success: boolean;
-                                attachment: {
-                                    id: string;
-                                };
-                            } = attachmentResponse.json();
+                            const attachment = attachmentResponse.json();
                             if (attachmentResponse.statusCode > 201)
                                 console.log(
                                     getOtherUpdateError(
@@ -763,10 +755,12 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                         data,
                                         createdIssueData,
                                         createdIssueResponse,
-                                        attachmentData
+                                        attachment
                                     )
                                 );
-                            else if (!attachmentData.success)
+                            else if (
+                                !attachment?.data?.attachmentCreate?.success
+                            )
                                 console.log(
                                     `Failed to create attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
                                 );
@@ -1097,12 +1091,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             })
                             .send()
                             .then(attachmentResponse => {
-                                const attachmentData: {
-                                    success: boolean;
-                                    attachment: {
-                                        id: string;
-                                    };
-                                } = attachmentResponse.json();
+                                const attachment = attachmentResponse.json();
                                 if (attachmentResponse.statusCode > 201)
                                     console.log(
                                         getOtherUpdateError(
@@ -1114,13 +1103,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                             },
                                             issue,
                                             attachmentResponse,
-                                            attachmentData
+                                            attachment
                                         )
                                     );
-                                else if (!attachmentData.success)
+                                else if (
+                                    !attachment?.data?.attachmentCreate?.success
+                                )
                                     console.log(
-                                        `Failed to create attachment for ${team.key}-${createdIssue.number} [${createdIssue.id}] for GitHub issue #${issue.number} [${issue.id}], received status code ${attachmentResponse.statusCode}`,
-                                        attachmentData
+                                        `Failed to create attachment for ${team.key}-${createdIssue.number} [${createdIssue.id}] for GitHub issue #${issue.number} [${issue.id}], received status code ${attachmentResponse.statusCode}`
                                     );
                                 else
                                     console.log(
