@@ -94,16 +94,19 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             GitHubRepo: { repoName: repoFullName, repoId }
         } = sync;
 
-        const linearKeyDecrypted = decrypt(linearApiKey, linearApiKeyIV);
+        const linearKey = process.env.LINEAR_API_KEY
+            ? process.env.LINEAR_API_KEY
+            : decrypt(linearApiKey, linearApiKeyIV);
+
         const linear = new LinearClient({
-            apiKey: linearKeyDecrypted
+            apiKey: linearKey
         });
 
-        const githubAuthHeader = `token ${decrypt(
-            githubApiKey,
-            githubApiKeyIV
-        )}`;
+        const githubKey = process.env.GITHUB_API_KEY
+            ? process.env.GITHUB_API_KEY
+            : decrypt(githubApiKey, githubApiKeyIV);
 
+        const githubAuthHeader = `token ${githubKey}`;
         const userAgentHeader = `${repoFullName}, linear-github-sync`;
         const issuesEndpoint = `https://api.github.com/repos/${repoFullName}/issues`;
 
@@ -331,7 +334,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 await Promise.all([
                     petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
-                        .header("Authorization", `Bearer ${linearKeyDecrypted}`)
+                        .header("Authorization", `Bearer ${linearKey}`)
                         .header("Content-Type", "application/json")
                         .body({
                             query: getAttachmentQuery(
@@ -726,7 +729,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 await Promise.all([
                     petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
-                        .header("Authorization", `Bearer ${linearKeyDecrypted}`)
+                        .header("Authorization", `Bearer ${linearKey}`)
                         .header("Content-Type", "application/json")
                         .body({
                             query: getAttachmentQuery(
@@ -906,16 +909,19 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             GitHubRepo: { repoName }
         } = sync;
 
-        const linearKeyDecrypted = decrypt(linearApiKey, linearApiKeyIV);
+        const linearKey = process.env.LINEAR_API_KEY
+            ? process.env.LINEAR_API_KEY
+            : decrypt(linearApiKey, linearApiKeyIV);
+
         const linear = new LinearClient({
-            apiKey: linearKeyDecrypted
+            apiKey: linearKey
         });
 
-        const githubAuthHeader = `token ${decrypt(
-            githubApiKey,
-            githubApiKeyIV
-        )}`;
+        const githubKey = process.env.GITHUB_API_KEY
+            ? process.env.GITHUB_API_KEY
+            : decrypt(githubApiKey, githubApiKeyIV);
 
+        const githubAuthHeader = `token ${githubKey}`;
         const userAgentHeader = `${repoName}, linear-github-sync`;
         const issuesEndpoint = `https://api.github.com/repos/${repoName}/issues`;
 
@@ -1144,10 +1150,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                     );
                             }),
                         petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
-                            .header(
-                                "Authorization",
-                                `Bearer ${linearKeyDecrypted}`
-                            )
+                            .header("Authorization", `Bearer ${linearKey}`)
                             .header("Content-Type", "application/json")
                             .body({
                                 query: getAttachmentQuery(

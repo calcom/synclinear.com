@@ -14,9 +14,9 @@ The simplest way to host your own instance of Linear-GitHub Sync is to one-click
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/L__0PR)
 
-[![Deploy to DO](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/calcom/linear-to-github/tree/main)
+[![Deploy to DO](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/calcom/synclinear.com/tree/main)
 
 Want more control? See the full [setup instructions](Setup.md).
 
-If you need any help, please feel free to raise an [issue](https://github.com/calcom/linear-to-github/issues/new)!
+If you need any help, please feel free to raise an [issue](https://github.com/calcom/synclinear.com/issues/new)!
 
