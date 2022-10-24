@@ -1,29 +1,33 @@
-# Development Setup
+# Self-Hosting Setup
 
-Welcome to the development page for Linear-GitHub sync. If you need any help, please feel free to raise an [issue](https://github.com/calcom/linear-to-github/issues/new)!
+Welcome to the self-hosting page for **SyncLinear.com**. If something doesn't seem right, feel free to [raise an issue](https://github.com/calcom/linear-to-github/issues/new) or [open a PR](https://github.com/calcom/synclinear.com/pulls)!
 
-### Getting Started
+## Getting Started
 
-First, copy the environment file with `cp .env.example .env`. Install dependencies with `pnpm i`.
+### Environment
+
+1. Copy the environment file with `cp .env.example .env`
+2. If you'll be sharing your instance with teammates, you'll need to create OAuth apps for both GitHub (under your org > developer settings) and [Linear](https://linear.app/settings/api/applications/new). Replace the `OAUTH_ID`s in [constants.ts](/utils/constants.ts) with your OAuth app IDs (safe to share publicly). Populate the `GITHUB_OAUTH_SECRET` and `LINEAR_OAUTH_SECRET` environment variables ([.env](/.env.example)) with your OAuth secrets. Keep these secret!
 
 ### Database
 
-Before you start the server, you'll need to provision a simple DB to persist IDs. Don't sweat - [Railway](https://docs.railway.app/databases/postgresql) makes this easy:
+To persist IDs, you'll need to provision a simple SQL database. One easy option is [Railway](https://docs.railway.app/databases/postgresql):
 
-1. Sign up for [Railway](https://railway.app/)
-2. Click "Start a New Project" → "Provision PostgreSQL"
-3. Once the DB is ready, focus it → go to "Connect" → "Postgres Connection URL" → hover to copy
-4. Paste this URL (beginning with `postgresql://`) to the `DATABASE_URL` variable in `.env`
-5. Run `npx prisma migrate dev` to generate tables with the necessary fields
-6. Run `npx prisma generate` to access Prisma's typesafety and intellisense
+1. Click "Start a New Project" → "Provision PostgreSQL" (no sign-up required yet)
+2. Once the DB is ready, focus it → go to "Connect" → "Postgres Connection URL" → hover to copy this URL. It should look like `postgresql://postgres:pass@region.railway.app:1234/railway`.
+
+To point the app to your database,
+
+1. Paste the connection URL (from step 3 above if you're using Railway) to the `DATABASE_URL` variable in `.env`
+2. Run `npx prisma migrate dev` to generate tables with the necessary columns
+3. Run `npx prisma generate` to generate the [ORM](https://www.prisma.io/) for your database
 
 ### Running the app
 
-To start the app locally, run `pnpm dev`.
-
-To receive webhooks locally, expose your local server with `ngrok http 3000` (or whichever port it's running on). This will give you a temporary public URL.
-
-To obtain API keys and labels, follow the auth flow at that URL.
+1. Install dependencies with `pnpm i`
+2. To start the app locally, run `pnpm dev`
+3. To receive webhooks locally, expose your local server with `ngrok http 3000` (or the port it's running on). This will give you a temporary public URL.
+4. To start syncing repos to Linear teams, follow the auth flow at that URL
 
 ---
 
