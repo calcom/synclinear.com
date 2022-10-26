@@ -59,8 +59,10 @@ export const decrypt = (content: string, initVector: string): string => {
 };
 
 export const getSyncFooter = (): string => {
-    return `\n\n> From [Linear-GitHub Sync](https://synclinear.com)`;
+    return `\n\n> From [SyncLinear.com](https://synclinear.com)`;
 };
+
+export const legacySyncFooter = `From [Linear-GitHub Sync](https://synclinear.com)`;
 
 export const saveSync = async (
     linearContext: LinearContext,

@@ -15,6 +15,7 @@ import {
     decrypt,
     formatJSON,
     getAttachmentQuery,
+    legacySyncFooter,
     getSyncFooter,
     isIssue,
     skipReason
@@ -488,7 +489,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
-                if (data.description?.includes(getSyncFooter())) {
+                if (
+                    data.description?.includes(getSyncFooter()) ||
+                    data.description?.includes(legacySyncFooter)
+                ) {
                     console.log(
                         skipReason(
                             "edit",
@@ -669,7 +673,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
-                if (data.description?.includes(getSyncFooter())) {
+                if (
+                    data.description?.includes(getSyncFooter()) ||
+                    data.description?.includes(legacySyncFooter)
+                ) {
                     console.log(skipReason("issue", data.id, true));
 
                     return res.status(200).send({
@@ -1079,7 +1086,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         ) {
             const { issue }: IssuesEvent = req.body;
 
-            if (issue.body?.includes(getSyncFooter())) {
+            if (
+                issue.body?.includes(getSyncFooter()) ||
+                issue.body?.includes(legacySyncFooter)
+            ) {
                 console.log(skipReason("edit", issue.number, true));
 
                 return res.status(200).send({
