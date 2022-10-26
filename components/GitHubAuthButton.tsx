@@ -1,19 +1,19 @@
 import { CheckIcon, DotsHorizontalIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { GitHubContext, GitHubRepo } from "../typings";
-import {
-    checkForExistingRepo,
-    clearURLParams,
-    exchangeGitHubToken,
-    getGitHubAuthURL,
-    getGitHubRepos,
-    getGitHubUser,
-    saveGitHubContext,
-    setGitHubWebook
-} from "../utils";
+import { clearURLParams } from "../utils";
 import { v4 as uuid } from "uuid";
 import { GITHUB } from "../utils/constants";
 import DeployButton from "./DeployButton";
+import {
+    exchangeGitHubToken,
+    getGitHubRepos,
+    getGitHubUser,
+    checkForExistingRepo,
+    getGitHubAuthURL,
+    saveGitHubContext,
+    setGitHubWebook
+} from "../utils/github";
 
 interface IProps {
     onAuth: (apiKey: string) => void;

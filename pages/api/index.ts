@@ -15,13 +15,12 @@ import {
     decrypt,
     formatJSON,
     getAttachmentQuery,
-    getGitHubFooter,
-    generateLinearUUID,
     getSyncFooter,
-    inviteMember,
     isIssue,
     skipReason
 } from "../../utils";
+import { getGitHubFooter } from "../../utils/github";
+import { generateLinearUUID, inviteMember } from "../../utils/linear";
 import { GITHUB, LINEAR } from "../../utils/constants";
 import { getIssueUpdateError, getOtherUpdateError } from "../../utils/errors";
 

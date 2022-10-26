@@ -1,18 +1,18 @@
 import { CheckIcon, DotsHorizontalIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import { LinearContext, LinearObject, LinearTeam } from "../typings";
-import {
-    checkForExistingTeam,
-    clearURLParams,
-    exchangeLinearToken,
-    getLinearAuthURL,
-    getLinearContext,
-    saveLinearContext,
-    setLinearWebhook
-} from "../utils";
+import { clearURLParams } from "../utils";
 import { v4 as uuid } from "uuid";
 import { LINEAR } from "../utils/constants";
 import DeployButton from "./DeployButton";
+import {
+    exchangeLinearToken,
+    getLinearContext,
+    checkForExistingTeam,
+    getLinearAuthURL,
+    saveLinearContext,
+    setLinearWebhook
+} from "../utils/linear";
 
 interface IProps {
     onAuth: (apiKey: string) => void;
