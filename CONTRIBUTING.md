@@ -61,3 +61,14 @@ If you get errors, be sure to fix them before committing.
 - If your PR refers to or fixes an issue, be sure to add `refs #XXX` or `fixes #XXX` to the PR description. Replacing `XXX` with the respective issue number. Se more about [Linking a pull request to an issue
   ](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue).
 - Be sure to fill the PR Template accordingly.
+
+## Architecture
+
+This app has two major components: a "webhook consumer" and a web UI for auth.
+
+The webhook consumer is a single endpoint that receives webhooks from Linear and GitHub then decides what to do.
+
+Data such as GitHub repos, synced issues, and usernames are persisted in PostgreSQL. This is the current data model:
+
+![image](https://user-images.githubusercontent.com/36117635/198146316-e910d370-bea3-449a-9f5a-5ac87d6e11ef.png)
+
