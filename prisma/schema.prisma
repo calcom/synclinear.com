@@ -78,3 +78,18 @@ model Sync {
     @@unique([githubUserId, linearUserId, githubRepoId, linearTeamId])
     @@map("syncs")
 }
+
+model User {
+    id String @id @default(cuid())
+
+    githubUserId   Int
+    githubUsername String
+    githubEmail    String?
+
+    linearUserId   String
+    linearUsername String
+    linearEmail    String?
+
+    @@unique([githubUserId, linearUserId])
+    @@map("users")
+}
