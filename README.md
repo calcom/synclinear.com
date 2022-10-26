@@ -22,7 +22,7 @@ To get started, see the [contributor docs](CONTRIBUTING.md)!
 
 If you prefer to host your own database and webhook consumer, we offer one-click deployment on Railway and DigitalOcean:
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/L__0PR)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/L__0PR?referralCode=ted)
 
 [![Deploy to DO](https://www.deploytodo.com/do-btn-blue-ghost.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/calcom/synclinear.com/tree/main)
 
