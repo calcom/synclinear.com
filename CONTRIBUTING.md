@@ -66,9 +66,9 @@ If you get errors, be sure to fix them before committing.
 
 This app has two major components: a "webhook consumer" and a web UI for auth.
 
-The webhook consumer is a single endpoint that receives webhooks from Linear and GitHub then decides what to do.
+The [webhook consumer](/pages/api/index.ts) is a single endpoint that receives webhooks from Linear and GitHub then decides what to do.
 
-Data such as GitHub repos, synced issues, and usernames are persisted in PostgreSQL. This is the current data model:
+Data such as GitHub repos, synced issues, and usernames are persisted in PostgreSQL. This is the current data model, as specified in the [schema](/prisma/schema.prisma):
 
-![image](https://user-images.githubusercontent.com/36117635/198146316-e910d370-bea3-449a-9f5a-5ac87d6e11ef.png)
+![image](https://user-images.githubusercontent.com/36117635/198146657-b37d3eee-c747-4aef-945f-b5ddac984063.png)
 
