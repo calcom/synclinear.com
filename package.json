@@ -2,7 +2,7 @@
     "name": "linear-github-sync",
     "private": true,
     "scripts": {
-        "dev": "npx prisma migrate dev && next dev",
+        "dev": "next dev",
         "build": "npx prisma generate && next build",
         "release": "npx prisma migrate deploy",
         "start": "next start",
