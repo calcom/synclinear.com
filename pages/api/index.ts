@@ -24,6 +24,7 @@ import { getGitHubFooter } from "../../utils/github";
 import { generateLinearUUID, inviteMember } from "../../utils/linear";
 import { GITHUB, LINEAR } from "../../utils/constants";
 import { getIssueUpdateError, getOtherUpdateError } from "../../utils/errors";
+import { replaceMentions, upsertUser } from "./utils";
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method !== "POST")
@@ -40,6 +41,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             message: "Request not from Linear or GitHub."
         });
 
+    /**
+     * Linear webhook consumer
+     */
     if (req.headers["user-agent"] === "Linear-Webhook") {
         const {
             action,
@@ -86,9 +90,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         }
 
         const {
+            linearUserId,
             linearApiKey,
             linearApiKeyIV,
             githubApiKey,
+            githubUserId,
             githubApiKeyIV,
             LinearTeam: { publicLabelId, doneStateId, canceledStateId },
             GitHubRepo: { repoName: repoFullName, repoId }
@@ -109,6 +115,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         const githubAuthHeader = `token ${githubKey}`;
         const userAgentHeader = `${repoFullName}, linear-github-sync`;
         const issuesEndpoint = `https://api.github.com/repos/${repoFullName}/issues`;
+
+        // Map the user's Linear username to their GitHub username if not yet mapped
+        await upsertUser(
+            linear,
+            githubUserId,
+            linearUserId,
+            userAgentHeader,
+            githubAuthHeader
+        );
 
         if (action === "update") {
             if (updatedFrom.labelIds?.includes(publicLabelId)) {
@@ -270,6 +285,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
+                const modifiedDescription = await replaceMentions(
+                    data.description,
+                    "linear"
+                );
+
                 const createdIssueResponse = await petitio(
                     issuesEndpoint,
                     "POST"
@@ -278,7 +298,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
-                        body: `${data.description ?? ""}${getSyncFooter()}`
+                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`
                     })
                     .send();
 
@@ -385,6 +405,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                     const { comment, user } = linearComment;
 
+                    const modifiedComment = await replaceMentions(
+                        comment.body,
+                        "linear"
+                    );
+
                     await petitio(
                         `${issuesEndpoint}/${createdIssueData.number}/comments`,
                         "POST"
@@ -392,7 +417,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         .header("User-Agent", userAgentHeader)
                         .header("Authorization", githubAuthHeader)
                         .body({
-                            body: `${comment.body ?? ""}${getGitHubFooter(
+                            body: `${modifiedComment ?? ""}${getGitHubFooter(
                                 user.displayName
                             )}`
                         })
@@ -511,6 +536,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
+                const modifiedDescription = await replaceMentions(
+                    data.description,
+                    "linear"
+                );
+
                 await petitio(
                     `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
                     "PATCH"
@@ -518,7 +548,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        body: `${data.description ?? ""}${getSyncFooter()}`
+                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`
                     })
                     .send()
                     .then(updatedIssueResponse => {
@@ -633,6 +663,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
+                const modifiedBody = await replaceMentions(data.body, "linear");
+
                 await petitio(
                     `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/comments`,
                     "POST"
@@ -640,7 +672,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        body: `${data.body ?? ""}${getGitHubFooter(
+                        body: `${modifiedBody ?? ""}${getGitHubFooter(
                             data.user?.name
                         )}`
                     })
@@ -703,6 +735,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
+                const modifiedDescription = await replaceMentions(
+                    data.description,
+                    "linear"
+                );
+
                 const createdIssueResponse = await petitio(
                     issuesEndpoint,
                     "POST"
@@ -711,7 +748,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${data.team.key}-${data.number}] ${data.title}`,
-                        body: `${data.description ?? ""}${getSyncFooter()}`
+                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`
                     })
                     .send();
 
@@ -858,6 +895,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 }
             }
         }
+
+        /**
+         * GitHub webhook consumer
+         */
     } else {
         const { repository, sender, action } = req.body;
 
@@ -901,8 +942,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         }
 
         const {
+            linearUserId,
             linearApiKey,
             linearApiKeyIV,
+            githubUserId,
             githubApiKey,
             githubApiKeyIV,
             LinearTeam: {
@@ -930,6 +973,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         const githubAuthHeader = `token ${githubKey}`;
         const userAgentHeader = `${repoName}, linear-github-sync`;
         const issuesEndpoint = `https://api.github.com/repos/${repoName}/issues`;
+
+        // Map the user's GitHub username to their Linear username if not yet mapped
+        await upsertUser(
+            linear,
+            githubUserId,
+            linearUserId,
+            userAgentHeader,
+            githubAuthHeader
+        );
 
         if (
             req.headers["x-github-event"] === "issue_comment" &&
@@ -962,11 +1014,16 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 });
             }
 
+            const modifiedComment = await replaceMentions(
+                comment.body,
+                "github"
+            );
+
             await linear
                 .commentCreate({
                     id: generateLinearUUID(),
                     issueId: syncedIssue.linearIssueId,
-                    body: comment.body ?? ""
+                    body: modifiedComment ?? ""
                 })
                 .then(comment => {
                     comment.comment?.then(commentData => {
@@ -1011,10 +1068,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             const description = issue.body?.split("<sub>");
             if ((description?.length || 0) > 1) description?.pop();
 
+            const modifiedDescription = await replaceMentions(
+                description?.join("<sub>"),
+                "github"
+            );
+
             await linear
                 .issueUpdate(syncedIssue.linearIssueId, {
                     title: title.join(`${syncedIssue.linearIssueNumber}]`),
-                    description: description?.join("<sub>")
+                    description: modifiedDescription
                 })
                 .then(updatedIssue => {
                     updatedIssue.issue?.then(updatedIssueData => {
@@ -1098,9 +1160,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 });
             }
 
+            const modifiedDescription = await replaceMentions(
+                issue.body,
+                "github"
+            );
+
             const createdIssueData = await linear.issueCreate({
                 title: issue.title,
-                description: `${issue.body}${getSyncFooter()}`,
+                description: `${modifiedDescription ?? ""}${getSyncFooter()}`,
                 teamId: linearTeamId,
                 labelIds: [publicLabelId]
             });
@@ -1247,10 +1314,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 });
 
                 for (const comment of commentsSanitized) {
+                    const modifiedComment = await replaceMentions(
+                        comment.body,
+                        "github"
+                    );
+
                     const commentData = await linear.commentCreate({
                         id: generateLinearUUID(),
                         issueId: createdIssue.id,
-                        body: comment.body ?? ""
+                        body: modifiedComment ?? ""
                     });
 
                     if (!commentData.success) {
