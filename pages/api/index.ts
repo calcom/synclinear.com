@@ -126,16 +126,16 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         );
 
         if (action === "update") {
-            if (updatedFrom.labelIds?.includes(publicLabelId)) {
-                // Label updated on an already-Public issue
-                const syncedIssue = await prisma.syncedIssue.findFirst({
-                    where: {
-                        linearIssueId: data.id,
-                        linearTeamId: data.teamId
-                    },
-                    include: { GitHubRepo: true }
-                });
+            const syncedIssue = await prisma.syncedIssue.findFirst({
+                where: {
+                    linearIssueId: data.id,
+                    linearTeamId: data.teamId
+                },
+                include: { GitHubRepo: true }
+            });
 
+            // Label updated on an already-Public issue
+            if (updatedFrom.labelIds?.includes(publicLabelId)) {
                 if (!syncedIssue) {
                     console.log(
                         skipReason("label", `${data.team.key}-${data.number}`)
@@ -267,16 +267,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 data.labelIds?.includes(publicLabelId)
             ) {
                 // Public label added to an issue
-                const issueAlreadyExists = await prisma.syncedIssue.findFirst({
-                    where: {
-                        linearIssueId: data.id,
-                        linearTeamId: data.teamId
-                    }
-                });
-
-                if (issueAlreadyExists) {
+                if (syncedIssue) {
                     console.log(
-                        `Not creating issue after label added as issue ${data.team.key}-${data.number} [${data.id}] already exists on GitHub as issue #${issueAlreadyExists.githubIssueNumber} [${issueAlreadyExists.githubIssueId}].`
+                        `Not creating issue after label added as issue ${data.team.key}-${data.number} [${data.id}] already exists on GitHub as issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                     );
 
                     return res.status(200).send({
@@ -441,15 +434,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 }
             }
 
+            // Title change
             if (updatedFrom.title) {
-                const syncedIssue = await prisma.syncedIssue.findFirst({
-                    where: {
-                        linearTeamId: data.teamId,
-                        linearIssueId: data.id
-                    },
-                    include: { GitHubRepo: true }
-                });
-
                 if (!syncedIssue) {
                     console.log(
                         skipReason("edit", `${data.team.key}-${data.number}`)
@@ -491,15 +477,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
             }
 
+            // Description change
             if (updatedFrom.description) {
-                const syncedIssue = await prisma.syncedIssue.findFirst({
-                    where: {
-                        linearIssueId: data.id,
-                        linearTeamId: data.teamId
-                    },
-                    include: { GitHubRepo: true }
-                });
-
                 if (!syncedIssue) {
                     console.log(
                         skipReason("edit", `${data.team.key}-${data.number}`)
@@ -568,15 +547,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
             }
 
+            // State change (eg. "Open" to "Done")
             if (updatedFrom.stateId) {
-                const syncedIssue = await prisma.syncedIssue.findFirst({
-                    where: {
-                        linearIssueId: data.id,
-                        linearTeamId: data.teamId
-                    },
-                    include: { GitHubRepo: true }
-                });
-
                 if (!syncedIssue) {
                     console.log(
                         skipReason(
@@ -627,6 +599,102 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                 `Updated GitHub issue state for ${data.team.key}-${data.number} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                             );
                     });
+            }
+
+            // Assignee change
+            if ("assigneeId" in updatedFrom) {
+                if (!syncedIssue) {
+                    const reason = skipReason(
+                        "assignee",
+                        `${data.team.key}-${data.number}`
+                    );
+                    console.log(reason);
+                    return res.status(200).send({
+                        success: true,
+                        message: reason
+                    });
+                }
+
+                const assigneeEndpoint = `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/assignees`;
+
+                // Assignee removed
+                if (updatedFrom.assigneeId !== null) {
+                    const prevAssignee = await prisma.user.findFirst({
+                        where: {
+                            linearUserId: updatedFrom.assigneeId
+                        },
+                        select: {
+                            githubUsername: true
+                        }
+                    });
+
+                    if (prevAssignee) {
+                        const response = await petitio(
+                            assigneeEndpoint,
+                            "DELETE"
+                        )
+                            .header("User-Agent", userAgentHeader)
+                            .header("Authorization", githubAuthHeader)
+                            .body({ assignees: [prevAssignee.githubUsername] })
+                            .send();
+
+                        if (response.statusCode > 201) {
+                            console.log(
+                                getIssueUpdateError(
+                                    "assignee",
+                                    data,
+                                    syncedIssue,
+                                    response
+                                )
+                            );
+                        } else {
+                            console.log(
+                                `Removed assignee on GitHub issue #${syncedIssue.githubIssueNumber} for ${data.team.key}-${data.number}.`
+                            );
+                        }
+                    } else {
+                        console.log(
+                            `Skipping assignee removal for ${data.team.key}-${data.number} as no GitHub username was found for Linear user ${data.assigneeId}.`
+                        );
+                    }
+                }
+
+                // Assignee added
+                if (data.assigneeId) {
+                    const assignee = await prisma.user.findFirst({
+                        where: {
+                            linearUserId: data.assigneeId
+                        },
+                        select: {
+                            githubUsername: true
+                        }
+                    });
+
+                    if (assignee) {
+                        const response = await petitio(assigneeEndpoint, "POST")
+                            .header("User-Agent", userAgentHeader)
+                            .header("Authorization", githubAuthHeader)
+                            .body({ assignees: [assignee.githubUsername] })
+                            .send();
+
+                        if (response.statusCode > 201) {
+                            console.log(
+                                getIssueUpdateError(
+                                    "assignee",
+                                    data,
+                                    syncedIssue,
+                                    response
+                                )
+                            );
+                        } else {
+                            console.log(
+                                `Updated assignee on GitHub issue #${syncedIssue.githubIssueNumber} for ${data.team.key}-${data.number}.`
+                            );
+                        }
+                    } else {
+                        `Skipping assignee for ${data.team.key}-${data.number} as no GitHub username was found for Linear user ${data.assigneeId}.`;
+                    }
+                }
             }
         } else if (action === "create") {
             if (actionType === "Comment") {
