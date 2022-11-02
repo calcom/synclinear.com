@@ -108,6 +108,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             apiKey: linearKey
         });
 
+        const ticketName = `${data.team.key}-${data.number}`;
+
         const githubKey = process.env.GITHUB_API_KEY
             ? process.env.GITHUB_API_KEY
             : decrypt(githubApiKey, githubApiKeyIV);
@@ -137,15 +139,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             // Label updated on an already-Public issue
             if (updatedFrom.labelIds?.includes(publicLabelId)) {
                 if (!syncedIssue) {
-                    console.log(
-                        skipReason("label", `${data.team.key}-${data.number}`)
-                    );
+                    console.log(skipReason("label", ticketName));
                     return res.status(200).send({
                         success: true,
-                        message: skipReason(
-                            "label",
-                            `${data.team.key}-${data.number}`
-                        )
+                        message: skipReason("label", ticketName)
                     });
                 }
 
@@ -165,7 +162,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                         return res.status(200).send({
                             success: true,
-                            message: `Deleted synced issue ${data.team.key}-${data.number} after Public label removed.`
+                            message: `Deleted synced issue ${ticketName} after Public label removed.`
                         });
                     }
 
@@ -269,7 +266,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 // Public label added to an issue
                 if (syncedIssue) {
                     console.log(
-                        `Not creating issue after label added as issue ${data.team.key}-${data.number} [${data.id}] already exists on GitHub as issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                        `Not creating issue after label added as issue ${ticketName} [${data.id}] already exists on GitHub as issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                     );
 
                     return res.status(200).send({
@@ -290,7 +287,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        title: `[${data.team.key}-${data.number}] ${data.title}`,
+                        title: `[${ticketName}] ${data.title}`,
                         body: `${modifiedDescription ?? ""}${getSyncFooter()}`
                     })
                     .send();
@@ -373,11 +370,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                 !attachment?.data?.attachmentCreate?.success
                             )
                                 console.log(
-                                    `Failed to create attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
+                                    `Failed to create attachment for ${ticketName} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
                                 );
                             else
                                 console.log(
-                                    `Created attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
+                                    `Created attachment for ${ticketName} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
                                 );
                         }),
                     prisma.syncedIssue.create({
@@ -428,7 +425,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                 );
                             else
                                 console.log(
-                                    `Created comment on GitHub issue #${createdIssueData.number} [${createdIssueData.id}] for Linear issue ${data.team.key}-${data.number}.`
+                                    `Created comment on GitHub issue #${createdIssueData.number} [${createdIssueData.id}] for Linear issue ${ticketName}.`
                                 );
                         });
                 }
@@ -437,16 +434,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             // Title change
             if (updatedFrom.title) {
                 if (!syncedIssue) {
-                    console.log(
-                        skipReason("edit", `${data.team.key}-${data.number}`)
-                    );
+                    console.log(skipReason("edit", ticketName));
 
                     return res.status(200).send({
                         success: true,
-                        message: skipReason(
-                            "edit",
-                            `${data.team.key}-${data.number}`
-                        )
+                        message: skipReason("edit", ticketName)
                     });
                 }
 
@@ -457,7 +449,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        title: `[${data.team.key}-${data.number}] ${data.title}`
+                        title: `[${ticketName}] ${data.title}`
                     })
                     .send()
                     .then(updatedIssueResponse => {
@@ -472,7 +464,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             );
                         else
                             console.log(
-                                `Updated GitHub issue title for ${data.team.key}-${data.number} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                                `Updated GitHub issue title for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                             );
                     });
             }
@@ -480,16 +472,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             // Description change
             if (updatedFrom.description) {
                 if (!syncedIssue) {
-                    console.log(
-                        skipReason("edit", `${data.team.key}-${data.number}`)
-                    );
+                    console.log(skipReason("edit", ticketName));
 
                     return res.status(200).send({
                         success: true,
-                        message: skipReason(
-                            "edit",
-                            `${data.team.key}-${data.number}`
-                        )
+                        message: skipReason("edit", ticketName)
                     });
                 }
 
@@ -497,21 +484,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     data.description?.includes(getSyncFooter()) ||
                     data.description?.includes(legacySyncFooter)
                 ) {
-                    console.log(
-                        skipReason(
-                            "edit",
-                            `${data.team.key}-${data.number}`,
-                            true
-                        )
-                    );
+                    console.log(skipReason("edit", ticketName, true));
 
                     return res.status(200).send({
                         success: true,
-                        message: skipReason(
-                            "edit",
-                            `${data.team.key}-${data.number}`,
-                            true
-                        )
+                        message: skipReason("edit", ticketName, true)
                     });
                 }
 
@@ -542,7 +519,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             );
                         else
                             console.log(
-                                `Updated GitHub issue description for ${data.team.key}-${data.number} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                                `Updated GitHub issue description for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                             );
                     });
             }
@@ -550,19 +527,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             // State change (eg. "Open" to "Done")
             if (updatedFrom.stateId) {
                 if (!syncedIssue) {
-                    console.log(
-                        skipReason(
-                            "state change",
-                            `${data.team.key}-${data.number}`
-                        )
-                    );
+                    console.log(skipReason("state change", ticketName));
 
                     return res.status(200).send({
                         success: true,
-                        message: skipReason(
-                            "state change",
-                            `${data.team.key}-${data.number}`
-                        )
+                        message: skipReason("state change", ticketName)
                     });
                 }
 
@@ -596,7 +565,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             );
                         else
                             console.log(
-                                `Updated GitHub issue state for ${data.team.key}-${data.number} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                                `Updated GitHub issue state for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                             );
                     });
             }
@@ -604,10 +573,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             // Assignee change
             if ("assigneeId" in updatedFrom) {
                 if (!syncedIssue) {
-                    const reason = skipReason(
-                        "assignee",
-                        `${data.team.key}-${data.number}`
-                    );
+                    const reason = skipReason("assignee", ticketName);
                     console.log(reason);
                     return res.status(200).send({
                         success: true,
@@ -649,12 +615,12 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             );
                         } else {
                             console.log(
-                                `Removed assignee on GitHub issue #${syncedIssue.githubIssueNumber} for ${data.team.key}-${data.number}.`
+                                `Removed assignee on GitHub issue #${syncedIssue.githubIssueNumber} for ${ticketName}.`
                             );
                         }
                     } else {
                         console.log(
-                            `Skipping assignee removal for ${data.team.key}-${data.number} as no GitHub username was found for Linear user ${data.assigneeId}.`
+                            `Skipping assignee removal for ${ticketName} as no GitHub username was found for Linear user ${data.assigneeId}.`
                         );
                     }
                 }
@@ -688,11 +654,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             );
                         } else {
                             console.log(
-                                `Updated assignee on GitHub issue #${syncedIssue.githubIssueNumber} for ${data.team.key}-${data.number}.`
+                                `Updated assignee on GitHub issue #${syncedIssue.githubIssueNumber} for ${ticketName}.`
                             );
                         }
                     } else {
-                        `Skipping assignee for ${data.team.key}-${data.number} as no GitHub username was found for Linear user ${data.assigneeId}.`;
+                        `Skipping assignee for ${ticketName} as no GitHub username was found for Linear user ${data.assigneeId}.`;
                     }
                 }
             }
@@ -794,7 +760,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 if (issueAlreadyExists) {
                     console.log(
-                        `Not creating issue after label added as issue ${data.team.key}-${data.number} [${data.id}] already exists on GitHub as issue #${issueAlreadyExists.githubIssueNumber} [${issueAlreadyExists.githubIssueId}].`
+                        `Not creating issue after label added as issue ${ticketName} [${data.id}] already exists on GitHub as issue #${issueAlreadyExists.githubIssueNumber} [${issueAlreadyExists.githubIssueId}].`
                     );
 
                     return res.status(200).send({
@@ -815,7 +781,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        title: `[${data.team.key}-${data.number}] ${data.title}`,
+                        title: `[${ticketName}] ${data.title}`,
                         body: `${modifiedDescription ?? ""}${getSyncFooter()}`
                     })
                     .send();
@@ -866,11 +832,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                 !attachment?.data?.attachmentCreate?.success
                             )
                                 console.log(
-                                    `Failed to create attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
+                                    `Failed to create attachment for ${ticketName} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
                                 );
                             else
                                 console.log(
-                                    `Created attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
+                                    `Created attachment for ${ticketName} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
                                 );
                         }),
                     prisma.syncedIssue.create({
@@ -896,7 +862,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     const label = await linear.issueLabel(labelId);
                     if (!label) {
                         console.log(
-                            `Could not find label ${labelId} for ${data.team.key}-${data.number}.`
+                            `Could not find label ${labelId} for ${ticketName}.`
                         );
                         continue;
                     }
