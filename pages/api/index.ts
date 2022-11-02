@@ -1335,17 +1335,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 const comments = await issueCommentsPayload.json();
 
-                const commentsSanitized = comments.map(comment => {
-                    return {
-                        body: comment.body,
-                        sender: {
-                            login: comment.user.login,
-                            html_url: comment.user.html_url
-                        }
-                    };
-                });
-
-                for (const comment of commentsSanitized) {
+                for (const comment of comments) {
                     const modifiedComment = await replaceMentions(
                         comment.body,
                         "github"
