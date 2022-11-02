@@ -1175,11 +1175,20 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 "github"
             );
 
+            const assignee = await prisma.user.findFirst({
+                where: { githubUserId: issue.assignee?.id },
+                select: { linearUserId: true }
+            });
+
             const createdIssueData = await linear.issueCreate({
                 title: issue.title,
                 description: `${modifiedDescription ?? ""}${getSyncFooter()}`,
                 teamId: linearTeamId,
-                labelIds: [publicLabelId]
+                labelIds: [publicLabelId],
+                assigneeId:
+                    issue.assignee?.id && assignee
+                        ? assignee.linearUserId
+                        : null
             });
 
             if (!createdIssueData.success) {
@@ -1223,13 +1232,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             .then(titleRenameResponse => {
                                 if (titleRenameResponse.statusCode > 201)
                                     console.log(
-                                        `Failed to update GitHub issue title for ${
-                                            team.key
-                                        }-${createdIssue.number} [${
-                                            createdIssue.id
-                                        }] on GitHub issue #${issue.number} [${
-                                            issue.id
-                                        }], received status code ${
+                                        `Failed to update GitHub issue title for ${ticketName} on GitHub issue #${
+                                            issue.number
+                                        }, received status code ${
                                             titleRenameResponse.statusCode
                                         }, body of ${formatJSON(
                                             titleRenameResponse.json()
