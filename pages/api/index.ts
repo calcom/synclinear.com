@@ -2,12 +2,7 @@ import petitio from "petitio";
 import { components } from "@octokit/openapi-types";
 import { LinearWebhookPayload } from "../../typings";
 import { createHmac, timingSafeEqual } from "crypto";
-import {
-    IssueCommentCreatedEvent,
-    IssuesEditedEvent,
-    IssuesClosedEvent,
-    IssuesEvent
-} from "@octokit/webhooks-types";
+import { IssueCommentCreatedEvent, IssuesEvent } from "@octokit/webhooks-types";
 import { LinearClient } from "@linear/sdk";
 import prisma from "../../prisma";
 import { NextApiRequest, NextApiResponse } from "next";
@@ -108,7 +103,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             apiKey: linearKey
         });
 
-        const ticketName = `${data.team.key}-${data.number}`;
+        const ticketName = `${data.team?.key ?? ""}-${data.number}`;
 
         const githubKey = process.env.GITHUB_API_KEY
             ? process.env.GITHUB_API_KEY
@@ -1019,13 +1014,22 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         const isIssue = req.headers["x-github-event"] === "issues";
 
+        const { issue }: IssuesEvent = req.body;
+
+        const syncedIssue = await prisma.syncedIssue.findFirst({
+            where: {
+                githubIssueNumber: issue?.number,
+                githubRepoId: repository.id
+            }
+        });
+
         if (
             req.headers["x-github-event"] === "issue_comment" &&
             action === "created"
         ) {
             // Comment created
 
-            const { issue, comment }: IssueCommentCreatedEvent = req.body;
+            const { comment }: IssueCommentCreatedEvent = req.body;
 
             if (comment.body.includes("on Linear")) {
                 console.log(skipReason("comment", issue.number, true));
@@ -1036,22 +1040,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 });
             }
 
-            const syncedIssue = await prisma.syncedIssue.findFirst({
-                where: {
-                    githubIssueNumber: issue.number,
-                    githubRepoId: repository.id
-                }
-            });
-
             if (!syncedIssue) {
-                console.log(skipReason("comment", issue.number));
-
+                const reason = skipReason("comment", issue.number);
+                console.log(reason);
                 return res.status(200).send({
                     success: true,
-                    message: skipReason("comment", issue.number)
+                    message: reason
                 });
             }
-
             const modifiedComment = await replaceMentions(
                 comment.body,
                 "github"
@@ -1082,24 +1078,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         } else if (isIssue && action === "edited") {
             // Issue edited
 
-            const { issue }: IssuesEditedEvent = req.body;
-
-            const syncedIssue = await prisma.syncedIssue.findFirst({
-                where: {
-                    githubIssueNumber: issue.number,
-                    githubRepoId: repository.id
-                }
-            });
-
             if (!syncedIssue) {
-                console.log(skipReason("edit", issue.number));
-
+                const reason = skipReason("edit", issue.number);
+                console.log(reason);
                 return res.status(200).send({
                     success: true,
-                    message: skipReason("edit", issue.number)
+                    message: reason
                 });
             }
-
             const title = issue.title.split(
                 `${syncedIssue.linearIssueNumber}]`
             );
@@ -1135,24 +1121,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         } else if (isIssue && ["closed", "reopened"].includes(action)) {
             // Issue closed or reopened
 
-            const { issue }: IssuesClosedEvent = req.body;
-
-            const syncedIssue = await prisma.syncedIssue.findFirst({
-                where: {
-                    githubIssueNumber: issue.number,
-                    githubRepoId: repository.id
-                }
-            });
-
             if (!syncedIssue) {
-                console.log(skipReason("edit", issue.number));
-
+                const reason = skipReason("edit", issue.number);
+                console.log(reason);
                 return res.status(200).send({
                     success: true,
-                    message: skipReason("edit", issue.number)
+                    message: reason
                 });
             }
-
             const title = issue.title.split(
                 `${syncedIssue.linearIssueNumber}]`
             );
@@ -1189,8 +1165,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         LINEAR.GITHUB_LABEL))
         ) {
             // Issue opened or special "linear" label added
-
-            const { issue }: IssuesEvent = req.body;
 
             if (
                 issue.body?.includes(getSyncFooter()) ||
@@ -1357,6 +1331,81 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             message: `Failed creating comment on Linear.`
                         });
                     }
+                }
+            }
+        } else if (isIssue && ["assigned", "unassigned"].includes(action)) {
+            // Assignee changed
+
+            if (!syncedIssue) {
+                const reason = skipReason("assignee", issue.number);
+                console.log(reason);
+                return res.status(200).send({
+                    success: true,
+                    message: reason
+                });
+            }
+
+            const { assignee } = issue;
+
+            if (!assignee?.id) {
+                // Remove assignee
+
+                const response = await linear.issueUpdate(
+                    syncedIssue.linearIssueId,
+                    { assigneeId: null }
+                );
+
+                if (!response?.success) {
+                    const reason = `Failed to remove assignee on Linear ticket for GitHub issue #${issue.number}.`;
+                    console.log(reason);
+                    return res.status(500).send({
+                        success: false,
+                        message: reason
+                    });
+                } else {
+                    const reason = `Removed assignee from Linear ticket for GitHub issue #${issue.number}.`;
+                    console.log(reason);
+                    return res.status(200).send({
+                        success: true,
+                        message: reason
+                    });
+                }
+            } else {
+                // Add assignee
+
+                const user = await prisma.user.findFirst({
+                    where: { githubUserId: assignee?.id },
+                    select: { linearUserId: true }
+                });
+
+                if (!user) {
+                    const reason = `Skipping assignee change for issue #${issue.number} as no Linear username was found for GitHub user ${assignee?.login}.`;
+                    console.log(reason);
+                    return res.status(200).send({
+                        success: true,
+                        message: reason
+                    });
+                }
+
+                const response = await linear.issueUpdate(
+                    syncedIssue.linearIssueId,
+                    { assigneeId: user.linearUserId }
+                );
+
+                if (!response?.success) {
+                    const reason = `Failed to add assignee on Linear ticket for GitHub issue #${issue.number}.`;
+                    console.log(reason);
+                    return res.status(500).send({
+                        success: false,
+                        message: reason
+                    });
+                } else {
+                    const reason = `Added assignee to Linear ticket for GitHub issue #${issue.number}.`;
+                    console.log(reason);
+                    return res.status(200).send({
+                        success: true,
+                        message: reason
+                    });
                 }
             }
         }
