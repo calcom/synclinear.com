@@ -324,6 +324,40 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 const linearIssue = await linear.issue(data.id);
 
+                const attachmentQuery = getAttachmentQuery(
+                    data.id,
+                    createdIssueData.number,
+                    repoFullName
+                );
+
+                await Promise.all([
+                    linearQuery(attachmentQuery, linearKey).then(response => {
+                        if (!response?.data?.attachmentCreate?.success) {
+                            console.log(
+                                `Failed to create attachment on ${ticketName} for GitHub issue #${
+                                    createdIssueData.number
+                                }, received response ${
+                                    response?.error ?? response?.data ?? ""
+                                }.`
+                            );
+                        } else {
+                            console.log(
+                                `Created attachment on ${ticketName} for GitHub issue #${createdIssueData.number}.`
+                            );
+                        }
+                    }),
+                    prisma.syncedIssue.create({
+                        data: {
+                            githubIssueId: createdIssueData.id,
+                            linearIssueId: data.id,
+                            linearTeamId: data.teamId,
+                            githubIssueNumber: createdIssueData.number,
+                            linearIssueNumber: data.number,
+                            githubRepoId: repoId
+                        }
+                    })
+                ] as Promise<any>[]);
+
                 const linearComments = await linearIssue
                     .comments()
                     .then(comments =>
@@ -336,53 +370,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             )
                         )
                     );
-
-                await Promise.all([
-                    petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
-                        .header("Authorization", `Bearer ${linearKey}`)
-                        .header("Content-Type", "application/json")
-                        .body({
-                            query: getAttachmentQuery(
-                                data.id,
-                                createdIssueData.number,
-                                repoFullName
-                            )
-                        })
-                        .send()
-                        .then(attachmentResponse => {
-                            const attachment = attachmentResponse.json();
-                            if (attachmentResponse.statusCode > 201)
-                                console.log(
-                                    getOtherUpdateError(
-                                        "attachment",
-                                        data,
-                                        createdIssueData,
-                                        createdIssueResponse,
-                                        attachment
-                                    )
-                                );
-                            else if (
-                                !attachment?.data?.attachmentCreate?.success
-                            )
-                                console.log(
-                                    `Failed to create attachment for ${ticketName} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
-                                );
-                            else
-                                console.log(
-                                    `Created attachment for ${ticketName} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
-                                );
-                        }),
-                    prisma.syncedIssue.create({
-                        data: {
-                            githubIssueId: createdIssueData.id,
-                            linearIssueId: data.id,
-                            linearTeamId: data.teamId,
-                            githubIssueNumber: createdIssueData.number,
-                            linearIssueNumber: data.number,
-                            githubRepoId: repoId
-                        }
-                    })
-                ] as Promise<any>[]);
 
                 // Sync all comments on the issue
                 for (const linearComment of linearComments) {
@@ -799,41 +786,28 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 const createdIssueData: components["schemas"]["issue"] =
                     await createdIssueResponse.json();
 
+                const attachmentQuery = getAttachmentQuery(
+                    data.id,
+                    createdIssueData.number,
+                    repoFullName
+                );
+
                 await Promise.all([
-                    petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
-                        .header("Authorization", `Bearer ${linearKey}`)
-                        .header("Content-Type", "application/json")
-                        .body({
-                            query: getAttachmentQuery(
-                                data.id,
-                                createdIssueData.number,
-                                repoFullName
-                            )
-                        })
-                        .send()
-                        .then(attachmentResponse => {
-                            const attachment = attachmentResponse.json();
-                            if (attachmentResponse.statusCode > 201)
-                                console.log(
-                                    getOtherUpdateError(
-                                        "attachment",
-                                        data,
-                                        createdIssueData,
-                                        createdIssueResponse,
-                                        attachment
-                                    )
-                                );
-                            else if (
-                                !attachment?.data?.attachmentCreate?.success
-                            )
-                                console.log(
-                                    `Failed to create attachment for ${ticketName} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
-                                );
-                            else
-                                console.log(
-                                    `Created attachment for ${ticketName} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
-                                );
-                        }),
+                    linearQuery(attachmentQuery, linearKey).then(response => {
+                        if (!response?.data?.attachmentCreate?.success) {
+                            console.log(
+                                `Failed to create attachment on ${ticketName} for GitHub issue #${
+                                    createdIssueData.number
+                                }, received response ${
+                                    response?.error ?? response?.data ?? ""
+                                }.`
+                            );
+                        } else {
+                            console.log(
+                                `Created attachment on ${ticketName} for GitHub issue #${createdIssueData.number}.`
+                            );
+                        }
+                    }),
                     prisma.syncedIssue.create({
                         data: {
                             githubIssueId: createdIssueData.id,

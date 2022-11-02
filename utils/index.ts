@@ -86,7 +86,7 @@ export const getAttachmentQuery = (
     repoFullName: string
 ): string => {
     return `mutation {
-        attachmentCreate(input:{
+        attachmentCreate(input: {
             issueId: "${issueId}"
             title: "GitHub Issue #${issueNumber}"
             subtitle: "Synchronized"
@@ -94,9 +94,6 @@ export const getAttachmentQuery = (
             iconUrl: "${GITHUB.ICON_URL}"
         }) {
             success
-            attachment {
-                id
-            }
         }
     }`;
 };
