@@ -122,15 +122,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             githubAuthHeader
         );
 
-        if (action === "update") {
-            const syncedIssue = await prisma.syncedIssue.findFirst({
-                where: {
-                    linearIssueId: data.id,
-                    linearTeamId: data.teamId
-                },
-                include: { GitHubRepo: true }
-            });
+        const syncedIssue = await prisma.syncedIssue.findFirst({
+            where: {
+                linearIssueId: data.id,
+                linearTeamId: data.teamId
+            },
+            include: { GitHubRepo: true }
+        });
 
+        if (action === "update") {
             // Label updated on an already-Public issue
             if (updatedFrom.labelIds?.includes(publicLabelId)) {
                 if (!syncedIssue) {
@@ -275,6 +275,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     "linear"
                 );
 
+                const assignee = await prisma.user.findFirst({
+                    where: { linearUserId: data.assigneeId },
+                    select: { githubUsername: true }
+                });
+
                 const createdIssueResponse = await petitio(
                     issuesEndpoint,
                     "POST"
@@ -283,7 +288,12 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${ticketName}] ${data.title}`,
-                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`
+                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`,
+                        assignees: [
+                            data.assigneeId && assignee?.githubUsername
+                                ? assignee?.githubUsername
+                                : ""
+                        ]
                     })
                     .send();
 
@@ -358,6 +368,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     })
                 ] as Promise<any>[]);
 
+                // Sync all comments on the issue
                 const linearComments = await linearIssue
                     .comments()
                     .then(comments =>
@@ -371,7 +382,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         )
                     );
 
-                // Sync all comments on the issue
                 for (const linearComment of linearComments) {
                     if (!linearComment) continue;
 
@@ -646,6 +656,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             }
         } else if (action === "create") {
             if (actionType === "Comment") {
+                // Comment added
+
                 if (data.id.includes(GITHUB.UUID_SUFFIX)) {
                     console.log(skipReason("comment", data.issue!.id, true));
 
@@ -655,6 +667,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
+                // Overrides the outer-scope syncedIssue because comments do not come with teamId
                 const syncedIssue = await prisma.syncedIssue.findFirst({
                     where: {
                         linearIssueId: data.issueId
@@ -714,10 +727,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             );
                     });
             } else if (actionType === "Issue") {
+                // Issue created
+
                 if (!data.labelIds?.includes(publicLabelId)) {
+                    const reason = "Issue is not labeled as public";
+                    console.log(reason);
                     return res.status(200).send({
                         success: true,
-                        message: "Issue is not labeled as public"
+                        message: reason
                     });
                 }
 
@@ -725,29 +742,20 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     data.description?.includes(getSyncFooter()) ||
                     data.description?.includes(legacySyncFooter)
                 ) {
-                    console.log(skipReason("issue", data.id, true));
-
+                    const reason = skipReason("issue", data.id, true);
+                    console.log(reason);
                     return res.status(200).send({
                         success: true,
-                        message: skipReason("issue", data.id, true)
+                        message: reason
                     });
                 }
 
-                const issueAlreadyExists = await prisma.syncedIssue.findFirst({
-                    where: {
-                        linearIssueId: data.id,
-                        linearTeamId: data.teamId
-                    }
-                });
-
-                if (issueAlreadyExists) {
-                    console.log(
-                        `Not creating issue after label added as issue ${ticketName} [${data.id}] already exists on GitHub as issue #${issueAlreadyExists.githubIssueNumber} [${issueAlreadyExists.githubIssueId}].`
-                    );
-
+                if (syncedIssue) {
+                    const reason = `Not creating issue after label added as issue ${ticketName} already exists on GitHub as #${syncedIssue.githubIssueNumber}.`;
+                    console.log(reason);
                     return res.status(200).send({
                         success: true,
-                        message: "Issue already exists on GitHub."
+                        message: reason
                     });
                 }
 
@@ -755,6 +763,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     data.description,
                     "linear"
                 );
+
+                const assignee = await prisma.user.findFirst({
+                    where: { linearUserId: data.assigneeId },
+                    select: { githubUsername: true }
+                });
 
                 const createdIssueResponse = await petitio(
                     issuesEndpoint,
@@ -764,7 +777,12 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${ticketName}] ${data.title}`,
-                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`
+                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`,
+                        assignees: [
+                            data.assigneeId && assignee?.githubUsername
+                                ? assignee?.githubUsername
+                                : ""
+                        ]
                     })
                     .send();
 
@@ -818,7 +836,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             githubRepoId: repoId
                         }
                     })
-                ]);
+                ] as Promise<any>[]);
 
                 // Apply all labels to newly-created issue
                 const labelIds = data.labelIds.filter(
