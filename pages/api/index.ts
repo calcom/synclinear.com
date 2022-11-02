@@ -17,7 +17,6 @@ import {
     getAttachmentQuery,
     legacySyncFooter,
     getSyncFooter,
-    isIssue,
     skipReason
 } from "../../utils";
 import { getGitHubFooter } from "../../utils/github";
@@ -25,6 +24,7 @@ import { generateLinearUUID, inviteMember } from "../../utils/linear";
 import { GITHUB, LINEAR } from "../../utils/constants";
 import { getIssueUpdateError, getOtherUpdateError } from "../../utils/errors";
 import { replaceMentions, upsertUser } from "./utils";
+import { linearQuery } from "../../utils/apollo";
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method !== "POST")
@@ -1017,10 +1017,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             githubAuthHeader
         );
 
+        const isIssue = req.headers["x-github-event"] === "issues";
+
         if (
             req.headers["x-github-event"] === "issue_comment" &&
             action === "created"
         ) {
+            // Comment created
+
             const { issue, comment }: IssueCommentCreatedEvent = req.body;
 
             if (comment.body.includes("on Linear")) {
@@ -1075,7 +1079,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         });
                     });
                 });
-        } else if (isIssue(req) && action === "edited") {
+        } else if (isIssue && action === "edited") {
+            // Issue edited
+
             const { issue }: IssuesEditedEvent = req.body;
 
             const syncedIssue = await prisma.syncedIssue.findFirst({
@@ -1126,7 +1132,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         });
                     });
                 });
-        } else if (isIssue(req) && ["closed", "reopened"].includes(action)) {
+        } else if (isIssue && ["closed", "reopened"].includes(action)) {
+            // Issue closed or reopened
+
             const { issue }: IssuesClosedEvent = req.body;
 
             const syncedIssue = await prisma.syncedIssue.findFirst({
@@ -1174,23 +1182,25 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 });
         } else if (
-            isIssue(req) &&
+            isIssue &&
             (action === "opened" ||
                 (action === "labeled" &&
                     req.body.label?.name?.toLowerCase() ===
                         LINEAR.GITHUB_LABEL))
         ) {
+            // Issue opened or special "linear" label added
+
             const { issue }: IssuesEvent = req.body;
 
             if (
                 issue.body?.includes(getSyncFooter()) ||
                 issue.body?.includes(legacySyncFooter)
             ) {
-                console.log(skipReason("edit", issue.number, true));
-
+                const reason = skipReason("edit", issue.number, true);
+                console.log(reason);
                 return res.status(200).send({
                     success: true,
-                    message: skipReason("edit", issue.number, true)
+                    message: reason
                 });
             }
 
@@ -1207,13 +1217,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             });
 
             if (!createdIssueData.success) {
-                console.log(
-                    `Failed to create issue for GitHub issue #${issue.number} [${issue.id}].`
-                );
-
+                const reason = `Failed to create ticket for GitHub issue #${issue.number}.`;
+                console.log(reason);
                 return res.status(500).send({
                     success: false,
-                    message: `Failed creating issue on Linear.`
+                    message: reason
                 });
             }
 
@@ -1221,22 +1229,29 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
             if (!createdIssue)
                 console.log(
-                    `Failed to fetch issue I just created for GitHub issue #${issue.number} [${issue.id}].`
+                    `Failed to fetch ticket I just created for GitHub issue #${issue.number}.`
                 );
             else {
                 const team = await createdIssue.team;
 
                 if (!team) {
                     console.log(
-                        `Failed to fetch team for issue, ${createdIssue.id} for GitHub issue #${issue.number} [${issue.id}].`
+                        `Failed to fetch team for ticket, ${createdIssue.id} for GitHub issue #${issue.number}.`
                     );
                 } else {
+                    const ticketName = `${team.key}-${createdIssue.number}`;
+                    const attachmentQuery = getAttachmentQuery(
+                        createdIssue.id,
+                        issue.number,
+                        repoName
+                    );
+
                     await Promise.all([
                         petitio(`${issuesEndpoint}/${issue.number}`, "PATCH")
                             .header("User-Agent", userAgentHeader)
                             .header("Authorization", githubAuthHeader)
                             .body({
-                                title: `[${team.key}-${createdIssue.number}] ${issue.title}`
+                                title: `[${ticketName}] ${issue.title}`
                             })
                             .send()
                             .then(titleRenameResponse => {
@@ -1256,47 +1271,30 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                     );
                                 else
                                     console.log(
-                                        `Created comment on GitHub issue #${issue.number} [${issue.id}] for Linear issue ${team.key}-${createdIssue.number}.`
+                                        `Created comment on GitHub issue #${issue.number} for Linear issue ${ticketName}.`
                                     );
                             }),
-                        petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
-                            .header("Authorization", `Bearer ${linearKey}`)
-                            .header("Content-Type", "application/json")
-                            .body({
-                                query: getAttachmentQuery(
-                                    createdIssue.id,
-                                    issue.number,
-                                    repoName
-                                )
-                            })
-                            .send()
-                            .then(attachmentResponse => {
-                                const attachment = attachmentResponse.json();
-                                if (attachmentResponse.statusCode > 201)
+                        linearQuery(attachmentQuery, linearKey).then(
+                            response => {
+                                if (
+                                    !response?.data?.attachmentCreate?.success
+                                ) {
                                     console.log(
-                                        getOtherUpdateError(
-                                            "attachment",
-                                            {
-                                                team: team,
-                                                id: createdIssue.id,
-                                                number: createdIssue.number
-                                            },
-                                            issue,
-                                            attachmentResponse,
-                                            attachment
-                                        )
+                                        `Failed to create attachment on ${ticketName} for GitHub issue #${
+                                            issue.number
+                                        }, received response ${
+                                            response?.error ??
+                                            response?.data ??
+                                            ""
+                                        }.`
                                     );
-                                else if (
-                                    !attachment?.data?.attachmentCreate?.success
-                                )
+                                } else {
                                     console.log(
-                                        `Failed to create attachment for ${team.key}-${createdIssue.number} [${createdIssue.id}] for GitHub issue #${issue.number} [${issue.id}], received status code ${attachmentResponse.statusCode}`
+                                        `Created attachment on ${ticketName} for GitHub issue #${issue.number}.`
                                     );
-                                else
-                                    console.log(
-                                        `Created attachment for ${team.key}-${createdIssue.number} [${createdIssue.id}] for GitHub issue #${issue.number} [${issue.id}].`
-                                    );
-                            }),
+                                }
+                            }
+                        ),
                         prisma.syncedIssue.create({
                             data: {
                                 githubIssueNumber: issue.number,

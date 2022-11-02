@@ -1,6 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
-import { NextApiRequest } from "next";
-import { GitHubContext, GitHubRepo, LinearContext } from "../typings";
+import { GitHubContext, LinearContext } from "../typings";
 import { GITHUB } from "./constants";
 
 export const isDev = (): boolean => {
@@ -100,10 +99,6 @@ export const getAttachmentQuery = (
             }
         }
     }`;
-};
-
-export const isIssue = (req: NextApiRequest): boolean => {
-    return req.headers["x-github-event"] === "issues";
 };
 
 export const skipReason = (
