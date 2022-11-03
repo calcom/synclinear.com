@@ -24,7 +24,8 @@ module.exports = {
             purple: colors.purple,
             indigo: colors.indigo,
             blue: colors.blue,
-            green: colors.green
+            green: colors.green,
+            "cal-gray": "#f2f2f2"
         }
     },
     plugins: []

@@ -1,21 +1,79 @@
-import { ArrowUpIcon } from "@radix-ui/react-icons";
-import React from "react";
+import {
+    ArrowLeftIcon,
+    ArrowRightIcon,
+    ArrowUpIcon,
+    QuestionMarkCircledIcon
+} from "@radix-ui/react-icons";
+import React, { Fragment } from "react";
 import { GENERAL } from "../utils/constants";
 import GitHubLogo from "./icons/GitHubLogo";
+import Tooltip from "./Tooltip";
 
 const Landing = () => {
     return (
         <section className="w-screen min-h-screen center gap-40 py-40 px-6">
             <div className="space-y-12 text-center max-w-xl">
                 <h2>What does it do?</h2>
-                <h3>
-                    This app lets you mirror Linear tickets to public GitHub
-                    issues, comments and all.
-                </h3>
+                <h3>This app lets you mirror Linear and GitHub issues.</h3>
                 <h3>
                     This way, open-source teams can chat with contributors
                     without giving access to an internal Linear team.
                 </h3>
+            </div>
+            <div className="space-y-12 text-center max-w-xl">
+                <h2>What gets synced?</h2>
+                <h3>
+                    Full two-way sync means titles, descriptions, and labels are
+                    magically kept in sync.
+                </h3>
+                <div className="grid grid-cols-3 font-tertiary gap-y-3">
+                    <>
+                        <h2 className="text-right font-tertiary">Linear</h2>
+                        <div />
+                        <h2 className="text-left font-tertiary">GitHub</h2>
+                    </>
+                    {GENERAL.SYNCED_ITEMS.map(
+                        ({
+                            linearField,
+                            githubField,
+                            toGithub,
+                            toLinear,
+                            notes
+                        }) => (
+                            <Fragment key={`${linearField}-${githubField}`}>
+                                <code className="ml-auto">{linearField}</code>
+                                <div className="center !flex-row">
+                                    {!toLinear && !toGithub ? (
+                                        <span className="italic">
+                                            Coming soon
+                                        </span>
+                                    ) : (
+                                        <>
+                                            {toLinear ? (
+                                                <ArrowLeftIcon className="w-6 h-6 translate-x-1" />
+                                            ) : (
+                                                <div className="w-6 h-6" />
+                                            )}
+                                            {toGithub ? (
+                                                <ArrowRightIcon className="w-6 h-6 -translate-x-1" />
+                                            ) : (
+                                                <div className="w-6 h-6" />
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                                <div className="flex justify-between">
+                                    <code>{githubField}</code>
+                                    {notes && (
+                                        <Tooltip content={notes}>
+                                            <QuestionMarkCircledIcon className="w-6 h-6 text-gray-400 hover:font-secondary transition-colors duration-200" />
+                                        </Tooltip>
+                                    )}
+                                </div>
+                            </Fragment>
+                        )
+                    )}
+                </div>
             </div>
             <div className="space-y-12 text-center max-w-xl">
                 <h2>How does it work?</h2>
@@ -74,7 +132,10 @@ const Landing = () => {
             <div className="space-y-12 max-w-xl text-center center">
                 <h2 className="text-center">Pricing</h2>
                 <h3>
-                    SyncLinear.com is completely free. If you want to donate, subscribe to a <a href="https://cal.com/pricing">Cal.com</a> or <a href="https://neat.run">Neat</a> plan to support the development.
+                    SyncLinear.com is completely free. If you want to donate,
+                    subscribe to a <a href="https://cal.com/pricing">Cal.com</a>{" "}
+                    or <a href="https://neat.run">Neat</a> plan to support the
+                    development.
                 </h3>
             </div>
         </section>

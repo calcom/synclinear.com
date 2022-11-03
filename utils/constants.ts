@@ -37,6 +37,55 @@ export const TIMEOUTS = {
 export const GENERAL = {
     APP_NAME: "Linear-GitHub Sync",
     APP_URL: "https://synclinear.com",
-    CONTRIBUTE_URL: "https://github.com/calcom/linear-to-github"
+    CONTRIBUTE_URL: "https://github.com/calcom/linear-to-github",
+    SYNCED_ITEMS: [
+        {
+            linearField: "Title",
+            githubField: "Title",
+            toGithub: true,
+            toLinear: true
+        },
+        {
+            linearField: "Description",
+            githubField: "Description",
+            toGithub: true,
+            toLinear: true
+        },
+        {
+            linearField: "Labels",
+            githubField: "Labels",
+            toGithub: true,
+            notes: "GitHub labels will be created if they don't yet exist"
+        },
+        {
+            linearField: "Assignee",
+            githubField: "Assignee",
+            toGithub: true,
+            toLinear: true,
+            notes: "For authenticated users only. Silently ignored otherwise."
+        },
+        {
+            linearField: "Status",
+            githubField: "State",
+            toGithub: true,
+            toLinear: true,
+            notes: "eg. Closed issue in GitHub will be marked as Done in Linear"
+        },
+        {
+            linearField: "Comments",
+            githubField: "Comments",
+            toGithub: true,
+            toLinear: true,
+            notes: "GitHub comments by non-members are ignored"
+        },
+        {
+            linearField: "Priority",
+            githubField: "Label"
+        },
+        {
+            linearField: "Project",
+            githubField: "Milestone"
+        }
+    ]
 };
 
