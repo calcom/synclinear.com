@@ -2,12 +2,7 @@ import petitio from "petitio";
 import { components } from "@octokit/openapi-types";
 import { LinearWebhookPayload } from "../../typings";
 import { createHmac, timingSafeEqual } from "crypto";
-import {
-    IssueCommentCreatedEvent,
-    IssuesEditedEvent,
-    IssuesClosedEvent,
-    IssuesEvent
-} from "@octokit/webhooks-types";
+import { IssueCommentCreatedEvent, IssuesEvent } from "@octokit/webhooks-types";
 import { LinearClient } from "@linear/sdk";
 import prisma from "../../prisma";
 import { NextApiRequest, NextApiResponse } from "next";
@@ -17,7 +12,6 @@ import {
     getAttachmentQuery,
     legacySyncFooter,
     getSyncFooter,
-    isIssue,
     skipReason
 } from "../../utils";
 import { getGitHubFooter } from "../../utils/github";
@@ -25,6 +19,7 @@ import { generateLinearUUID, inviteMember } from "../../utils/linear";
 import { GITHUB, LINEAR } from "../../utils/constants";
 import { getIssueUpdateError, getOtherUpdateError } from "../../utils/errors";
 import { replaceMentions, upsertUser } from "./utils";
+import { linearQuery } from "../../utils/apollo";
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method !== "POST")
@@ -108,6 +103,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             apiKey: linearKey
         });
 
+        const ticketName = `${data.team?.key ?? ""}-${data.number}`;
+
         const githubKey = process.env.GITHUB_API_KEY
             ? process.env.GITHUB_API_KEY
             : decrypt(githubApiKey, githubApiKeyIV);
@@ -125,27 +122,22 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             githubAuthHeader
         );
 
-        if (action === "update") {
-            if (updatedFrom.labelIds?.includes(publicLabelId)) {
-                // Label updated on an already-Public issue
-                const syncedIssue = await prisma.syncedIssue.findFirst({
-                    where: {
-                        linearIssueId: data.id,
-                        linearTeamId: data.teamId
-                    },
-                    include: { GitHubRepo: true }
-                });
+        const syncedIssue = await prisma.syncedIssue.findFirst({
+            where: {
+                linearIssueId: data.id,
+                linearTeamId: data.teamId
+            },
+            include: { GitHubRepo: true }
+        });
 
+        if (action === "update") {
+            // Label updated on an already-Public issue
+            if (updatedFrom.labelIds?.includes(publicLabelId)) {
                 if (!syncedIssue) {
-                    console.log(
-                        skipReason("label", `${data.team.key}-${data.number}`)
-                    );
+                    console.log(skipReason("label", ticketName));
                     return res.status(200).send({
                         success: true,
-                        message: skipReason(
-                            "label",
-                            `${data.team.key}-${data.number}`
-                        )
+                        message: skipReason("label", ticketName)
                     });
                 }
 
@@ -165,7 +157,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                         return res.status(200).send({
                             success: true,
-                            message: `Deleted synced issue ${data.team.key}-${data.number} after Public label removed.`
+                            message: `Deleted synced issue ${ticketName} after Public label removed.`
                         });
                     }
 
@@ -267,16 +259,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 data.labelIds?.includes(publicLabelId)
             ) {
                 // Public label added to an issue
-                const issueAlreadyExists = await prisma.syncedIssue.findFirst({
-                    where: {
-                        linearIssueId: data.id,
-                        linearTeamId: data.teamId
-                    }
-                });
-
-                if (issueAlreadyExists) {
+                if (syncedIssue) {
                     console.log(
-                        `Not creating issue after label added as issue ${data.team.key}-${data.number} [${data.id}] already exists on GitHub as issue #${issueAlreadyExists.githubIssueNumber} [${issueAlreadyExists.githubIssueId}].`
+                        `Not creating issue after label added as issue ${ticketName} [${data.id}] already exists on GitHub as issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                     );
 
                     return res.status(200).send({
@@ -290,6 +275,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     "linear"
                 );
 
+                const assignee = await prisma.user.findFirst({
+                    where: { linearUserId: data.assigneeId },
+                    select: { githubUsername: true }
+                });
+
                 const createdIssueResponse = await petitio(
                     issuesEndpoint,
                     "POST"
@@ -297,8 +287,13 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        title: `[${data.team.key}-${data.number}] ${data.title}`,
-                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`
+                        title: `[${ticketName}] ${data.title}`,
+                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`,
+                        assignees: [
+                            data.assigneeId && assignee?.githubUsername
+                                ? assignee?.githubUsername
+                                : ""
+                        ]
                     })
                     .send();
 
@@ -339,54 +334,28 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 const linearIssue = await linear.issue(data.id);
 
-                const linearComments = await linearIssue
-                    .comments()
-                    .then(comments =>
-                        Promise.all(
-                            comments.nodes.map(comment =>
-                                comment.user?.then(user => ({
-                                    comment,
-                                    user
-                                }))
-                            )
-                        )
-                    );
+                const attachmentQuery = getAttachmentQuery(
+                    data.id,
+                    createdIssueData.number,
+                    repoFullName
+                );
 
                 await Promise.all([
-                    petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
-                        .header("Authorization", `Bearer ${linearKey}`)
-                        .header("Content-Type", "application/json")
-                        .body({
-                            query: getAttachmentQuery(
-                                data.id,
-                                createdIssueData.number,
-                                repoFullName
-                            )
-                        })
-                        .send()
-                        .then(attachmentResponse => {
-                            const attachment = attachmentResponse.json();
-                            if (attachmentResponse.statusCode > 201)
-                                console.log(
-                                    getOtherUpdateError(
-                                        "attachment",
-                                        data,
-                                        createdIssueData,
-                                        createdIssueResponse,
-                                        attachment
-                                    )
-                                );
-                            else if (
-                                !attachment?.data?.attachmentCreate?.success
-                            )
-                                console.log(
-                                    `Failed to create attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
-                                );
-                            else
-                                console.log(
-                                    `Created attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
-                                );
-                        }),
+                    linearQuery(attachmentQuery, linearKey).then(response => {
+                        if (!response?.data?.attachmentCreate?.success) {
+                            console.log(
+                                `Failed to create attachment on ${ticketName} for GitHub issue #${
+                                    createdIssueData.number
+                                }, received response ${
+                                    response?.error ?? response?.data ?? ""
+                                }.`
+                            );
+                        } else {
+                            console.log(
+                                `Created attachment on ${ticketName} for GitHub issue #${createdIssueData.number}.`
+                            );
+                        }
+                    }),
                     prisma.syncedIssue.create({
                         data: {
                             githubIssueId: createdIssueData.id,
@@ -400,6 +369,19 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 ] as Promise<any>[]);
 
                 // Sync all comments on the issue
+                const linearComments = await linearIssue
+                    .comments()
+                    .then(comments =>
+                        Promise.all(
+                            comments.nodes.map(comment =>
+                                comment.user?.then(user => ({
+                                    comment,
+                                    user
+                                }))
+                            )
+                        )
+                    );
+
                 for (const linearComment of linearComments) {
                     if (!linearComment) continue;
 
@@ -435,32 +417,20 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                 );
                             else
                                 console.log(
-                                    `Created comment on GitHub issue #${createdIssueData.number} [${createdIssueData.id}] for Linear issue ${data.team.key}-${data.number}.`
+                                    `Created comment on GitHub issue #${createdIssueData.number} [${createdIssueData.id}] for Linear issue ${ticketName}.`
                                 );
                         });
                 }
             }
 
+            // Title change
             if (updatedFrom.title) {
-                const syncedIssue = await prisma.syncedIssue.findFirst({
-                    where: {
-                        linearTeamId: data.teamId,
-                        linearIssueId: data.id
-                    },
-                    include: { GitHubRepo: true }
-                });
-
                 if (!syncedIssue) {
-                    console.log(
-                        skipReason("edit", `${data.team.key}-${data.number}`)
-                    );
+                    console.log(skipReason("edit", ticketName));
 
                     return res.status(200).send({
                         success: true,
-                        message: skipReason(
-                            "edit",
-                            `${data.team.key}-${data.number}`
-                        )
+                        message: skipReason("edit", ticketName)
                     });
                 }
 
@@ -471,7 +441,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        title: `[${data.team.key}-${data.number}] ${data.title}`
+                        title: `[${ticketName}] ${data.title}`
                     })
                     .send()
                     .then(updatedIssueResponse => {
@@ -486,31 +456,19 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             );
                         else
                             console.log(
-                                `Updated GitHub issue title for ${data.team.key}-${data.number} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                                `Updated GitHub issue title for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                             );
                     });
             }
 
+            // Description change
             if (updatedFrom.description) {
-                const syncedIssue = await prisma.syncedIssue.findFirst({
-                    where: {
-                        linearIssueId: data.id,
-                        linearTeamId: data.teamId
-                    },
-                    include: { GitHubRepo: true }
-                });
-
                 if (!syncedIssue) {
-                    console.log(
-                        skipReason("edit", `${data.team.key}-${data.number}`)
-                    );
+                    console.log(skipReason("edit", ticketName));
 
                     return res.status(200).send({
                         success: true,
-                        message: skipReason(
-                            "edit",
-                            `${data.team.key}-${data.number}`
-                        )
+                        message: skipReason("edit", ticketName)
                     });
                 }
 
@@ -518,21 +476,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     data.description?.includes(getSyncFooter()) ||
                     data.description?.includes(legacySyncFooter)
                 ) {
-                    console.log(
-                        skipReason(
-                            "edit",
-                            `${data.team.key}-${data.number}`,
-                            true
-                        )
-                    );
+                    console.log(skipReason("edit", ticketName, true));
 
                     return res.status(200).send({
                         success: true,
-                        message: skipReason(
-                            "edit",
-                            `${data.team.key}-${data.number}`,
-                            true
-                        )
+                        message: skipReason("edit", ticketName, true)
                     });
                 }
 
@@ -563,34 +511,19 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             );
                         else
                             console.log(
-                                `Updated GitHub issue description for ${data.team.key}-${data.number} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                                `Updated GitHub issue description for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                             );
                     });
             }
 
+            // State change (eg. "Open" to "Done")
             if (updatedFrom.stateId) {
-                const syncedIssue = await prisma.syncedIssue.findFirst({
-                    where: {
-                        linearIssueId: data.id,
-                        linearTeamId: data.teamId
-                    },
-                    include: { GitHubRepo: true }
-                });
-
                 if (!syncedIssue) {
-                    console.log(
-                        skipReason(
-                            "state change",
-                            `${data.team.key}-${data.number}`
-                        )
-                    );
+                    console.log(skipReason("state change", ticketName));
 
                     return res.status(200).send({
                         success: true,
-                        message: skipReason(
-                            "state change",
-                            `${data.team.key}-${data.number}`
-                        )
+                        message: skipReason("state change", ticketName)
                     });
                 }
 
@@ -624,12 +557,107 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             );
                         else
                             console.log(
-                                `Updated GitHub issue state for ${data.team.key}-${data.number} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                                `Updated GitHub issue state for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                             );
                     });
             }
+
+            // Assignee change
+            if ("assigneeId" in updatedFrom) {
+                if (!syncedIssue) {
+                    const reason = skipReason("assignee", ticketName);
+                    console.log(reason);
+                    return res.status(200).send({
+                        success: true,
+                        message: reason
+                    });
+                }
+
+                const assigneeEndpoint = `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/assignees`;
+
+                // Assignee removed
+                if (updatedFrom.assigneeId !== null) {
+                    const prevAssignee = await prisma.user.findFirst({
+                        where: {
+                            linearUserId: updatedFrom.assigneeId
+                        },
+                        select: {
+                            githubUsername: true
+                        }
+                    });
+
+                    if (prevAssignee) {
+                        const response = await petitio(
+                            assigneeEndpoint,
+                            "DELETE"
+                        )
+                            .header("User-Agent", userAgentHeader)
+                            .header("Authorization", githubAuthHeader)
+                            .body({ assignees: [prevAssignee.githubUsername] })
+                            .send();
+
+                        if (response.statusCode > 201) {
+                            console.log(
+                                getIssueUpdateError(
+                                    "assignee",
+                                    data,
+                                    syncedIssue,
+                                    response
+                                )
+                            );
+                        } else {
+                            console.log(
+                                `Removed assignee on GitHub issue #${syncedIssue.githubIssueNumber} for ${ticketName}.`
+                            );
+                        }
+                    } else {
+                        console.log(
+                            `Skipping assignee removal for ${ticketName} as no GitHub username was found for Linear user ${data.assigneeId}.`
+                        );
+                    }
+                }
+
+                // Assignee added
+                if (data.assigneeId) {
+                    const assignee = await prisma.user.findFirst({
+                        where: {
+                            linearUserId: data.assigneeId
+                        },
+                        select: {
+                            githubUsername: true
+                        }
+                    });
+
+                    if (assignee) {
+                        const response = await petitio(assigneeEndpoint, "POST")
+                            .header("User-Agent", userAgentHeader)
+                            .header("Authorization", githubAuthHeader)
+                            .body({ assignees: [assignee.githubUsername] })
+                            .send();
+
+                        if (response.statusCode > 201) {
+                            console.log(
+                                getIssueUpdateError(
+                                    "assignee",
+                                    data,
+                                    syncedIssue,
+                                    response
+                                )
+                            );
+                        } else {
+                            console.log(
+                                `Updated assignee on GitHub issue #${syncedIssue.githubIssueNumber} for ${ticketName}.`
+                            );
+                        }
+                    } else {
+                        `Skipping assignee for ${ticketName} as no GitHub username was found for Linear user ${data.assigneeId}.`;
+                    }
+                }
+            }
         } else if (action === "create") {
             if (actionType === "Comment") {
+                // Comment added
+
                 if (data.id.includes(GITHUB.UUID_SUFFIX)) {
                     console.log(skipReason("comment", data.issue!.id, true));
 
@@ -639,6 +667,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
+                // Overrides the outer-scope syncedIssue because comments do not come with teamId
                 const syncedIssue = await prisma.syncedIssue.findFirst({
                     where: {
                         linearIssueId: data.issueId
@@ -698,10 +727,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             );
                     });
             } else if (actionType === "Issue") {
+                // Issue created
+
                 if (!data.labelIds?.includes(publicLabelId)) {
+                    const reason = "Issue is not labeled as public";
+                    console.log(reason);
                     return res.status(200).send({
                         success: true,
-                        message: "Issue is not labeled as public"
+                        message: reason
                     });
                 }
 
@@ -709,29 +742,20 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     data.description?.includes(getSyncFooter()) ||
                     data.description?.includes(legacySyncFooter)
                 ) {
-                    console.log(skipReason("issue", data.id, true));
-
+                    const reason = skipReason("issue", data.id, true);
+                    console.log(reason);
                     return res.status(200).send({
                         success: true,
-                        message: skipReason("issue", data.id, true)
+                        message: reason
                     });
                 }
 
-                const issueAlreadyExists = await prisma.syncedIssue.findFirst({
-                    where: {
-                        linearIssueId: data.id,
-                        linearTeamId: data.teamId
-                    }
-                });
-
-                if (issueAlreadyExists) {
-                    console.log(
-                        `Not creating issue after label added as issue ${data.team.key}-${data.number} [${data.id}] already exists on GitHub as issue #${issueAlreadyExists.githubIssueNumber} [${issueAlreadyExists.githubIssueId}].`
-                    );
-
+                if (syncedIssue) {
+                    const reason = `Not creating issue after label added as issue ${ticketName} already exists on GitHub as #${syncedIssue.githubIssueNumber}.`;
+                    console.log(reason);
                     return res.status(200).send({
                         success: true,
-                        message: "Issue already exists on GitHub."
+                        message: reason
                     });
                 }
 
@@ -740,6 +764,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     "linear"
                 );
 
+                const assignee = await prisma.user.findFirst({
+                    where: { linearUserId: data.assigneeId },
+                    select: { githubUsername: true }
+                });
+
                 const createdIssueResponse = await petitio(
                     issuesEndpoint,
                     "POST"
@@ -747,8 +776,13 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        title: `[${data.team.key}-${data.number}] ${data.title}`,
-                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`
+                        title: `[${ticketName}] ${data.title}`,
+                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`,
+                        assignees: [
+                            data.assigneeId && assignee?.githubUsername
+                                ? assignee?.githubUsername
+                                : ""
+                        ]
                     })
                     .send();
 
@@ -770,41 +804,28 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 const createdIssueData: components["schemas"]["issue"] =
                     await createdIssueResponse.json();
 
+                const attachmentQuery = getAttachmentQuery(
+                    data.id,
+                    createdIssueData.number,
+                    repoFullName
+                );
+
                 await Promise.all([
-                    petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
-                        .header("Authorization", `Bearer ${linearKey}`)
-                        .header("Content-Type", "application/json")
-                        .body({
-                            query: getAttachmentQuery(
-                                data.id,
-                                createdIssueData.number,
-                                repoFullName
-                            )
-                        })
-                        .send()
-                        .then(attachmentResponse => {
-                            const attachment = attachmentResponse.json();
-                            if (attachmentResponse.statusCode > 201)
-                                console.log(
-                                    getOtherUpdateError(
-                                        "attachment",
-                                        data,
-                                        createdIssueData,
-                                        createdIssueResponse,
-                                        attachment
-                                    )
-                                );
-                            else if (
-                                !attachment?.data?.attachmentCreate?.success
-                            )
-                                console.log(
-                                    `Failed to create attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
-                                );
-                            else
-                                console.log(
-                                    `Created attachment for ${data.team.key}-${data.number} [${data.id}] for GitHub issue #${createdIssueData.number} [${createdIssueData.id}].`
-                                );
-                        }),
+                    linearQuery(attachmentQuery, linearKey).then(response => {
+                        if (!response?.data?.attachmentCreate?.success) {
+                            console.log(
+                                `Failed to create attachment on ${ticketName} for GitHub issue #${
+                                    createdIssueData.number
+                                }, received response ${
+                                    response?.error ?? response?.data ?? ""
+                                }.`
+                            );
+                        } else {
+                            console.log(
+                                `Created attachment on ${ticketName} for GitHub issue #${createdIssueData.number}.`
+                            );
+                        }
+                    }),
                     prisma.syncedIssue.create({
                         data: {
                             githubIssueId: createdIssueData.id,
@@ -815,7 +836,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             githubRepoId: repoId
                         }
                     })
-                ]);
+                ] as Promise<any>[]);
 
                 // Apply all labels to newly-created issue
                 const labelIds = data.labelIds.filter(
@@ -828,7 +849,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     const label = await linear.issueLabel(labelId);
                     if (!label) {
                         console.log(
-                            `Could not find label ${labelId} for ${data.team.key}-${data.number}.`
+                            `Could not find label ${labelId} for ${ticketName}.`
                         );
                         continue;
                     }
@@ -983,11 +1004,24 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             githubAuthHeader
         );
 
+        const isIssue = req.headers["x-github-event"] === "issues";
+
+        const { issue }: IssuesEvent = req.body;
+
+        const syncedIssue = await prisma.syncedIssue.findFirst({
+            where: {
+                githubIssueNumber: issue?.number,
+                githubRepoId: repository.id
+            }
+        });
+
         if (
             req.headers["x-github-event"] === "issue_comment" &&
             action === "created"
         ) {
-            const { issue, comment }: IssueCommentCreatedEvent = req.body;
+            // Comment created
+
+            const { comment }: IssueCommentCreatedEvent = req.body;
 
             if (comment.body.includes("on Linear")) {
                 console.log(skipReason("comment", issue.number, true));
@@ -998,22 +1032,14 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 });
             }
 
-            const syncedIssue = await prisma.syncedIssue.findFirst({
-                where: {
-                    githubIssueNumber: issue.number,
-                    githubRepoId: repository.id
-                }
-            });
-
             if (!syncedIssue) {
-                console.log(skipReason("comment", issue.number));
-
+                const reason = skipReason("comment", issue.number);
+                console.log(reason);
                 return res.status(200).send({
                     success: true,
-                    message: skipReason("comment", issue.number)
+                    message: reason
                 });
             }
-
             const modifiedComment = await replaceMentions(
                 comment.body,
                 "github"
@@ -1041,25 +1067,17 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         });
                     });
                 });
-        } else if (isIssue(req) && action === "edited") {
-            const { issue }: IssuesEditedEvent = req.body;
-
-            const syncedIssue = await prisma.syncedIssue.findFirst({
-                where: {
-                    githubIssueNumber: issue.number,
-                    githubRepoId: repository.id
-                }
-            });
+        } else if (isIssue && action === "edited") {
+            // Issue edited
 
             if (!syncedIssue) {
-                console.log(skipReason("edit", issue.number));
-
+                const reason = skipReason("edit", issue.number);
+                console.log(reason);
                 return res.status(200).send({
                     success: true,
-                    message: skipReason("edit", issue.number)
+                    message: reason
                 });
             }
-
             const title = issue.title.split(
                 `${syncedIssue.linearIssueNumber}]`
             );
@@ -1092,25 +1110,17 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         });
                     });
                 });
-        } else if (isIssue(req) && ["closed", "reopened"].includes(action)) {
-            const { issue }: IssuesClosedEvent = req.body;
-
-            const syncedIssue = await prisma.syncedIssue.findFirst({
-                where: {
-                    githubIssueNumber: issue.number,
-                    githubRepoId: repository.id
-                }
-            });
+        } else if (isIssue && ["closed", "reopened"].includes(action)) {
+            // Issue closed or reopened
 
             if (!syncedIssue) {
-                console.log(skipReason("edit", issue.number));
-
+                const reason = skipReason("edit", issue.number);
+                console.log(reason);
                 return res.status(200).send({
                     success: true,
-                    message: skipReason("edit", issue.number)
+                    message: reason
                 });
             }
-
             const title = issue.title.split(
                 `${syncedIssue.linearIssueNumber}]`
             );
@@ -1140,23 +1150,23 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 });
         } else if (
-            isIssue(req) &&
+            isIssue &&
             (action === "opened" ||
                 (action === "labeled" &&
                     req.body.label?.name?.toLowerCase() ===
                         LINEAR.GITHUB_LABEL))
         ) {
-            const { issue }: IssuesEvent = req.body;
+            // Issue opened or special "linear" label added
 
             if (
                 issue.body?.includes(getSyncFooter()) ||
                 issue.body?.includes(legacySyncFooter)
             ) {
-                console.log(skipReason("edit", issue.number, true));
-
+                const reason = skipReason("edit", issue.number, true);
+                console.log(reason);
                 return res.status(200).send({
                     success: true,
-                    message: skipReason("edit", issue.number, true)
+                    message: reason
                 });
             }
 
@@ -1165,21 +1175,28 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 "github"
             );
 
+            const assignee = await prisma.user.findFirst({
+                where: { githubUserId: issue.assignee?.id },
+                select: { linearUserId: true }
+            });
+
             const createdIssueData = await linear.issueCreate({
                 title: issue.title,
                 description: `${modifiedDescription ?? ""}${getSyncFooter()}`,
                 teamId: linearTeamId,
-                labelIds: [publicLabelId]
+                labelIds: [publicLabelId],
+                assigneeId:
+                    issue.assignee?.id && assignee
+                        ? assignee.linearUserId
+                        : null
             });
 
             if (!createdIssueData.success) {
-                console.log(
-                    `Failed to create issue for GitHub issue #${issue.number} [${issue.id}].`
-                );
-
+                const reason = `Failed to create ticket for GitHub issue #${issue.number}.`;
+                console.log(reason);
                 return res.status(500).send({
                     success: false,
-                    message: `Failed creating issue on Linear.`
+                    message: reason
                 });
             }
 
@@ -1187,34 +1204,37 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
             if (!createdIssue)
                 console.log(
-                    `Failed to fetch issue I just created for GitHub issue #${issue.number} [${issue.id}].`
+                    `Failed to fetch ticket I just created for GitHub issue #${issue.number}.`
                 );
             else {
                 const team = await createdIssue.team;
 
                 if (!team) {
                     console.log(
-                        `Failed to fetch team for issue, ${createdIssue.id} for GitHub issue #${issue.number} [${issue.id}].`
+                        `Failed to fetch team for ticket, ${createdIssue.id} for GitHub issue #${issue.number}.`
                     );
                 } else {
+                    const ticketName = `${team.key}-${createdIssue.number}`;
+                    const attachmentQuery = getAttachmentQuery(
+                        createdIssue.id,
+                        issue.number,
+                        repoName
+                    );
+
                     await Promise.all([
                         petitio(`${issuesEndpoint}/${issue.number}`, "PATCH")
                             .header("User-Agent", userAgentHeader)
                             .header("Authorization", githubAuthHeader)
                             .body({
-                                title: `[${team.key}-${createdIssue.number}] ${issue.title}`
+                                title: `[${ticketName}] ${issue.title}`
                             })
                             .send()
                             .then(titleRenameResponse => {
                                 if (titleRenameResponse.statusCode > 201)
                                     console.log(
-                                        `Failed to update GitHub issue title for ${
-                                            team.key
-                                        }-${createdIssue.number} [${
-                                            createdIssue.id
-                                        }] on GitHub issue #${issue.number} [${
-                                            issue.id
-                                        }], received status code ${
+                                        `Failed to update GitHub issue title for ${ticketName} on GitHub issue #${
+                                            issue.number
+                                        }, received status code ${
                                             titleRenameResponse.statusCode
                                         }, body of ${formatJSON(
                                             titleRenameResponse.json()
@@ -1222,47 +1242,30 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                                     );
                                 else
                                     console.log(
-                                        `Created comment on GitHub issue #${issue.number} [${issue.id}] for Linear issue ${team.key}-${createdIssue.number}.`
+                                        `Created comment on GitHub issue #${issue.number} for Linear issue ${ticketName}.`
                                     );
                             }),
-                        petitio(LINEAR.GRAPHQL_ENDPOINT, "POST")
-                            .header("Authorization", `Bearer ${linearKey}`)
-                            .header("Content-Type", "application/json")
-                            .body({
-                                query: getAttachmentQuery(
-                                    createdIssue.id,
-                                    issue.number,
-                                    repoName
-                                )
-                            })
-                            .send()
-                            .then(attachmentResponse => {
-                                const attachment = attachmentResponse.json();
-                                if (attachmentResponse.statusCode > 201)
+                        linearQuery(attachmentQuery, linearKey).then(
+                            response => {
+                                if (
+                                    !response?.data?.attachmentCreate?.success
+                                ) {
                                     console.log(
-                                        getOtherUpdateError(
-                                            "attachment",
-                                            {
-                                                team: team,
-                                                id: createdIssue.id,
-                                                number: createdIssue.number
-                                            },
-                                            issue,
-                                            attachmentResponse,
-                                            attachment
-                                        )
+                                        `Failed to create attachment on ${ticketName} for GitHub issue #${
+                                            issue.number
+                                        }, received response ${
+                                            response?.error ??
+                                            response?.data ??
+                                            ""
+                                        }.`
                                     );
-                                else if (
-                                    !attachment?.data?.attachmentCreate?.success
-                                )
+                                } else {
                                     console.log(
-                                        `Failed to create attachment for ${team.key}-${createdIssue.number} [${createdIssue.id}] for GitHub issue #${issue.number} [${issue.id}], received status code ${attachmentResponse.statusCode}`
+                                        `Created attachment on ${ticketName} for GitHub issue #${issue.number}.`
                                     );
-                                else
-                                    console.log(
-                                        `Created attachment for ${team.key}-${createdIssue.number} [${createdIssue.id}] for GitHub issue #${issue.number} [${issue.id}].`
-                                    );
-                            }),
+                                }
+                            }
+                        ),
                         prisma.syncedIssue.create({
                             data: {
                                 githubIssueNumber: issue.number,
@@ -1303,17 +1306,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
                 const comments = await issueCommentsPayload.json();
 
-                const commentsSanitized = comments.map(comment => {
-                    return {
-                        body: comment.body,
-                        sender: {
-                            login: comment.user.login,
-                            html_url: comment.user.html_url
-                        }
-                    };
-                });
-
-                for (const comment of commentsSanitized) {
+                for (const comment of comments) {
                     const modifiedComment = await replaceMentions(
                         comment.body,
                         "github"
@@ -1335,6 +1328,81 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             message: `Failed creating comment on Linear.`
                         });
                     }
+                }
+            }
+        } else if (isIssue && ["assigned", "unassigned"].includes(action)) {
+            // Assignee changed
+
+            if (!syncedIssue) {
+                const reason = skipReason("assignee", issue.number);
+                console.log(reason);
+                return res.status(200).send({
+                    success: true,
+                    message: reason
+                });
+            }
+
+            const { assignee } = issue;
+
+            if (!assignee?.id) {
+                // Remove assignee
+
+                const response = await linear.issueUpdate(
+                    syncedIssue.linearIssueId,
+                    { assigneeId: null }
+                );
+
+                if (!response?.success) {
+                    const reason = `Failed to remove assignee on Linear ticket for GitHub issue #${issue.number}.`;
+                    console.log(reason);
+                    return res.status(500).send({
+                        success: false,
+                        message: reason
+                    });
+                } else {
+                    const reason = `Removed assignee from Linear ticket for GitHub issue #${issue.number}.`;
+                    console.log(reason);
+                    return res.status(200).send({
+                        success: true,
+                        message: reason
+                    });
+                }
+            } else {
+                // Add assignee
+
+                const user = await prisma.user.findFirst({
+                    where: { githubUserId: assignee?.id },
+                    select: { linearUserId: true }
+                });
+
+                if (!user) {
+                    const reason = `Skipping assignee change for issue #${issue.number} as no Linear username was found for GitHub user ${assignee?.login}.`;
+                    console.log(reason);
+                    return res.status(200).send({
+                        success: true,
+                        message: reason
+                    });
+                }
+
+                const response = await linear.issueUpdate(
+                    syncedIssue.linearIssueId,
+                    { assigneeId: user.linearUserId }
+                );
+
+                if (!response?.success) {
+                    const reason = `Failed to add assignee on Linear ticket for GitHub issue #${issue.number}.`;
+                    console.log(reason);
+                    return res.status(500).send({
+                        success: false,
+                        message: reason
+                    });
+                } else {
+                    const reason = `Added assignee to Linear ticket for GitHub issue #${issue.number}.`;
+                    console.log(reason);
+                    return res.status(200).send({
+                        success: true,
+                        message: reason
+                    });
                 }
             }
         }

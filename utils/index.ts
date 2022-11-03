@@ -1,6 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
-import { NextApiRequest } from "next";
-import { GitHubContext, GitHubRepo, LinearContext } from "../typings";
+import { GitHubContext, LinearContext } from "../typings";
 import { GITHUB } from "./constants";
 
 export const isDev = (): boolean => {
@@ -87,7 +86,7 @@ export const getAttachmentQuery = (
     repoFullName: string
 ): string => {
     return `mutation {
-        attachmentCreate(input:{
+        attachmentCreate(input: {
             issueId: "${issueId}"
             title: "GitHub Issue #${issueNumber}"
             subtitle: "Synchronized"
@@ -95,19 +94,12 @@ export const getAttachmentQuery = (
             iconUrl: "${GITHUB.ICON_URL}"
         }) {
             success
-            attachment {
-                id
-            }
         }
     }`;
 };
 
-export const isIssue = (req: NextApiRequest): boolean => {
-    return req.headers["x-github-event"] === "issues";
-};
-
 export const skipReason = (
-    event: "issue" | "edit" | "comment" | "state change" | "label",
+    event: "issue" | "edit" | "comment" | "state change" | "label" | "assignee",
     issueNumber: number | string,
     causedBySync: boolean = false
 ): string => {
