@@ -22,8 +22,7 @@ export const formatJSON = (body: Object): string => {
 };
 
 export const clearURLParams = () => {
-    const baseURL = window.location.href.split("?")[0];
-    window.history.replaceState({}, document.title, baseURL);
+    window.history.replaceState(null, null, window.location.pathname);
 };
 
 export const encrypt = (text: string): { hash: string; initVector: string } => {
