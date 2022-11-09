@@ -77,3 +77,8 @@ export interface GitHubContext {
     apiKey: string;
 }
 
+export interface Sync {
+    LinearTeam: { id: string; teamName: string };
+    GitHubRepo: { id: string; repoName: string };
+}
+

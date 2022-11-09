@@ -10,6 +10,7 @@ import { saveSync } from "../utils";
 import confetti from "canvas-confetti";
 import { GITHUB, LINEAR } from "../utils/constants";
 import { ExternalLinkIcon } from "@radix-ui/react-icons";
+import Header from "../components/Header";
 
 const index = () => {
     const [linearContext, setLinearContext] = useState<LinearContext>({
@@ -86,8 +87,12 @@ const index = () => {
     return (
         <div>
             <PageHead />
-            <section className="w-screen min-h-screen center gap-28 px-6">
+            <Header />
+            <section className="w-screen min-h-[80vh] center gap-28 px-6">
                 <div className="space-y-4 text-center">
+                    <span className="px-3 py-1 rounded-full bg-gray-500 text-gray-200">
+                        Beta
+                    </span>
                     <h1>Linear-GitHub Sync</h1>
                     <p className="text-2xl font-tertiary">
                         End-to-end sync of Linear tickets and GitHub issues

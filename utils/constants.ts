@@ -38,6 +38,7 @@ export const GENERAL = {
     APP_NAME: "Linear-GitHub Sync",
     APP_URL: "https://synclinear.com",
     CONTRIBUTE_URL: "https://github.com/calcom/linear-to-github",
+    LOGIN_KEY: "login",
     SYNCED_ITEMS: [
         {
             linearField: "Title",
