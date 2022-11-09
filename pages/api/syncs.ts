@@ -55,7 +55,7 @@ export default async function handle(
 
             return res.status(200).json({
                 syncs,
-                user: { name: user.name, id: user.id }
+                user: { name: user.login, id: user.id }
             });
         } catch (error) {
             console.log("Error fetching syncs: ", error.message);
