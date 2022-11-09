@@ -1,5 +1,5 @@
 import { CheckIcon, DotsHorizontalIcon } from "@radix-ui/react-icons";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import { GitHubContext, GitHubRepo } from "../typings";
 import { clearURLParams } from "../utils";
 import { v4 as uuid } from "uuid";
@@ -14,6 +14,7 @@ import {
     saveGitHubContext,
     setGitHubWebook
 } from "../utils/github";
+import { Context } from "./ContextProvider";
 
 interface IProps {
     onAuth: (apiKey: string) => void;
@@ -28,16 +29,17 @@ const GitHubAuthButton = ({
     restoredApiKey,
     restored
 }: IProps) => {
-    const [accessToken, setAccessToken] = useState("");
     const [repos, setRepos] = useState<GitHubRepo[]>([]);
     const [chosenRepo, setChosenRepo] = useState<GitHubRepo>();
-    const [user, setUser] = useState<GitHubRepo>();
     const [deployed, setDeployed] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    const { gitHubToken, setGitHubToken, gitHubUser, setGitHubUser } =
+        useContext(Context);
+
     // If present, exchange the temporary auth code for an access token
     useEffect(() => {
-        if (accessToken) return;
+        if (gitHubToken) return;
 
         // If the URL params have an auth code, we're returning from the GitHub auth page
         const authResponse = new URLSearchParams(window.location.search);
@@ -58,7 +60,7 @@ const GitHubAuthButton = ({
         const refreshToken = authResponse.get("code");
         exchangeGitHubToken(refreshToken)
             .then(body => {
-                if (body.access_token) setAccessToken(body.access_token);
+                if (body.access_token) setGitHubToken(body.access_token);
                 else {
                     alert("No access token returned. Please try again.");
                     clearURLParams();
@@ -74,17 +76,17 @@ const GitHubAuthButton = ({
 
     // Restore the GitHub context from local storage
     useEffect(() => {
-        if (restoredApiKey) setAccessToken(restoredApiKey);
+        if (restoredApiKey) setGitHubToken(restoredApiKey);
     }, [restoredApiKey]);
 
     // Fetch the user's repos when a token is available
     useEffect(() => {
-        if (!accessToken) return;
-        if (user?.id) return;
+        if (!gitHubToken) return;
+        if (gitHubUser?.id) return;
 
-        onAuth(accessToken);
+        onAuth(gitHubToken);
 
-        getGitHubRepos(accessToken)
+        getGitHubRepos(gitHubToken)
             .then(res => {
                 setRepos(
                     res.map(repo => {
@@ -94,14 +96,14 @@ const GitHubAuthButton = ({
             })
             .catch(err => alert(`Error fetching repos: ${err}`));
 
-        getGitHubUser(accessToken)
-            .then(res => setUser({ id: res.id, name: res.login }))
+        getGitHubUser(gitHubToken)
+            .then(res => setGitHubUser({ id: res.id, name: res.login }))
             .catch(err => alert(`Error fetching user profile: ${err}`));
-    }, [accessToken]);
+    }, [gitHubToken]);
 
     // Disable webhook deployment button if the repo already exists
     useEffect(() => {
-        if (!chosenRepo) return;
+        if (!chosenRepo || !gitHubUser || !gitHubToken) return;
 
         setLoading(true);
 
@@ -110,9 +112,9 @@ const GitHubAuthButton = ({
                 if (res?.exists) {
                     setDeployed(true);
                     onDeployWebhook({
-                        userId: user.id,
+                        userId: gitHubUser.id,
                         repoId: chosenRepo.id,
-                        apiKey: accessToken
+                        apiKey: gitHubToken
                     });
                 } else {
                     setDeployed(false);
@@ -142,7 +144,7 @@ const GitHubAuthButton = ({
             alert(`Error saving repo to DB: ${err}`)
         );
 
-        setGitHubWebook(accessToken, chosenRepo, webhookSecret)
+        setGitHubWebook(gitHubToken, chosenRepo, webhookSecret)
             .then(res => {
                 if (res.errors) {
                     alert(res.errors[0].message);
@@ -150,19 +152,19 @@ const GitHubAuthButton = ({
                 }
                 setDeployed(true);
                 onDeployWebhook({
-                    userId: user.id,
+                    userId: gitHubUser.id,
                     repoId: chosenRepo.id,
-                    apiKey: accessToken
+                    apiKey: gitHubToken
                 });
             })
             .catch(err => alert(`Error deploying webhook: ${err}`));
-    }, [accessToken, chosenRepo, deployed, user]);
+    }, [gitHubToken, chosenRepo, deployed, gitHubUser]);
 
     return (
         <div className="center space-y-8 w-80">
             <button
                 onClick={openAuthPage}
-                disabled={!!accessToken || loading}
+                disabled={!!gitHubToken || loading}
                 className={loading ? "animate-pulse" : ""}
                 aria-label="Authorize with GitHub"
             >
@@ -174,9 +176,9 @@ const GitHubAuthButton = ({
                 ) : (
                     <span>2. Connect GitHub</span>
                 )}
-                {!!accessToken && <CheckIcon className="w-6 h-6" />}
+                {!!gitHubToken && <CheckIcon className="w-6 h-6" />}
             </button>
-            {repos.length > 0 && restored && (
+            {repos.length > 0 && gitHubUser && restored && (
                 <div className="flex flex-col items-center space-y-4">
                     <select
                         name="GitHub repository"
