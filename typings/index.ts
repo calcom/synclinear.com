@@ -78,6 +78,7 @@ export interface GitHubContext {
 }
 
 export interface Sync {
+    id: string;
     LinearTeam: { id: string; teamName: string };
     GitHubRepo: { id: string; repoName: string };
 }
