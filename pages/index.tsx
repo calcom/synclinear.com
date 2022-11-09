@@ -1,28 +1,21 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import Footer from "../components/Footer";
 import GitHubAuthButton from "../components/GitHubAuthButton";
 import Landing from "../components/Landing";
 import LinearAuthButton from "../components/LinearAuthButton";
 import PageHead from "../components/PageHead";
 import SyncArrow from "../components/SyncArrow";
-import { GitHubContext, LinearContext } from "../typings";
 import { saveSync } from "../utils";
 import confetti from "canvas-confetti";
 import { GITHUB, LINEAR } from "../utils/constants";
 import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import Header from "../components/Header";
+import { Context } from "../components/ContextProvider";
+import Dashboard from "../components/Dashboard";
 
 const index = () => {
-    const [linearContext, setLinearContext] = useState<LinearContext>({
-        userId: "",
-        teamId: "",
-        apiKey: ""
-    });
-    const [gitHubContext, setGitHubContext] = useState<GitHubContext>({
-        userId: "",
-        repoId: "",
-        apiKey: ""
-    });
+    const { linearContext, setLinearContext, gitHubContext, setGitHubContext } =
+        useContext(Context);
     const [synced, setSynced] = useState(false);
     const [restored, setRestored] = useState(false);
 
@@ -98,12 +91,16 @@ const index = () => {
                         End-to-end sync of Linear tickets and GitHub issues
                     </p>
                 </div>
+                <Dashboard />
                 <div className="w-full flex flex-col sm:flex-row justify-around items-center sm:items-start gap-4">
                     <LinearAuthButton
                         restoredApiKey={linearContext.apiKey}
                         restored={restored}
                         onAuth={(apiKey: string) =>
-                            setLinearContext({ ...linearContext, apiKey })
+                            setLinearContext({
+                                ...linearContext,
+                                apiKey
+                            })
                         }
                         onDeployWebhook={setLinearContext}
                     />
@@ -125,7 +122,10 @@ const index = () => {
                         restoredApiKey={gitHubContext.apiKey}
                         restored={restored}
                         onAuth={(apiKey: string) =>
-                            setGitHubContext({ ...gitHubContext, apiKey })
+                            setGitHubContext({
+                                ...gitHubContext,
+                                apiKey
+                            })
                         }
                         onDeployWebhook={setGitHubContext}
                     />
