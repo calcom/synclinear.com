@@ -7,7 +7,7 @@ export default async function handle(_, res: NextApiResponse) {
         return res
             .status(404)
             .send(
-                "No database URL found. Check the DATABSE_URL environment variable."
+                "No database URL found. Check the DATABASE_URL environment variable."
             );
     }
 
