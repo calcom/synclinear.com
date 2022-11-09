@@ -12,15 +12,19 @@ import Tooltip from "./Tooltip";
 const Landing = () => {
     return (
         <section className="w-screen min-h-screen center gap-40 py-40 px-6">
-            <div className="space-y-12 text-center max-w-xl">
-                <h2>What does it do?</h2>
-                <h3>This app lets you mirror Linear and GitHub issues.</h3>
-                <h3>
-                    This way, open-source teams can chat with contributors
-                    without giving access to an internal Linear team.
-                </h3>
+            <div className="mx-6 p-6 sm:p-12 w-full rounded-3xl bg-gray-900 center">
+                <div className="space-y-10 max-w-xl text-center">
+                    <h2 className="text-gray-200">What does it do?</h2>
+                    <h3 className="font-negative">
+                        This app lets you mirror Linear and GitHub issues.
+                    </h3>
+                    <h3 className="font-negative">
+                        This way, open-source teams can chat with contributors
+                        without giving access to an internal Linear team.
+                    </h3>
+                </div>
             </div>
-            <div className="space-y-12 text-center max-w-xl">
+            <div className="space-y-10 text-center max-w-xl">
                 <h2>What gets synced?</h2>
                 <h3>
                     Full two-way sync means titles, descriptions, and labels are
@@ -75,7 +79,7 @@ const Landing = () => {
                     )}
                 </div>
             </div>
-            <div className="space-y-12 text-center max-w-xl">
+            <div className="space-y-10 text-center max-w-xl">
                 <h2>How does it work?</h2>
                 <h3>
                     Under the hood, a webhook pings the app with new issues and
@@ -86,7 +90,7 @@ const Landing = () => {
                     accessible only by your team's webhook.
                 </h3>
             </div>
-            <div className="space-y-12 center">
+            <div className="space-y-10 center">
                 <h2 className="text-center">How do I set it up?</h2>
                 <ul className="text-xl font-tertiary">
                     <li>
@@ -114,7 +118,7 @@ const Landing = () => {
                     <ArrowUpIcon className="w-6 h-6" />
                 </button>
             </div>
-            <div className="space-y-12 max-w-xl text-center center">
+            <div className="space-y-10 max-w-xl text-center center">
                 <h2 className="text-center">Missing something?</h2>
                 <h3>
                     This app is completely open-source (even this sentence). If
@@ -129,13 +133,13 @@ const Landing = () => {
                     <GitHubLogo />
                 </button>
             </div>
-            <div className="space-y-12 max-w-xl text-center center">
+            <div className="space-y-10 max-w-xl text-center center">
                 <h2 className="text-center">Pricing</h2>
                 <h3>
                     SyncLinear.com is completely free. If you want to donate,
                     subscribe to a <a href="https://cal.com/pricing">Cal.com</a>{" "}
-                    or <a href="https://neat.run">Neat</a> plan to support the
-                    development.
+                    or <a href="https://neat.run/pro">Neat</a> plan to support
+                    the development.
                 </h3>
             </div>
         </section>

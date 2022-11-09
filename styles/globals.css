@@ -54,6 +54,9 @@
     .font-tertiary {
         @apply text-gray-500;
     }
+    .font-negative {
+        @apply text-gray-300;
+    }
     .font-cal-sans {
         font-family: "cal-sans", Arial, Helvetica, sans-serif;
     }
