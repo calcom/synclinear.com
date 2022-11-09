@@ -10,13 +10,8 @@ import { Context } from "./ContextProvider";
 const LoginButton = () => {
     const [loading, setLoading] = useState(false);
 
-    const {
-        gitHubToken,
-        setGitHubToken,
-        gitHubUsername,
-        setGitHubUsername,
-        setSyncs
-    } = useContext(Context);
+    const { gitHubToken, setGitHubToken, gitHubUser, setGitHubUser, setSyncs } =
+        useContext(Context);
 
     // If present, exchange the temporary auth code for an access token
     useEffect(() => {
@@ -75,15 +70,14 @@ const LoginButton = () => {
 
         getSyncs()
             .then(res => {
-                setGitHubUsername(res.name);
+                setGitHubUser(res.user);
                 setSyncs(res.syncs);
-                console.log(res.syncs);
             })
             .catch(err => {
                 alert(err);
             })
             .finally(() => setLoading(false));
-    }, [gitHubToken]);
+    }, [gitHubToken, gitHubUser]);
 
     const openAuthPage = () => {
         // Generate random code to validate against CSRF attack
@@ -99,7 +93,7 @@ const LoginButton = () => {
 
     const logOut = () => {
         setGitHubToken("");
-        setGitHubUsername("");
+        setGitHubUser(null);
         localStorage.removeItem(`${GENERAL.LOGIN_KEY}-verification`);
         localStorage.removeItem(`${GENERAL.LOGIN_KEY}-token`);
     };
@@ -110,8 +104,8 @@ const LoginButton = () => {
             className="bg-cal-gray !w-40 !h-12 group"
         >
             <span>
-                {gitHubUsername
-                    ? gitHubUsername
+                {gitHubUser?.name
+                    ? gitHubUser.name
                     : loading
                     ? "Loading..."
                     : "Log in"}
