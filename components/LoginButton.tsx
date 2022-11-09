@@ -33,6 +33,7 @@ const LoginButton = () => {
         if (!authResponse.get("state")?.includes(GENERAL.LOGIN_KEY)) return;
         if (authResponse.get("state") !== verificationCode) {
             alert("GitHub auth returned an invalid code. Please try again.");
+            clearURLParams();
             return;
         }
 
@@ -116,7 +117,7 @@ const LoginButton = () => {
                     : "Log in"}
             </span>
             {gitHubToken ? (
-                <Cross1Icon className="w-4 h-4 group-hover:text-red-600" />
+                <Cross1Icon className="w-4 h-4 group-hover:text-danger transition-colors" />
             ) : (
                 <GitHubLogo className={loading ? "animate-spin" : ""} />
             )}
