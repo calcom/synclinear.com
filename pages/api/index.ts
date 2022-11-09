@@ -44,6 +44,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             action,
             updatedFrom,
             data,
+            url,
             type: actionType
         }: LinearWebhookPayload = req.body;
 
@@ -288,7 +289,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${ticketName}] ${data.title}`,
-                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`,
+                        body: `${
+                            modifiedDescription ?? ""
+                        }${getSyncFooter()} | [${ticketName}](${url})`,
                         assignees: [
                             data.assigneeId && assignee?.githubUsername
                                 ? assignee?.githubUsername
@@ -777,7 +780,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("Authorization", githubAuthHeader)
                     .body({
                         title: `[${ticketName}] ${data.title}`,
-                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`,
+                        body: `${
+                            modifiedDescription ?? ""
+                        }${getSyncFooter()} | [${ticketName}](${url})`,
                         assignees: [
                             data.assigneeId && assignee?.githubUsername
                                 ? assignee?.githubUsername
