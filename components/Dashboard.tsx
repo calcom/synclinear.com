@@ -5,6 +5,7 @@ import Tooltip from "./Tooltip";
 
 const Dashboard = () => {
     const { syncs, setSyncs, gitHubToken } = useContext(Context);
+
     const [loading, setLoading] = useState(false);
 
     const removeSync = async (syncId: string) => {
@@ -32,7 +33,7 @@ const Dashboard = () => {
             });
     };
 
-    if (syncs.length === 0) return <></>;
+    if (!syncs?.length) return <></>;
 
     return (
         <div className="center space-y-4">

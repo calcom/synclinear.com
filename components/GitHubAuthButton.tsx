@@ -88,10 +88,11 @@ const GitHubAuthButton = ({
 
         getGitHubRepos(gitHubToken)
             .then(res => {
+                if (!res?.length) throw new Error("No repos retrieved");
                 setRepos(
-                    res.map(repo => {
+                    res?.map(repo => {
                         return { id: repo.id, name: repo.full_name };
-                    })
+                    }) ?? []
                 );
             })
             .catch(err => alert(`Error fetching repos: ${err}`));
@@ -178,7 +179,7 @@ const GitHubAuthButton = ({
                 )}
                 {!!gitHubToken && <CheckIcon className="w-6 h-6" />}
             </button>
-            {repos.length > 0 && gitHubUser && restored && (
+            {repos?.length > 0 && gitHubUser && restored && (
                 <div className="flex flex-col items-center space-y-4">
                     <select
                         name="GitHub repository"

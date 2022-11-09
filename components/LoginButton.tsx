@@ -3,7 +3,7 @@ import { exchangeGitHubToken, getGitHubAuthURL } from "../utils/github";
 import GitHubLogo from "./icons/GitHubLogo";
 import { v4 as uuid } from "uuid";
 import { clearURLParams } from "../utils";
-import { GENERAL } from "../utils/constants";
+import { GENERAL, GITHUB, LINEAR } from "../utils/constants";
 import { Cross1Icon } from "@radix-ui/react-icons";
 import { Context } from "./ContextProvider";
 
@@ -77,7 +77,7 @@ const LoginButton = () => {
                 alert(err);
             })
             .finally(() => setLoading(false));
-    }, [gitHubToken, gitHubUser]);
+    }, [gitHubToken]);
 
     const openAuthPage = () => {
         // Generate random code to validate against CSRF attack
@@ -93,9 +93,13 @@ const LoginButton = () => {
 
     const logOut = () => {
         setGitHubToken("");
-        setGitHubUser(null);
+        setGitHubUser(undefined);
+        setSyncs([]);
+        clearURLParams();
         localStorage.removeItem(`${GENERAL.LOGIN_KEY}-verification`);
         localStorage.removeItem(`${GENERAL.LOGIN_KEY}-token`);
+        localStorage.removeItem(LINEAR.STORAGE_KEY);
+        localStorage.removeItem(GITHUB.STORAGE_KEY);
     };
 
     return (
@@ -104,7 +108,7 @@ const LoginButton = () => {
             className="bg-cal-gray !w-40 !h-12 group"
         >
             <span>
-                {gitHubToken && gitHubUser?.name
+                {gitHubUser?.name
                     ? gitHubUser.name
                     : loading
                     ? "Loading..."
