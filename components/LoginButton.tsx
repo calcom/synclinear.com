@@ -104,7 +104,7 @@ const LoginButton = () => {
             className="bg-cal-gray !w-40 !h-12 group"
         >
             <span>
-                {gitHubUser?.name
+                {gitHubToken && gitHubUser?.name
                     ? gitHubUser.name
                     : loading
                     ? "Loading..."
