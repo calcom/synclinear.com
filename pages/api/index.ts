@@ -427,7 +427,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             }
 
             // Title change
-            if (updatedFrom.title) {
+            if (updatedFrom.title && actionType === "Issue") {
                 if (!syncedIssue) {
                     console.log(skipReason("edit", ticketName));
 
@@ -465,7 +465,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             }
 
             // Description change
-            if (updatedFrom.description) {
+            if (updatedFrom.description && actionType === "Issue") {
                 if (!syncedIssue) {
                     console.log(skipReason("edit", ticketName));
 
@@ -920,6 +920,10 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     );
                 }
             }
+        }
+
+        if (actionType === "Project") {
+            console.log("Project event received.");
         }
 
         /**
