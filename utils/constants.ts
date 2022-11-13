@@ -1,3 +1,5 @@
+import colors from "tailwindcss/colors";
+
 export const LINEAR = {
     OAUTH_ID: "de24196afa78e6f3f99875b753a3ae29",
     OAUTH_URL: "https://linear.app/oauth/authorize",
@@ -10,6 +12,16 @@ export const LINEAR = {
     STORAGE_KEY: "linear-context",
     APP_URL: "https://linear.app",
     GITHUB_LABEL: "linear"
+};
+
+export const SHARED = {
+    PRIORITY_LABELS: {
+        0: { name: "No priority", color: colors.gray["500"] },
+        1: { name: "Urgent", color: colors.red["600"] },
+        2: { name: "High priority", color: colors.orange["500"] },
+        3: { name: "Medium priority", color: colors.yellow["500"] },
+        4: { name: "Low priority", color: colors.green["600"] }
+    }
 };
 
 export const GITHUB = {

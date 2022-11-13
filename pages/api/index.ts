@@ -16,7 +16,7 @@ import {
 } from "../../utils";
 import { getGitHubFooter } from "../../utils/github";
 import { generateLinearUUID, inviteMember } from "../../utils/linear";
-import { GITHUB, LINEAR } from "../../utils/constants";
+import { GITHUB, LINEAR, SHARED } from "../../utils/constants";
 import { getIssueUpdateError, getOtherUpdateError } from "../../utils/errors";
 import { replaceMentions, upsertUser } from "./utils";
 import { linearQuery } from "../../utils/apollo";
@@ -142,23 +142,23 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
+                // Label(s) removed
                 if (data.labelIds.length < updatedFrom.labelIds.length) {
                     const removedLabelId = updatedFrom.labelIds.find(
                         id => !data.labelIds.includes(id)
                     );
 
+                    // Public label removed
                     if (removedLabelId === publicLabelId) {
                         await prisma.syncedIssue.delete({
                             where: { id: syncedIssue.id }
                         });
 
-                        console.log(
-                            "Deleted synced issue after Public label removed."
-                        );
-
+                        const reason = `Deleted synced issue ${ticketName} after Public label removed.`;
+                        console.log(reason);
                         return res.status(200).send({
                             success: true,
-                            message: `Deleted synced issue ${ticketName} after Public label removed.`
+                            message: reason
                         });
                     }
 
@@ -426,17 +426,15 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 }
             }
 
+            // Ensure there is a synced issue to update
+            if (!syncedIssue) {
+                const reason = skipReason("edit", ticketName);
+                console.log(reason);
+                return res.status(200).send({ success: true, message: reason });
+            }
+
             // Title change
             if (updatedFrom.title && actionType === "Issue") {
-                if (!syncedIssue) {
-                    console.log(skipReason("edit", ticketName));
-
-                    return res.status(200).send({
-                        success: true,
-                        message: skipReason("edit", ticketName)
-                    });
-                }
-
                 await petitio(
                     `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
                     "PATCH"
@@ -466,15 +464,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
             // Description change
             if (updatedFrom.description && actionType === "Issue") {
-                if (!syncedIssue) {
-                    console.log(skipReason("edit", ticketName));
-
-                    return res.status(200).send({
-                        success: true,
-                        message: skipReason("edit", ticketName)
-                    });
-                }
-
                 if (
                     data.description?.includes(getSyncFooter()) ||
                     data.description?.includes(legacySyncFooter)
@@ -521,15 +510,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
             // State change (eg. "Open" to "Done")
             if (updatedFrom.stateId) {
-                if (!syncedIssue) {
-                    console.log(skipReason("state change", ticketName));
-
-                    return res.status(200).send({
-                        success: true,
-                        message: skipReason("state change", ticketName)
-                    });
-                }
-
                 await petitio(
                     `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
                     "PATCH"
@@ -567,15 +547,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
             // Assignee change
             if ("assigneeId" in updatedFrom) {
-                if (!syncedIssue) {
-                    const reason = skipReason("assignee", ticketName);
-                    console.log(reason);
-                    return res.status(200).send({
-                        success: true,
-                        message: reason
-                    });
-                }
-
                 const assigneeEndpoint = `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/assignees`;
 
                 // Assignee removed
@@ -655,6 +626,103 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     } else {
                         `Skipping assignee for ${ticketName} as no GitHub username was found for Linear user ${data.assigneeId}.`;
                     }
+                }
+            }
+
+            if ("priority" in updatedFrom) {
+                const priorityLabels = SHARED.PRIORITY_LABELS;
+
+                if (
+                    !priorityLabels[data.priority] ||
+                    !priorityLabels[updatedFrom.priority]
+                ) {
+                    const reason = `Could not find a priority label for ${updatedFrom.priority} or ${data.priority}.`;
+                    console.log(reason);
+                    return res.status(403).send({
+                        success: false,
+                        message: reason
+                    });
+                }
+
+                // Remove old priority label
+                const prevPriorityLabel = priorityLabels[updatedFrom.priority];
+                const removedLabelResponse = await petitio(
+                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels/${prevPriorityLabel.name}`,
+                    "DELETE"
+                )
+                    .header("User-Agent", userAgentHeader)
+                    .header("Authorization", githubAuthHeader)
+                    .send();
+
+                if (removedLabelResponse.statusCode > 201) {
+                    console.log(
+                        `Did not remove priority label "${prevPriorityLabel.name}".`
+                    );
+                } else {
+                    console.log(
+                        `Removed priority "${prevPriorityLabel.name}" from issue #${syncedIssue.githubIssueNumber}.`
+                    );
+                }
+
+                if (data.priority === 0) {
+                    return res.status(200).send({
+                        success: true,
+                        message: `Removed priority label "${prevPriorityLabel.name}" from issue #${syncedIssue.githubIssueNumber}.`
+                    });
+                }
+
+                // Add new priority label if not none
+                const priorityLabel = priorityLabels[data.priority];
+                const createdLabelResponse = await petitio(
+                    `https://api.github.com/repos/${repoFullName}/labels`,
+                    "POST"
+                )
+                    .header("User-Agent", userAgentHeader)
+                    .header("Authorization", githubAuthHeader)
+                    .body({
+                        name: priorityLabel.name,
+                        color: priorityLabel.color?.replace("#", ""),
+                        description: "Created by Linear-GitHub Sync"
+                    })
+                    .send();
+
+                const createdLabelData = await createdLabelResponse.json();
+
+                if (
+                    createdLabelResponse.statusCode > 201 &&
+                    createdLabelData.errors?.[0]?.code !== "already_exists"
+                ) {
+                    console.log("Could not create label.");
+                    return res.status(403).send({
+                        success: false,
+                        message: "Could not create label."
+                    });
+                }
+
+                const labelName =
+                    createdLabelData.errors?.[0]?.code === "already_exists"
+                        ? priorityLabel.name
+                        : createdLabelData.name;
+
+                const appliedLabelResponse = await petitio(
+                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels`,
+                    "POST"
+                )
+                    .header("User-Agent", userAgentHeader)
+                    .header("Authorization", githubAuthHeader)
+                    .body({ labels: [labelName] })
+                    .send();
+
+                if (appliedLabelResponse.statusCode > 201) {
+                    console.log("Could not apply label.");
+                    return res.status(403).send({
+                        success: false,
+                        message: "Could not apply label."
+                    });
+                } else {
+                    console.log(
+                        `Applied priority label "${labelName}" to issue #${syncedIssue.githubIssueNumber}.`
+                    );
                 }
             }
         } else if (action === "create") {
@@ -1013,8 +1081,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             githubAuthHeader
         );
 
-        const isIssue = req.headers["x-github-event"] === "issues";
-
         const { issue }: IssuesEvent = req.body;
 
         const syncedIssue = await prisma.syncedIssue.findFirst({
@@ -1076,7 +1142,18 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         });
                     });
                 });
-        } else if (isIssue && action === "edited") {
+        }
+
+        // Ensure the event is for an issue
+        if (req.headers["x-github-event"] !== "issues") {
+            console.log("Not an issue event.");
+            return res.status(200).send({
+                success: true,
+                message: "Not an issue event."
+            });
+        }
+
+        if (action === "edited") {
             // Issue edited
 
             if (!syncedIssue) {
@@ -1119,7 +1196,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         });
                     });
                 });
-        } else if (isIssue && ["closed", "reopened"].includes(action)) {
+        } else if (["closed", "reopened"].includes(action)) {
             // Issue closed or reopened
 
             if (!syncedIssue) {
@@ -1159,11 +1236,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 });
         } else if (
-            isIssue &&
-            (action === "opened" ||
-                (action === "labeled" &&
-                    req.body.label?.name?.toLowerCase() ===
-                        LINEAR.GITHUB_LABEL))
+            action === "opened" ||
+            (action === "labeled" &&
+                req.body.label?.name?.toLowerCase() === LINEAR.GITHUB_LABEL)
         ) {
             // Issue opened or special "linear" label added
 
@@ -1339,7 +1414,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     }
                 }
             }
-        } else if (isIssue && ["assigned", "unassigned"].includes(action)) {
+        } else if (["assigned", "unassigned"].includes(action)) {
             // Assignee changed
 
             if (!syncedIssue) {
