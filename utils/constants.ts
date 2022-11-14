@@ -93,6 +93,7 @@ export const GENERAL = {
         },
         {
             linearField: "Priority",
+            toGithub: true,
             githubField: "Label"
         },
         {
