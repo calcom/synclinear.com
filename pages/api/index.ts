@@ -960,6 +960,41 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     labelNames.push(labelName);
                 }
 
+                // Add priority label if applicable
+                if (!!data.priority && SHARED.PRIORITY_LABELS[data.priority]) {
+                    const priorityLabel = SHARED.PRIORITY_LABELS[data.priority];
+                    const createdLabelResponse = await petitio(
+                        `https://api.github.com/repos/${repoFullName}/labels`,
+                        "POST"
+                    )
+                        .header("User-Agent", userAgentHeader)
+                        .header("Authorization", githubAuthHeader)
+                        .body({
+                            name: priorityLabel.name,
+                            color: priorityLabel.color?.replace("#", ""),
+                            description: "Created by Linear-GitHub Sync"
+                        })
+                        .send();
+                    const createdLabelData = await createdLabelResponse.json();
+
+                    if (
+                        createdLabelResponse.statusCode > 201 &&
+                        createdLabelData.errors?.[0]?.code !== "already_exists"
+                    ) {
+                        console.log(
+                            `Could not create priority label "${priorityLabel.name}" in ${repoFullName}.`
+                        );
+                    } else {
+                        const labelName =
+                            createdLabelData.errors?.[0]?.code ===
+                            "already_exists"
+                                ? priorityLabel.name
+                                : createdLabelData.name;
+
+                        labelNames.push(labelName);
+                    }
+                }
+
                 const appliedLabelResponse = await petitio(
                     `${issuesEndpoint}/${createdIssueData.number}/labels`,
                     "POST"
