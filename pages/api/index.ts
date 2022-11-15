@@ -371,6 +371,106 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     })
                 ] as Promise<any>[]);
 
+                // Apply all labels to newly-created issue
+                const labelIds = data.labelIds.filter(
+                    id => id != publicLabelId
+                );
+                const labelNames: string[] = [];
+                for (const labelId of labelIds) {
+                    if (labelId === publicLabelId) continue;
+
+                    const label = await linear.issueLabel(labelId);
+                    if (!label) {
+                        console.log(
+                            `Could not find label ${labelId} for ${ticketName}.`
+                        );
+                        continue;
+                    }
+
+                    const createdLabelResponse = await petitio(
+                        `https://api.github.com/repos/${repoFullName}/labels`,
+                        "POST"
+                    )
+                        .header("User-Agent", userAgentHeader)
+                        .header("Authorization", githubAuthHeader)
+                        .body({
+                            name: label.name,
+                            color: label.color?.replace("#", ""),
+                            description: "Created by Linear-GitHub Sync"
+                        })
+                        .send();
+                    const createdLabelData = await createdLabelResponse.json();
+                    if (
+                        createdLabelResponse.statusCode > 201 &&
+                        createdLabelData.errors?.[0]?.code !== "already_exists"
+                    ) {
+                        console.log(
+                            `Could not create GH label "${label.name}" in ${repoFullName}.`
+                        );
+                        continue;
+                    }
+
+                    const labelName =
+                        createdLabelData.errors?.[0]?.code === "already_exists"
+                            ? label.name
+                            : createdLabelData.name;
+
+                    labelNames.push(labelName);
+                }
+
+                // Add priority label if applicable
+                if (!!data.priority && SHARED.PRIORITY_LABELS[data.priority]) {
+                    const priorityLabel = SHARED.PRIORITY_LABELS[data.priority];
+                    const createdLabelResponse = await petitio(
+                        `https://api.github.com/repos/${repoFullName}/labels`,
+                        "POST"
+                    )
+                        .header("User-Agent", userAgentHeader)
+                        .header("Authorization", githubAuthHeader)
+                        .body({
+                            name: priorityLabel.name,
+                            color: priorityLabel.color?.replace("#", ""),
+                            description: "Created by Linear-GitHub Sync"
+                        })
+                        .send();
+                    const createdLabelData = await createdLabelResponse.json();
+                    if (
+                        createdLabelResponse.statusCode > 201 &&
+                        createdLabelData.errors?.[0]?.code !== "already_exists"
+                    ) {
+                        console.log(
+                            `Could not create priority label "${priorityLabel.name}" in ${repoFullName}.`
+                        );
+                    } else {
+                        const labelName =
+                            createdLabelData.errors?.[0]?.code ===
+                            "already_exists"
+                                ? priorityLabel.name
+                                : createdLabelData.name;
+
+                        labelNames.push(labelName);
+                    }
+                }
+
+                const appliedLabelResponse = await petitio(
+                    `${issuesEndpoint}/${createdIssueData.number}/labels`,
+                    "POST"
+                )
+                    .header("User-Agent", userAgentHeader)
+                    .header("Authorization", githubAuthHeader)
+                    .body({ labels: labelNames })
+                    .send();
+
+                if (appliedLabelResponse.statusCode > 201) {
+                    console.log(
+                        `Could not apply labels to #${createdIssueData.number} in ${repoFullName}.`
+                    );
+                } else {
+                    console.log(
+                        `Applied labels to #${createdIssueData.number} in ${repoFullName}.`
+                    );
+                }
+
                 // Sync all comments on the issue
                 const linearComments = await linearIssue
                     .comments()
