@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 import { GitHubContext, LinearContext } from "../typings";
-import { GITHUB } from "./constants";
+import { GENERAL, GITHUB } from "./constants";
 
 export const isDev = (): boolean => {
     return process.env.NODE_ENV === "development";
@@ -54,6 +54,14 @@ export const decrypt = (content: string, initVector: string): string => {
     ]);
 
     return decrypted.toString();
+};
+
+export const replaceImgTags = (text: string): string => {
+    if (!text) return "";
+    return text.replace(
+        GENERAL.IMG_TAG_REGEX,
+        (_, args) => `![image](https://${args})`
+    );
 };
 
 export const getSyncFooter = (): string => {

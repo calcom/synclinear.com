@@ -12,7 +12,8 @@ import {
     getAttachmentQuery,
     legacySyncFooter,
     getSyncFooter,
-    skipReason
+    skipReason,
+    replaceImgTags
 } from "../../utils";
 import { getGitHubFooter } from "../../utils/github";
 import { generateLinearUUID, inviteMember } from "../../utils/linear";
@@ -1049,10 +1050,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     message: reason
                 });
             }
-            const modifiedComment = await replaceMentions(
-                comment.body,
-                "github"
-            );
+
+            let modifiedComment = await replaceMentions(comment.body, "github");
+            modifiedComment = replaceImgTags(modifiedComment);
 
             await linear
                 .commentCreate({
@@ -1095,10 +1095,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             const description = issue.body?.split("<sub>");
             if ((description?.length || 0) > 1) description?.pop();
 
-            const modifiedDescription = await replaceMentions(
+            let modifiedDescription = await replaceMentions(
                 description?.join("<sub>"),
                 "github"
             );
+            modifiedDescription = replaceImgTags(modifiedDescription);
 
             await linear
                 .issueUpdate(syncedIssue.linearIssueId, {
@@ -1179,10 +1180,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 });
             }
 
-            const modifiedDescription = await replaceMentions(
+            let modifiedDescription = await replaceMentions(
                 issue.body,
                 "github"
             );
+            modifiedDescription = replaceImgTags(modifiedDescription);
 
             const assignee = await prisma.user.findFirst({
                 where: { githubUserId: issue.assignee?.id },
@@ -1316,10 +1318,11 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 const comments = await issueCommentsPayload.json();
 
                 for (const comment of comments) {
-                    const modifiedComment = await replaceMentions(
+                    let modifiedComment = await replaceMentions(
                         comment.body,
                         "github"
                     );
+                    modifiedComment = replaceImgTags(modifiedComment);
 
                     const commentData = await linear.commentCreate({
                         id: generateLinearUUID(),
