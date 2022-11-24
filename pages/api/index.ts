@@ -10,7 +10,6 @@ import {
     decrypt,
     formatJSON,
     getAttachmentQuery,
-    legacySyncFooter,
     getSyncFooter,
     skipReason,
     replaceImgTags
@@ -292,7 +291,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         title: `[${ticketName}] ${data.title}`,
                         body: `${
                             modifiedDescription ?? ""
-                        }${getSyncFooter()} | [${ticketName}](${url})`,
+                        }\n\n<sub>${getSyncFooter()} | [${ticketName}](${url})</sub>`,
                         assignees: [
                             data.assigneeId && assignee?.githubUsername
                                 ? assignee?.githubUsername
@@ -565,18 +564,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
             // Description change
             if (updatedFrom.description && actionType === "Issue") {
-                if (
-                    data.description?.includes(getSyncFooter()) ||
-                    data.description?.includes(legacySyncFooter)
-                ) {
-                    console.log(skipReason("edit", ticketName, true));
-
-                    return res.status(200).send({
-                        success: true,
-                        message: skipReason("edit", ticketName, true)
-                    });
-                }
-
                 const modifiedDescription = await replaceMentions(
                     data.description,
                     "linear"
@@ -589,7 +576,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     .header("User-Agent", userAgentHeader)
                     .header("Authorization", githubAuthHeader)
                     .body({
-                        body: `${modifiedDescription ?? ""}${getSyncFooter()}`
+                        body: `${
+                            modifiedDescription ?? ""
+                        }\n\n<sub>${getSyncFooter()} | [${ticketName}](${url})</sub>`
                     })
                     .send()
                     .then(updatedIssueResponse => {
@@ -910,11 +899,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
-                if (
-                    data.description?.includes(getSyncFooter()) ||
-                    data.description?.includes(legacySyncFooter)
-                ) {
-                    const reason = skipReason("issue", data.id, true);
+                if (syncedIssue) {
+                    const reason = `Not creating issue after label added as issue ${ticketName} already exists on GitHub as #${syncedIssue.githubIssueNumber}.`;
                     console.log(reason);
                     return res.status(200).send({
                         success: true,
@@ -922,8 +908,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     });
                 }
 
-                if (syncedIssue) {
-                    const reason = `Not creating issue after label added as issue ${ticketName} already exists on GitHub as #${syncedIssue.githubIssueNumber}.`;
+                if (data.id?.includes(GITHUB.UUID_SUFFIX)) {
+                    const reason = skipReason("issue", data.id, true);
                     console.log(reason);
                     return res.status(200).send({
                         success: true,
@@ -951,7 +937,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         title: `[${ticketName}] ${data.title}`,
                         body: `${
                             modifiedDescription ?? ""
-                        }${getSyncFooter()} | [${ticketName}](${url})`,
+                        }\n\n<sub>${getSyncFooter()} | [${ticketName}](${url})</sub>`,
                         assignees: [
                             data.assigneeId && assignee?.githubUsername
                                 ? assignee?.githubUsername
@@ -1299,6 +1285,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     message: reason
                 });
             }
+
             const title = issue.title.split(
                 `${syncedIssue.linearIssueNumber}]`
             );
@@ -1343,10 +1330,6 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                     message: reason
                 });
             }
-            const title = issue.title.split(
-                `${syncedIssue.linearIssueNumber}]`
-            );
-            if (title.length > 1) title.shift();
 
             await linear
                 .issueUpdate(syncedIssue.linearIssueId, {
@@ -1378,11 +1361,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         ) {
             // Issue opened or special "linear" label added
 
-            if (
-                issue.body?.includes(getSyncFooter()) ||
-                issue.body?.includes(legacySyncFooter)
-            ) {
-                const reason = skipReason("edit", issue.number, true);
+            if (syncedIssue) {
+                const reason = `Not creating ticket as issue ${issue.number} already exists on Linear as ${syncedIssue.linearIssueNumber}.`;
                 console.log(reason);
                 return res.status(200).send({
                     success: true,
@@ -1402,8 +1382,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             });
 
             const createdIssueData = await linear.issueCreate({
+                id: generateLinearUUID(),
                 title: issue.title,
-                description: `${modifiedDescription ?? ""}${getSyncFooter()}`,
+                description: `${modifiedDescription ?? ""}`,
                 teamId: linearTeamId,
                 labelIds: [publicLabelId],
                 assigneeId:
@@ -1447,7 +1428,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                             .header("User-Agent", userAgentHeader)
                             .header("Authorization", githubAuthHeader)
                             .body({
-                                title: `[${ticketName}] ${issue.title}`
+                                title: `[${ticketName}] ${issue.title}`,
+                                body: `${issue.body}\n\n<sub>[${ticketName}](${createdIssue.url})</sub>`
                             })
                             .send()
                             .then(titleRenameResponse => {

@@ -65,7 +65,7 @@ export const replaceImgTags = (text: string): string => {
 };
 
 export const getSyncFooter = (): string => {
-    return `\n\n> From [SyncLinear.com](https://synclinear.com)`;
+    return `From [SyncLinear.com](https://synclinear.com)`;
 };
 
 export const legacySyncFooter = `From [Linear-GitHub Sync](https://synclinear.com)`;
