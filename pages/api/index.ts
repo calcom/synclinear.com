@@ -66,7 +66,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         if (
             syncs.length === 0 ||
-            !syncs.some(
+            !syncs.find(
                 sync => sync.linearUserId === (data.userId ?? data.creatorId)
             )
         ) {
@@ -77,24 +77,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             });
         }
 
-        let sync: Sync & { LinearTeam: LinearTeam; GitHubRepo: GitHubRepo };
-
-        if (actionType === "Comment") {
-            sync = syncs.find(
-                sync => sync.linearUserId === (data.userId ?? data.creatorId)
-            );
-        } else {
-            sync = await prisma.sync.findFirst({
-                where: {
-                    linearUserId: data.userId,
-                    linearTeamId: data.teamId
-                },
-                include: {
-                    LinearTeam: true,
-                    GitHubRepo: true
-                }
-            });
-        }
+        const sync = syncs.find(
+            sync => sync.linearUserId === (data.userId ?? data.creatorId)
+        );
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
             console.log("Could not find ticket's corresponding repo.");
