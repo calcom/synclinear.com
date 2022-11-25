@@ -20,6 +20,7 @@ import { GITHUB, LINEAR, SHARED } from "../../utils/constants";
 import { getIssueUpdateError, getOtherUpdateError } from "../../utils/errors";
 import { replaceMentions, upsertUser } from "./utils";
 import { linearQuery } from "../../utils/apollo";
+import { GitHubRepo, LinearTeam, Sync } from "@prisma/client";
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method !== "POST")
@@ -60,21 +61,35 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
 
         if (
             syncs.length === 0 ||
-            !syncs.find(
+            !syncs.some(
                 sync => sync.linearUserId === (data.userId ?? data.creatorId)
             )
         ) {
             console.log("Could not find Linear user in syncs.");
-
             return res.status(200).send({
                 success: true,
                 message: "Could not find Linear user in syncs."
             });
         }
 
-        const sync = syncs.find(
-            sync => sync.linearUserId === (data.userId ?? data.creatorId)
-        );
+        let sync: Sync & { LinearTeam: LinearTeam; GitHubRepo: GitHubRepo };
+
+        if (actionType === "Comment") {
+            sync = syncs.find(
+                sync => sync.linearUserId === (data.userId ?? data.creatorId)
+            );
+        } else {
+            sync = await prisma.sync.findFirst({
+                where: {
+                    linearUserId: data.userId,
+                    linearTeamId: data.teamId
+                },
+                include: {
+                    LinearTeam: true,
+                    GitHubRepo: true
+                }
+            });
+        }
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
             console.log("Could not find ticket's corresponding repo.");
@@ -639,8 +654,50 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             if ("assigneeId" in updatedFrom) {
                 const assigneeEndpoint = `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/assignees`;
 
-                // Assignee removed
-                if (updatedFrom.assigneeId !== null) {
+                // Assignee added
+                const assignee = data.assigneeId
+                    ? await prisma.user.findFirst({
+                          where: {
+                              linearUserId: data.assigneeId
+                          },
+                          select: {
+                              githubUsername: true
+                          }
+                      })
+                    : null;
+
+                if (assignee) {
+                    const response = await petitio(assigneeEndpoint, "POST")
+                        .header("User-Agent", userAgentHeader)
+                        .header("Authorization", githubAuthHeader)
+                        .body({ assignees: [assignee.githubUsername] })
+                        .send();
+
+                    if (response.statusCode > 201) {
+                        console.log(
+                            getIssueUpdateError(
+                                "assignee",
+                                data,
+                                syncedIssue,
+                                response
+                            )
+                        );
+                    } else {
+                        console.log(
+                            `Added assignee to GitHub issue #${syncedIssue.githubIssueNumber} for ${ticketName}.`
+                        );
+                    }
+                } else {
+                    console.log(
+                        `Skipping assignee for ${ticketName} as no GitHub username was found for Linear user ${data.assigneeId}.`
+                    );
+                }
+
+                // Remove previous assignee only if reassigned or deassigned explicitly
+                if (
+                    updatedFrom.assigneeId !== null &&
+                    (assignee || data.assigneeId === undefined)
+                ) {
                     const prevAssignee = await prisma.user.findFirst({
                         where: {
                             linearUserId: updatedFrom.assigneeId
@@ -676,45 +733,8 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                         }
                     } else {
                         console.log(
-                            `Skipping assignee removal for ${ticketName} as no GitHub username was found for Linear user ${data.assigneeId}.`
+                            `Skipping assignee removal for ${ticketName} as no GitHub username was found for Linear user ${updatedFrom.assigneeId}.`
                         );
-                    }
-                }
-
-                // Assignee added
-                if (data.assigneeId) {
-                    const assignee = await prisma.user.findFirst({
-                        where: {
-                            linearUserId: data.assigneeId
-                        },
-                        select: {
-                            githubUsername: true
-                        }
-                    });
-
-                    if (assignee) {
-                        const response = await petitio(assigneeEndpoint, "POST")
-                            .header("User-Agent", userAgentHeader)
-                            .header("Authorization", githubAuthHeader)
-                            .body({ assignees: [assignee.githubUsername] })
-                            .send();
-
-                        if (response.statusCode > 201) {
-                            console.log(
-                                getIssueUpdateError(
-                                    "assignee",
-                                    data,
-                                    syncedIssue,
-                                    response
-                                )
-                            );
-                        } else {
-                            console.log(
-                                `Updated assignee on GitHub issue #${syncedIssue.githubIssueNumber} for ${ticketName}.`
-                            );
-                        }
-                    } else {
-                        `Skipping assignee for ${ticketName} as no GitHub username was found for Linear user ${data.assigneeId}.`;
                     }
                 }
             }
