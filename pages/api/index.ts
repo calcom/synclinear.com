@@ -23,24 +23,29 @@ import { linearQuery } from "../../utils/apollo";
 import { GitHubRepo, LinearTeam, Sync } from "@prisma/client";
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
-    if (req.method !== "POST")
+    if (req.method !== "POST") {
         return res.status(405).send({
             success: false,
             message: "Only POST requests are accepted."
         });
-    else if (
-        LINEAR.IP_ORIGINS.includes(req.socket.remoteAddress || "") &&
-        !req.headers["x-hub-signature-256"]
-    )
-        return res.status(403).send({
-            success: false,
-            message: "Request not from Linear or GitHub."
-        });
+    }
 
     /**
      * Linear webhook consumer
      */
     if (req.headers["user-agent"] === "Linear-Webhook") {
+        if (
+            !LINEAR.IP_ORIGINS.includes(
+                `${req.headers["x-forwarded-for"] || ""}`
+            )
+        ) {
+            console.log("Could not verify Linear webhook.");
+            return res.status(403).send({
+                success: false,
+                message: "Could not verify Linear webhook."
+            });
+        }
+
         const {
             action,
             updatedFrom,
