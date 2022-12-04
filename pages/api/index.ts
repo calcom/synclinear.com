@@ -78,7 +78,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         }
 
         const sync = syncs.find(
-            sync => sync.linearUserId === (data.userId ?? data.creatorId)
+            sync => sync.linearUserId === (data.userId ?? data.creatorId) && sync.linearTeamId === data.teamId
         );
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
