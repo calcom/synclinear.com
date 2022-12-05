@@ -35,7 +35,8 @@ export const upsertUser = async (
         console.log("Adding user to users table");
 
         const linearUser = await linearClient.viewer;
-        console.log(linearUser, "linear USERRR");
+
+        console.log(userAgentHeader, githubAuthHeader);
 
         const githubUser = await petitio(`https://api.github.com/user`, "GET")
             .header("User-Agent", userAgentHeader)
@@ -43,7 +44,7 @@ export const upsertUser = async (
             .header("Content-Type", "application/json")
             .send();
 
-        console.log(githubUser.text(), "GITHUB TEXT CONTENT");
+        console.log(githubUser.body, "GITHUB TEXT CONTENT");
         console.log(githubUser.statusCode, "GITHUB STATUS CODE");
         console.log(githubUser.json(), "USERRR JSON");
         const githubUserBody = await githubUser.json();
