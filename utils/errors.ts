@@ -31,3 +31,8 @@ export const getOtherUpdateError = (
     }, body of ${formatJSON(responseBody)}.`;
 };
 
+export class ApiError extends Error {
+    constructor(public message: string, public statusCode: number) {
+        super(message);
+    }
+}
