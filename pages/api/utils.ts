@@ -1,5 +1,5 @@
 import { LinearClient } from "@linear/sdk";
-import petitio from "petitio";
+import got from "got";
 import prisma from "../../prisma";
 
 /**
@@ -36,11 +36,14 @@ export const upsertUser = async (
 
         const linearUser = await linearClient.viewer;
 
-        const githubUser = await petitio(`https://api.github.com/user`, "GET")
-            .header("User-Agent", userAgentHeader)
-            .header("Authorization", githubAuthHeader)
-            .send();
-        const githubUserBody = await githubUser.json();
+        const { body: githubUserBody } = await got
+            .get(`https://api.github.com/user`, {
+                headers: {
+                    "User-Agent": userAgentHeader,
+                    Authorization: githubAuthHeader
+                }
+            })
+            .json();
 
         await prisma.user.upsert({
             where: {
@@ -133,4 +136,3 @@ export const replaceMentions = async (
 
     return sanitizedBody;
 };
-

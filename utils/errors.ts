@@ -4,7 +4,7 @@ export const getIssueUpdateError = (
     resource: "state" | "description" | "title" | "assignee",
     data: { number: number; id: string; team: { key: string } },
     syncedIssue: { githubIssueNumber: number; githubIssueId: number },
-    updatedIssueResponse: { statusCode: number; json: () => any }
+    updatedIssueResponse: { statusCode: number; body: string }
 ): string => {
     return `Failed to update GitHub issue ${resource} for ${data.team.key}-${
         data.number
@@ -12,7 +12,7 @@ export const getIssueUpdateError = (
         syncedIssue.githubIssueId
     }], received status code ${
         updatedIssueResponse.statusCode
-    }, body of ${formatJSON(updatedIssueResponse.json())}.`;
+    }, body of ${formatJSON(JSON.parse(updatedIssueResponse.body))}.`;
 };
 
 export const getOtherUpdateError = (
@@ -30,4 +30,3 @@ export const getOtherUpdateError = (
         createdIssueResponse.statusCode
     }, body of ${formatJSON(responseBody)}.`;
 };
-
