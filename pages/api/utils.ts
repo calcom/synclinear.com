@@ -36,17 +36,12 @@ export const upsertUser = async (
 
         const linearUser = await linearClient.viewer;
 
-        console.log(userAgentHeader, githubAuthHeader);
-
         const githubUser = await petitio(`https://api.github.com/user`, "GET")
             .header("User-Agent", userAgentHeader)
             .header("Authorization", githubAuthHeader)
             .header("Content-Type", "application/json")
             .send();
 
-        console.log(githubUser.body, "GITHUB TEXT CONTENT");
-        console.log(githubUser.statusCode, "GITHUB STATUS CODE");
-        console.log(githubUser.json(), "USERRR JSON");
         const githubUserBody = await githubUser.json();
 
         await prisma.user.upsert({
