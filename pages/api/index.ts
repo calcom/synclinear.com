@@ -20,7 +20,6 @@ import { GITHUB, LINEAR, SHARED } from "../../utils/constants";
 import { getIssueUpdateError, getOtherUpdateError } from "../../utils/errors";
 import { replaceMentions, upsertUser } from "./utils";
 import { linearQuery } from "../../utils/apollo";
-import { GitHubRepo, LinearTeam, Sync } from "@prisma/client";
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method !== "POST") {
@@ -67,7 +66,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         if (
             syncs.length === 0 ||
             !syncs.find(
-                sync => sync.linearUserId === (data.userId ?? data.creatorId) && sync.linearTeamId === data.teamId
+                sync =>
+                    sync.linearUserId === (data.userId ?? data.creatorId) &&
+                    sync.linearTeamId === data.teamId
             )
         ) {
             console.log("Could not find Linear user in syncs.");
@@ -78,7 +79,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         }
 
         const sync = syncs.find(
-            sync => sync.linearUserId === (data.userId ?? data.creatorId) && sync.linearTeamId === data.teamId
+            sync =>
+                sync.linearUserId === (data.userId ?? data.creatorId) &&
+                sync.linearTeamId === data.teamId
         );
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
@@ -1629,4 +1632,3 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         message: "Webhook received."
     });
 };
-
