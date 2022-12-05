@@ -43,6 +43,8 @@ export const upsertUser = async (
             .header("Content-Type", "application/json")
             .send();
 
+        console.log(githubUser.text(), "GITHUB TEXT CONTENT");
+        console.log(githubUser.statusCode, "GITHUB STATUS CODE");
         console.log(githubUser.json(), "USERRR JSON");
         const githubUserBody = await githubUser.json();
 
