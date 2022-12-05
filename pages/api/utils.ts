@@ -35,11 +35,15 @@ export const upsertUser = async (
         console.log("Adding user to users table");
 
         const linearUser = await linearClient.viewer;
+        console.log(linearUser, "linear USERRR");
 
         const githubUser = await petitio(`https://api.github.com/user`, "GET")
             .header("User-Agent", userAgentHeader)
             .header("Authorization", githubAuthHeader)
             .send();
+
+        console.log(githubUser, "USERRR");
+        console.log(githubUser.json(), "USERRR JSON");
         const githubUserBody = await githubUser.json();
 
         await prisma.user.upsert({
@@ -133,4 +137,3 @@ export const replaceMentions = async (
 
     return sanitizedBody;
 };
-
