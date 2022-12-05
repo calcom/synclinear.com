@@ -66,7 +66,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         if (
             syncs.length === 0 ||
             !syncs.find(
-                sync => sync.linearUserId === (data.userId ?? data.creatorId)
+                sync =>
+                    sync.linearUserId === (data.userId ?? data.creatorId) &&
+                    sync.linearTeamId === data.teamId
             )
         ) {
             console.log("Could not find Linear user in syncs.");
@@ -77,7 +79,9 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         }
 
         const sync = syncs.find(
-            sync => sync.linearUserId === (data.userId ?? data.creatorId)
+            sync =>
+                sync.linearUserId === (data.userId ?? data.creatorId) &&
+                sync.linearTeamId === data.teamId
         );
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
