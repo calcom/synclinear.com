@@ -350,7 +350,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
                 }
 
                 let createdIssueData: components["schemas"]["issue"] =
-                    await createdIssueResponse.json();
+                    JSON.parse(createdIssueResponse.body);
 
                 const linearIssue = await linear.issue(data.id);
 
