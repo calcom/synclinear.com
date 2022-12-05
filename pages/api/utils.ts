@@ -36,14 +36,14 @@ export const upsertUser = async (
 
         const linearUser = await linearClient.viewer;
 
-        const { body: githubUserBody } = await got
+        const githubUserBody = await got
             .get(`https://api.github.com/user`, {
                 headers: {
                     "User-Agent": userAgentHeader,
                     Authorization: githubAuthHeader
                 }
             })
-            .json();
+            .json<any>();
 
         await prisma.user.upsert({
             where: {
