@@ -40,9 +40,9 @@ export const upsertUser = async (
         const githubUser = await petitio(`https://api.github.com/user`, "GET")
             .header("User-Agent", userAgentHeader)
             .header("Authorization", githubAuthHeader)
+            .header("Content-Type", "application/json")
             .send();
 
-        console.log(githubUser, "USERRR");
         console.log(githubUser.json(), "USERRR JSON");
         const githubUserBody = await githubUser.json();
 
