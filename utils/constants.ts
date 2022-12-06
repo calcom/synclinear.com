@@ -1,7 +1,7 @@
 import colors from "tailwindcss/colors";
 
 export const LINEAR = {
-    OAUTH_ID: "de24196afa78e6f3f99875b753a3ae29",
+    OAUTH_ID: process.env.NEXT_PUBLIC_LINEAR_OAUTH_ID,
     OAUTH_URL: "https://linear.app/oauth/authorize",
     TOKEN_URL: "https://api.linear.app/oauth/token",
     SCOPES: ["write"],
@@ -25,7 +25,7 @@ export const SHARED = {
 };
 
 export const GITHUB = {
-    OAUTH_ID: "487937ed57e1d5ffea0d",
+    OAUTH_ID: process.env.NEXT_PUBLIC_GITHUB_OAUTH_ID,
     OAUTH_URL: "https://github.com/login/oauth/authorize",
     TOKEN_URL: "https://github.com/login/oauth/access_token",
     SCOPES: ["repo", "write:repo_hook", "read:user", "user:email"],
@@ -103,4 +103,3 @@ export const GENERAL = {
         }
     ]
 };
-
