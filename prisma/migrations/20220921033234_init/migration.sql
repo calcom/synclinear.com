@@ -29,6 +29,7 @@ CREATE TABLE "github_repos" (
     "id" TEXT NOT NULL,
     "repoId" INTEGER NOT NULL,
     "repoName" TEXT NOT NULL,
+    "webhookSecret" TEXT NOT NULL,
 
     CONSTRAINT "github_repos_pkey" PRIMARY KEY ("id")
 );
@@ -39,7 +40,6 @@ CREATE TABLE "syncs" (
     "githubUserId" INTEGER NOT NULL,
     "linearUserId" TEXT NOT NULL,
     "githubRepoId" INTEGER NOT NULL,
-    "githubWebhookSecret" TEXT NOT NULL,
     "githubApiKey" TEXT NOT NULL,
     "githubApiKeyIV" TEXT NOT NULL,
     "linearTeamId" TEXT NOT NULL,
