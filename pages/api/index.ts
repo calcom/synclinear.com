@@ -63,26 +63,22 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             }
         });
 
-        if (
-            syncs.length === 0 ||
-            !syncs.find(
-                sync =>
-                    sync.linearUserId === (data.userId ?? data.creatorId) &&
-                    sync.linearTeamId === data.teamId
-            )
-        ) {
+        const sync = syncs.find((sync) => {
+            // For comment events the teamId property from linear is not passed,
+            // so we fallback to only match on user
+            const isTeamMatching = data.teamId ? sync.linearTeamId === data.teamId : true;
+            const isUserMatching = sync.linearUserId === (data.userId ?? data.creatorId);
+
+            return isUserMatching && isTeamMatching;
+        });
+
+        if (syncs.length === 0 || !sync) {
             console.log("Could not find Linear user in syncs.");
             return res.status(200).send({
                 success: true,
                 message: "Could not find Linear user in syncs."
             });
         }
-
-        const sync = syncs.find(
-            sync =>
-                sync.linearUserId === (data.userId ?? data.creatorId) &&
-                sync.linearTeamId === data.teamId
-        );
 
         if (!sync?.LinearTeam || !sync?.GitHubRepo) {
             console.log("Could not find ticket's corresponding repo.");
