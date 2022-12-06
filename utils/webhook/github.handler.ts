@@ -285,14 +285,17 @@ export async function githubWebhookHandler(
                 );
 
                 await Promise.all([
-                    petitio(`${issuesEndpoint}/${issue.number}`, "PATCH")
-                        .header("User-Agent", userAgentHeader)
-                        .header("Authorization", githubAuthHeader)
-                        .body({
-                            title: `[${ticketName}] ${issue.title}`,
-                            body: `${issue.body}\n\n<sub>[${ticketName}](${createdIssue.url})</sub>`
+                    got
+                        .patch(`${issuesEndpoint}/${issue.number}`, {
+                            json: {
+                                title: `[${ticketName}] ${issue.title}`,
+                                body: `${issue.body}\n\n<sub>[${ticketName}](${createdIssue.url})</sub>`
+                            },
+                            headers: {
+                                "User-Agent": userAgentHeader,
+                                Authorization: githubAuthHeader
+                            }
                         })
-                        .send()
                         .then(titleRenameResponse => {
                             if (titleRenameResponse.statusCode > 201)
                                 console.log(
@@ -301,7 +304,7 @@ export async function githubWebhookHandler(
                                     }, received status code ${
                                         titleRenameResponse.statusCode
                                     }, body of ${formatJSON(
-                                        titleRenameResponse.json()
+                                        JSON.parse(titleRenameResponse.body)
                                     )}.`
                                 );
                             else
@@ -340,13 +343,15 @@ export async function githubWebhookHandler(
 
         // Add issue comment history to newly-created Linear ticket
         if (action === "labeled") {
-            const issueCommentsPayload = await petitio(
+            const issueCommentsPayload = await got.get(
                 `${issuesEndpoint}/${issue.number}/comments`,
-                "GET"
-            )
-                .header("User-Agent", userAgentHeader)
-                .header("Authorization", githubAuthHeader)
-                .send();
+                {
+                    headers: {
+                        "User-Agent": userAgentHeader,
+                        Authorization: githubAuthHeader
+                    }
+                }
+            );
 
             if (issueCommentsPayload.statusCode > 201) {
                 console.log(
@@ -354,7 +359,9 @@ export async function githubWebhookHandler(
                         issue.number
                     } [${issue.id}], received status code ${
                         issueCommentsPayload.statusCode
-                    }, body of ${formatJSON(issueCommentsPayload.json())}.`
+                    }, body of ${formatJSON(
+                        JSON.parse(issueCommentsPayload.body)
+                    )}.`
                 );
 
                 throw new ApiError(
@@ -363,7 +370,7 @@ export async function githubWebhookHandler(
                 );
             }
 
-            const comments = await issueCommentsPayload.json();
+            const comments = JSON.parse(issueCommentsPayload.body);
 
             for (const comment of comments) {
                 let modifiedComment = await replaceMentions(

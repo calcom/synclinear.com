@@ -10,13 +10,12 @@ import {
 } from "../index";
 import { LinearClient } from "@linear/sdk";
 import { replaceMentions, upsertUser } from "../../pages/api/utils";
-import petitio from "petitio";
+import got from "got";
 import { inviteMember } from "../linear";
 import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
 import { getGitHubFooter } from "../github";
 import { ApiError, getIssueUpdateError, getOtherUpdateError } from "../errors";
-import { NextApiRequest } from "next";
 
 export async function linearWebhookHandler(
     body: LinearWebhookPayload,
@@ -144,13 +143,15 @@ export async function linearWebhookHandler(
                     throw new ApiError("Could not find label.", 403);
                 }
 
-                const removedLabelResponse = await petitio(
+                const removedLabelResponse = await got.delete(
                     `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels/${label.name}`,
-                    "DELETE"
-                )
-                    .header("User-Agent", userAgentHeader)
-                    .header("Authorization", githubAuthHeader)
-                    .send();
+                    {
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
+                        }
+                    }
+                );
 
                 if (removedLabelResponse.statusCode > 201) {
                     console.log(`Could not remove label "${label.name}".`);
@@ -173,20 +174,22 @@ export async function linearWebhookHandler(
                     throw new ApiError("Could not find label.", 403);
                 }
 
-                const createdLabelResponse = await petitio(
+                const createdLabelResponse = await got.post(
                     `https://api.github.com/repos/${repoFullName}/labels`,
-                    "POST"
-                )
-                    .header("User-Agent", userAgentHeader)
-                    .header("Authorization", githubAuthHeader)
-                    .body({
-                        name: label.name,
-                        color: label.color.replace("#", ""),
-                        description: "Created by Linear-GitHub Sync"
-                    })
-                    .send();
+                    {
+                        json: {
+                            name: label.name,
+                            color: label.color.replace("#", ""),
+                            description: "Created by Linear-GitHub Sync"
+                        },
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
+                        }
+                    }
+                );
 
-                const createdLabelData = await createdLabelResponse.json();
+                const createdLabelData = JSON.parse(createdLabelResponse.body);
 
                 if (
                     createdLabelResponse.statusCode > 201 &&
@@ -201,14 +204,18 @@ export async function linearWebhookHandler(
                         ? label.name
                         : createdLabelData.name;
 
-                const appliedLabelResponse = await petitio(
+                const appliedLabelResponse = await got.post(
                     `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels`,
-                    "POST"
-                )
-                    .header("User-Agent", userAgentHeader)
-                    .header("Authorization", githubAuthHeader)
-                    .body({ labels: [labelName] })
-                    .send();
+                    {
+                        json: {
+                            labels: [labelName]
+                        },
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
+                        }
+                    }
+                );
 
                 if (appliedLabelResponse.statusCode > 201) {
                     console.log("Could not apply label.");
@@ -243,10 +250,8 @@ export async function linearWebhookHandler(
                 select: { githubUsername: true }
             });
 
-            const createdIssueResponse = await petitio(issuesEndpoint, "POST")
-                .header("User-Agent", userAgentHeader)
-                .header("Authorization", githubAuthHeader)
-                .body({
+            const createdIssueResponse = await got.post(issuesEndpoint, {
+                json: {
                     title: `[${ticketName}] ${data.title}`,
                     body: `${
                         modifiedDescription ?? ""
@@ -256,8 +261,12 @@ export async function linearWebhookHandler(
                             ? assignee?.githubUsername
                             : ""
                     ]
-                })
-                .send();
+                },
+                headers: {
+                    Authorization: githubAuthHeader,
+                    "User-Agent": userAgentHeader
+                }
+            });
 
             if (
                 !syncs.some(
@@ -275,7 +284,7 @@ export async function linearWebhookHandler(
                     }, received status code ${
                         createdIssueResponse.statusCode
                     }, body of ${formatJSON(
-                        await createdIssueResponse.json()
+                        JSON.parse(createdIssueResponse.body)
                     )}.`
                 );
 
@@ -285,8 +294,9 @@ export async function linearWebhookHandler(
                 );
             }
 
-            let createdIssueData: components["schemas"]["issue"] =
-                await createdIssueResponse.json();
+            let createdIssueData: components["schemas"]["issue"] = JSON.parse(
+                createdIssueResponse.body
+            );
 
             const linearIssue = await linear.issue(data.id);
 
@@ -338,19 +348,22 @@ export async function linearWebhookHandler(
                     continue;
                 }
 
-                const createdLabelResponse = await petitio(
+                const createdLabelResponse = await got.post(
                     `https://api.github.com/repos/${repoFullName}/labels`,
-                    "POST"
-                )
-                    .header("User-Agent", userAgentHeader)
-                    .header("Authorization", githubAuthHeader)
-                    .body({
-                        name: label.name,
-                        color: label.color?.replace("#", ""),
-                        description: "Created by Linear-GitHub Sync"
-                    })
-                    .send();
-                const createdLabelData = await createdLabelResponse.json();
+                    {
+                        json: {
+                            name: label.name,
+                            color: label.color?.replace("#", ""),
+                            description: "Created by Linear-GitHub Sync"
+                        },
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
+                        }
+                    }
+                );
+
+                const createdLabelData = JSON.parse(createdLabelResponse.body);
                 if (
                     createdLabelResponse.statusCode > 201 &&
                     createdLabelData.errors?.[0]?.code !== "already_exists"
@@ -372,19 +385,22 @@ export async function linearWebhookHandler(
             // Add priority label if applicable
             if (!!data.priority && SHARED.PRIORITY_LABELS[data.priority]) {
                 const priorityLabel = SHARED.PRIORITY_LABELS[data.priority];
-                const createdLabelResponse = await petitio(
+                const createdLabelResponse = await got.post(
                     `https://api.github.com/repos/${repoFullName}/labels`,
-                    "POST"
-                )
-                    .header("User-Agent", userAgentHeader)
-                    .header("Authorization", githubAuthHeader)
-                    .body({
-                        name: priorityLabel.name,
-                        color: priorityLabel.color?.replace("#", ""),
-                        description: "Created by Linear-GitHub Sync"
-                    })
-                    .send();
-                const createdLabelData = await createdLabelResponse.json();
+                    {
+                        json: {
+                            name: priorityLabel.name,
+                            color: priorityLabel.color?.replace("#", ""),
+                            description: "Created by Linear-GitHub Sync"
+                        },
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
+                        }
+                    }
+                );
+
+                const createdLabelData = JSON.parse(createdLabelResponse.body);
                 if (
                     createdLabelResponse.statusCode > 201 &&
                     createdLabelData.errors?.[0]?.code !== "already_exists"
@@ -402,14 +418,18 @@ export async function linearWebhookHandler(
                 }
             }
 
-            const appliedLabelResponse = await petitio(
+            const appliedLabelResponse = await got.post(
                 `${issuesEndpoint}/${createdIssueData.number}/labels`,
-                "POST"
-            )
-                .header("User-Agent", userAgentHeader)
-                .header("Authorization", githubAuthHeader)
-                .body({ labels: labelNames })
-                .send();
+                {
+                    json: {
+                        labels: labelNames
+                    },
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
+                    }
+                }
+            );
 
             if (appliedLabelResponse.statusCode > 201) {
                 console.log(
@@ -443,18 +463,22 @@ export async function linearWebhookHandler(
                     "linear"
                 );
 
-                await petitio(
-                    `${issuesEndpoint}/${createdIssueData.number}/comments`,
-                    "POST"
-                )
-                    .header("User-Agent", userAgentHeader)
-                    .header("Authorization", githubAuthHeader)
-                    .body({
-                        body: `${modifiedComment ?? ""}${getGitHubFooter(
-                            user.displayName
-                        )}`
-                    })
-                    .send()
+                await got
+                    .post(
+                        `${issuesEndpoint}/${createdIssueData.number}/comments`,
+                        {
+                            json: {
+                                body: `${
+                                    modifiedComment ?? ""
+                                }${getGitHubFooter(user.displayName)}`
+                            },
+                            headers: {
+                                Authorization: githubAuthHeader,
+                                "User-Agent": userAgentHeader
+                            }
+                        }
+                    )
+
                     .then(commentResponse => {
                         if (commentResponse.statusCode > 201)
                             console.log(
@@ -463,7 +487,7 @@ export async function linearWebhookHandler(
                                     data,
                                     createdIssueData,
                                     createdIssueResponse,
-                                    commentResponse.json()
+                                    JSON.parse(commentResponse.body)
                                 )
                             );
                         else
@@ -483,16 +507,19 @@ export async function linearWebhookHandler(
 
         // Title change
         if (updatedFrom.title && actionType === "Issue") {
-            await petitio(
-                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
-                "PATCH"
-            )
-                .header("User-Agent", userAgentHeader)
-                .header("Authorization", githubAuthHeader)
-                .body({
-                    title: `[${ticketName}] ${data.title}`
-                })
-                .send()
+            await got
+                .patch(
+                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
+                    {
+                        json: {
+                            title: `[${ticketName}] ${data.title}`
+                        },
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
+                        }
+                    }
+                )
                 .then(updatedIssueResponse => {
                     if (updatedIssueResponse.statusCode > 201)
                         console.log(
@@ -517,18 +544,22 @@ export async function linearWebhookHandler(
                 "linear"
             );
 
-            await petitio(
-                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
-                "PATCH"
-            )
-                .header("User-Agent", userAgentHeader)
-                .header("Authorization", githubAuthHeader)
-                .body({
-                    body: `${
-                        modifiedDescription ?? ""
-                    }\n\n<sub>${getSyncFooter()} | [${ticketName}](${url})</sub>`
-                })
-                .send()
+            await got
+                .patch(
+                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
+                    {
+                        json: {
+                            body: `${
+                                modifiedDescription ?? ""
+                            }\n\n<sub>${getSyncFooter()} | [${ticketName}](${url})</sub>`
+                        },
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
+                        }
+                    }
+                )
+
                 .then(updatedIssueResponse => {
                     if (updatedIssueResponse.statusCode > 201)
                         console.log(
@@ -548,22 +579,27 @@ export async function linearWebhookHandler(
 
         // State change (eg. "Open" to "Done")
         if (updatedFrom.stateId) {
-            await petitio(
-                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
-                "PATCH"
-            )
-                .header("User-Agent", userAgentHeader)
-                .header("Authorization", githubAuthHeader)
-                .body({
-                    state: [doneStateId, canceledStateId].includes(data.stateId)
-                        ? "closed"
-                        : "open",
-                    state_reason:
-                        doneStateId === data.stateId
-                            ? "completed"
-                            : "not_planned"
-                })
-                .send()
+            await got
+                .patch(
+                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
+                    {
+                        json: {
+                            state: [doneStateId, canceledStateId].includes(
+                                data.stateId
+                            )
+                                ? "closed"
+                                : "open",
+                            state_reason:
+                                doneStateId === data.stateId
+                                    ? "completed"
+                                    : "not_planned"
+                        },
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
+                        }
+                    }
+                )
                 .then(updatedIssueResponse => {
                     if (updatedIssueResponse.statusCode > 201)
                         console.log(
@@ -598,11 +634,15 @@ export async function linearWebhookHandler(
                 : null;
 
             if (assignee) {
-                const response = await petitio(assigneeEndpoint, "POST")
-                    .header("User-Agent", userAgentHeader)
-                    .header("Authorization", githubAuthHeader)
-                    .body({ assignees: [assignee.githubUsername] })
-                    .send();
+                const response = await got.post(assigneeEndpoint, {
+                    json: {
+                        assignees: [assignee.githubUsername]
+                    },
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
+                    }
+                });
 
                 if (response.statusCode > 201) {
                     console.log(
@@ -639,11 +679,15 @@ export async function linearWebhookHandler(
                 });
 
                 if (prevAssignee) {
-                    const response = await petitio(assigneeEndpoint, "DELETE")
-                        .header("User-Agent", userAgentHeader)
-                        .header("Authorization", githubAuthHeader)
-                        .body({ assignees: [prevAssignee.githubUsername] })
-                        .send();
+                    const response = await got.delete(assigneeEndpoint, {
+                        json: {
+                            assignees: [prevAssignee.githubUsername]
+                        },
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
+                        }
+                    });
 
                     if (response.statusCode > 201) {
                         console.log(
@@ -681,13 +725,15 @@ export async function linearWebhookHandler(
 
             // Remove old priority label
             const prevPriorityLabel = priorityLabels[updatedFrom.priority];
-            const removedLabelResponse = await petitio(
+            const removedLabelResponse = await got.delete(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels/${prevPriorityLabel.name}`,
-                "DELETE"
-            )
-                .header("User-Agent", userAgentHeader)
-                .header("Authorization", githubAuthHeader)
-                .send();
+                {
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
+                    }
+                }
+            );
 
             if (removedLabelResponse.statusCode > 201) {
                 console.log(
@@ -705,20 +751,22 @@ export async function linearWebhookHandler(
 
             // Add new priority label if not none
             const priorityLabel = priorityLabels[data.priority];
-            const createdLabelResponse = await petitio(
+            const createdLabelResponse = await got.post(
                 `https://api.github.com/repos/${repoFullName}/labels`,
-                "POST"
-            )
-                .header("User-Agent", userAgentHeader)
-                .header("Authorization", githubAuthHeader)
-                .body({
-                    name: priorityLabel.name,
-                    color: priorityLabel.color?.replace("#", ""),
-                    description: "Created by Linear-GitHub Sync"
-                })
-                .send();
+                {
+                    json: {
+                        name: priorityLabel.name,
+                        color: priorityLabel.color?.replace("#", ""),
+                        description: "Created by Linear-GitHub Sync"
+                    },
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
+                    }
+                }
+            );
 
-            const createdLabelData = await createdLabelResponse.json();
+            const createdLabelData = JSON.parse(createdLabelResponse.body);
 
             if (
                 createdLabelResponse.statusCode > 201 &&
@@ -733,14 +781,18 @@ export async function linearWebhookHandler(
                     ? priorityLabel.name
                     : createdLabelData.name;
 
-            const appliedLabelResponse = await petitio(
+            const appliedLabelResponse = await got.post(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels`,
-                "POST"
-            )
-                .header("User-Agent", userAgentHeader)
-                .header("Authorization", githubAuthHeader)
-                .body({ labels: [labelName] })
-                .send();
+                {
+                    json: {
+                        labels: [labelName]
+                    },
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
+                    }
+                }
+            );
 
             if (appliedLabelResponse.statusCode > 201) {
                 console.log("Could not apply label.");
@@ -782,18 +834,22 @@ export async function linearWebhookHandler(
 
             const modifiedBody = await replaceMentions(data.body, "linear");
 
-            await petitio(
-                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/comments`,
-                "POST"
-            )
-                .header("User-Agent", userAgentHeader)
-                .header("Authorization", githubAuthHeader)
-                .body({
-                    body: `${modifiedBody ?? ""}${getGitHubFooter(
-                        data.user?.name
-                    )}`
-                })
-                .send()
+            await got
+                .post(
+                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/comments`,
+                    {
+                        json: {
+                            body: `${modifiedBody ?? ""}${getGitHubFooter(
+                                data.user?.name
+                            )}`
+                        },
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
+                        }
+                    }
+                )
+
                 .then(commentResponse => {
                     if (commentResponse.statusCode > 201)
                         console.log(
@@ -805,7 +861,9 @@ export async function linearWebhookHandler(
                                 syncedIssue.githubIssueId
                             }], received status code ${
                                 commentResponse.statusCode
-                            }, body of ${formatJSON(commentResponse.json())}.`
+                            }, body of ${formatJSON(
+                                JSON.parse(commentResponse.body)
+                            )}.`
                         );
                     else
                         console.log(
@@ -843,10 +901,12 @@ export async function linearWebhookHandler(
                 select: { githubUsername: true }
             });
 
-            const createdIssueResponse = await petitio(issuesEndpoint, "POST")
-                .header("User-Agent", userAgentHeader)
-                .header("Authorization", githubAuthHeader)
-                .body({
+            const createdIssueResponse = await got.post(issuesEndpoint, {
+                headers: {
+                    Authorization: githubAuthHeader,
+                    "User-Agent": userAgentHeader
+                },
+                json: {
                     title: `[${ticketName}] ${data.title}`,
                     body: `${
                         modifiedDescription ?? ""
@@ -856,8 +916,8 @@ export async function linearWebhookHandler(
                             ? assignee?.githubUsername
                             : ""
                     ]
-                })
-                .send();
+                }
+            });
 
             if (createdIssueResponse.statusCode > 201) {
                 console.log(
@@ -865,7 +925,9 @@ export async function linearWebhookHandler(
                         data.number
                     }, received status code ${
                         createdIssueResponse.statusCode
-                    }, body of ${formatJSON(createdIssueResponse.json())}.`
+                    }, body of ${formatJSON(
+                        JSON.parse(createdIssueResponse.body)
+                    )}.`
                 );
 
                 throw new ApiError(
@@ -874,8 +936,9 @@ export async function linearWebhookHandler(
                 );
             }
 
-            const createdIssueData: components["schemas"]["issue"] =
-                await createdIssueResponse.json();
+            const createdIssueData: components["schemas"]["issue"] = JSON.parse(
+                createdIssueResponse.body
+            );
 
             const attachmentQuery = getAttachmentQuery(
                 data.id,
@@ -927,20 +990,22 @@ export async function linearWebhookHandler(
                     continue;
                 }
 
-                const createdLabelResponse = await petitio(
+                const createdLabelResponse = await got.post(
                     `https://api.github.com/repos/${repoFullName}/labels`,
-                    "POST"
-                )
-                    .header("User-Agent", userAgentHeader)
-                    .header("Authorization", githubAuthHeader)
-                    .body({
-                        name: label.name,
-                        color: label.color?.replace("#", ""),
-                        description: "Created by Linear-GitHub Sync"
-                    })
-                    .send();
+                    {
+                        json: {
+                            name: label.name,
+                            color: label.color?.replace("#", ""),
+                            description: "Created by Linear-GitHub Sync"
+                        },
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
+                        }
+                    }
+                );
 
-                const createdLabelData = await createdLabelResponse.json();
+                const createdLabelData = JSON.parse(createdLabelResponse.body);
 
                 if (
                     createdLabelResponse.statusCode > 201 &&
@@ -963,19 +1028,22 @@ export async function linearWebhookHandler(
             // Add priority label if applicable
             if (!!data.priority && SHARED.PRIORITY_LABELS[data.priority]) {
                 const priorityLabel = SHARED.PRIORITY_LABELS[data.priority];
-                const createdLabelResponse = await petitio(
+                const createdLabelResponse = await got.post(
                     `https://api.github.com/repos/${repoFullName}/labels`,
-                    "POST"
-                )
-                    .header("User-Agent", userAgentHeader)
-                    .header("Authorization", githubAuthHeader)
-                    .body({
-                        name: priorityLabel.name,
-                        color: priorityLabel.color?.replace("#", ""),
-                        description: "Created by Linear-GitHub Sync"
-                    })
-                    .send();
-                const createdLabelData = await createdLabelResponse.json();
+                    {
+                        json: {
+                            name: priorityLabel.name,
+                            color: priorityLabel.color?.replace("#", ""),
+                            description: "Created by Linear-GitHub Sync"
+                        },
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
+                        }
+                    }
+                );
+
+                const createdLabelData = JSON.parse(createdLabelResponse.body);
 
                 if (
                     createdLabelResponse.statusCode > 201 &&
@@ -994,14 +1062,18 @@ export async function linearWebhookHandler(
                 }
             }
 
-            const appliedLabelResponse = await petitio(
+            const appliedLabelResponse = await got.post(
                 `${issuesEndpoint}/${createdIssueData.number}/labels`,
-                "POST"
-            )
-                .header("User-Agent", userAgentHeader)
-                .header("Authorization", githubAuthHeader)
-                .body({ labels: labelNames })
-                .send();
+                {
+                    json: {
+                        labels: labelNames
+                    },
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
+                    }
+                }
+            );
 
             if (appliedLabelResponse.statusCode > 201) {
                 console.log(
