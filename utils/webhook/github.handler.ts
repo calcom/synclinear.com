@@ -12,7 +12,7 @@ import { replaceMentions, upsertUser } from "../../pages/api/utils";
 import { IssueCommentCreatedEvent, IssuesEvent } from "@octokit/webhooks-types";
 import { generateLinearUUID } from "../linear";
 import { LINEAR } from "../constants";
-import petitio from "petitio";
+import got from "got";
 import { linearQuery } from "../apollo";
 import { ApiError } from "../errors";
 
