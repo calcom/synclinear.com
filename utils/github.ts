@@ -117,9 +117,22 @@ export const getGitHubUser = async (token: string): Promise<any> => {
     return await response.json();
 };
 
-export const checkForExistingRepo = async (repoId: string): Promise<any> => {
-    const response = await fetch(`/api/github/repo/${repoId}`, {
-        method: "GET"
+export const getRepoWebhook = async (
+    repoName: string,
+    token: string
+): Promise<any> => {
+    const webhookUrl = getWebhookURL();
+
+    const response = await fetch(`/api/github/webhook`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            repoName,
+            webhookUrl
+        })
     });
 
     return await response.json();
