@@ -9,7 +9,7 @@ import {
     exchangeGitHubToken,
     getGitHubRepos,
     getGitHubUser,
-    checkForExistingRepo,
+    getRepoWebhook,
     getGitHubAuthURL,
     saveGitHubContext,
     setGitHubWebook
@@ -108,7 +108,7 @@ const GitHubAuthButton = ({
 
         setLoading(true);
 
-        checkForExistingRepo(chosenRepo.id)
+        getRepoWebhook(chosenRepo.name, gitHubToken)
             .then(res => {
                 if (res?.exists) {
                     setDeployed(true);
@@ -183,7 +183,7 @@ const GitHubAuthButton = ({
                 <div className="flex flex-col items-center space-y-4">
                     <select
                         name="GitHub repository"
-                        disabled={deployed || loading}
+                        disabled={loading}
                         onChange={e => {
                             setChosenRepo(
                                 repos.find(repo => repo.id == e.target.value)
