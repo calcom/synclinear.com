@@ -274,3 +274,7 @@ export const generateLinearUUID = (): string => {
     return `${uuid().substring(0, 28)}${GITHUB.UUID_SUFFIX}`;
 };
 
+export const getProjectFooter = (name: string, url: string): string => {
+    return `\n\n<sub>[${name}](${url}) on Linear</sub>`;
+};
+

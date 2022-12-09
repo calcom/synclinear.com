@@ -11,10 +11,10 @@ import {
 import { LinearClient } from "@linear/sdk";
 import { replaceMentions, upsertUser } from "../../pages/api/utils";
 import got from "got";
-import { inviteMember } from "../linear";
+import { getProjectFooter, inviteMember } from "../linear";
 import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
-import { createMilestone, getGitHubFooter } from "../github";
+import { createMilestone, getGitHubFooter, updateMilestone } from "../github";
 import { ApiError, getIssueUpdateError, getOtherUpdateError } from "../errors";
 
 export async function linearWebhookHandler(
@@ -501,7 +501,40 @@ export async function linearWebhookHandler(
         }
 
         if (actionType === "Project") {
-            console.log("Project updated: ", data);
+            const project = await linear.project(data.id);
+
+            if (!project) {
+                const error = `Could not find project ${data.id}`;
+                console.log(error);
+                throw new ApiError(error, 404);
+            }
+
+            const state = ["completed", "canceled"].includes(project.state)
+                ? "closed"
+                : "open";
+
+            const descriptionWithFooter = `${
+                project.description || ""
+            }${getProjectFooter(project.name, project.url)}`;
+
+            const response = await updateMilestone(
+                githubKey,
+                repoFullName,
+                3, // TODO: get milestoneId from Projects table in DB
+                project.name,
+                state,
+                descriptionWithFooter
+            );
+
+            if (response.statusCode > 201) {
+                const error = `Could not update milestone ${project.name} in ${repoFullName}.`;
+                console.log(error);
+                throw new ApiError(error, 500);
+            } else {
+                const result = `Updated milestone ${project.name} in ${repoFullName}.`;
+                console.log(result);
+                return result;
+            }
         }
 
         // Ensure there is a synced issue to update
@@ -1104,22 +1137,32 @@ export async function linearWebhookHandler(
             }
         } else if (actionType === "Project") {
             if (action === "create") {
+                const project = await linear.project(data.id);
+
+                if (!project) {
+                    const error = `Could not find project ${data.id}.`;
+                    console.log(error);
+                    throw new ApiError(error, 403);
+                }
+
+                const title = project.name;
+                const descriptionWithFooter = `${
+                    project.description || ""
+                }${getProjectFooter(project.name, project.url)}`;
+
                 const response = await createMilestone(
                     githubKey,
                     repoFullName,
-                    (data as any).name,
-                    data.description
+                    title,
+                    descriptionWithFooter
                 );
 
                 if (!response.milestoneId) {
-                    const reason = `Failed to create milestone for project ${data.id} in ${repoFullName}.`;
-                    console.log(reason);
-                    return reason;
+                    const error = `Failed to create milestone for project ${data.id} in ${repoFullName}.`;
+                    console.log(error);
+                    throw new ApiError(error, 500);
                 } else {
-                    console.log(
-                        `Created milestone for ${repoFullName}:`,
-                        response.milestoneId
-                    );
+                    console.log(`Created milestone for ${repoFullName}`);
                     // TODO: Add milestoneId to Projects table in DB
                 }
             }

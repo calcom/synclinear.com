@@ -165,8 +165,6 @@ export const createMilestone = async (
 
     const responseBody = await response.json();
 
-    console.log("responseBody", responseBody);
-
     return { milestoneId: responseBody?.number };
 };
 
@@ -196,6 +194,6 @@ export const updateMilestone = async (
         }
     );
 
-    return await response.json();
+    return response;
 };
 
