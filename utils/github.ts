@@ -1,4 +1,4 @@
-import { GitHubRepo } from "../typings";
+import { GitHubRepo, MilestoneState } from "../typings";
 import { getWebhookURL } from ".";
 import { GITHUB } from "./constants";
 
@@ -134,6 +134,67 @@ export const getRepoWebhook = async (
             webhookUrl
         })
     });
+
+    return await response.json();
+};
+
+export const createMilestone = async (
+    token: string,
+    repoName: string,
+    title: string,
+    description?: string,
+    state?: MilestoneState
+): Promise<{ milestoneId: number }> => {
+    const milestoneData = {
+        title,
+        state: state || "open",
+        ...(description && { description })
+    };
+
+    const response = await fetch(
+        `https://api.github.com/repos/${repoName}/milestones`,
+        {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/vnd.github+json"
+            },
+            body: JSON.stringify(milestoneData)
+        }
+    );
+
+    const responseBody = await response.json();
+
+    console.log("responseBody", responseBody);
+
+    return { milestoneId: responseBody?.number };
+};
+
+export const updateMilestone = async (
+    token: string,
+    repoName: string,
+    milestoneId: number,
+    title?: string,
+    state?: MilestoneState,
+    description?: string
+): Promise<any> => {
+    const milestoneData = {
+        ...(title && { title }),
+        ...(state && { state }),
+        ...(description && { description })
+    };
+
+    const response = await fetch(
+        `https://api.github.com/repos/${repoName}/milestones/${milestoneId}`,
+        {
+            method: "PATCH",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/vnd.github+json"
+            },
+            body: JSON.stringify(milestoneData)
+        }
+    );
 
     return await response.json();
 };
