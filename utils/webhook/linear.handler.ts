@@ -14,7 +14,7 @@ import got from "got";
 import { inviteMember } from "../linear";
 import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
-import { getGitHubFooter } from "../github";
+import { createMilestone, getGitHubFooter } from "../github";
 import { ApiError, getIssueUpdateError, getOtherUpdateError } from "../errors";
 
 export async function linearWebhookHandler(
@@ -498,6 +498,10 @@ export async function linearWebhookHandler(
                             );
                     });
             }
+        }
+
+        if (actionType === "Project") {
+            console.log("Project updated: ", data);
         }
 
         // Ensure there is a synced issue to update
@@ -1098,10 +1102,27 @@ export async function linearWebhookHandler(
                     linear
                 );
             }
-        }
-    }
+        } else if (actionType === "Project") {
+            if (action === "create") {
+                const response = await createMilestone(
+                    githubKey,
+                    repoFullName,
+                    (data as any).name,
+                    data.description
+                );
 
-    if (actionType === "Project") {
-        console.log("Project event received.");
+                if (!response.milestoneId) {
+                    const reason = `Failed to create milestone for project ${data.id} in ${repoFullName}.`;
+                    console.log(reason);
+                    return reason;
+                } else {
+                    console.log(
+                        `Created milestone for ${repoFullName}:`,
+                        response.milestoneId
+                    );
+                    // TODO: Add milestoneId to Projects table in DB
+                }
+            }
+        }
     }
 }
