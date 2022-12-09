@@ -3,7 +3,7 @@ import { getWebhookURL, getSyncFooter } from ".";
 import { linearQuery } from "./apollo";
 import { LINEAR, GENERAL, GITHUB } from "./constants";
 import { v4 as uuid } from "uuid";
-import { LinearTeam } from "../typings";
+import { LinearProjectState, LinearTeam } from "../typings";
 
 export const getLinearTokenURL = (): string => {
     const baseURL = LINEAR.NEW_TOKEN_URL;
@@ -109,6 +109,87 @@ export const createLinearPublicLabel = async (
     }`;
 
     return await linearQuery(mutation, token, { teamID });
+};
+
+export const createLinearProject = async (
+    token: string,
+    teamId: string,
+    title: string,
+    description?: string,
+    state?: LinearProjectState
+): Promise<{
+    data: {
+        success: boolean;
+        project: {
+            id: string;
+        };
+    };
+}> => {
+    const mutation = `mutation CreateProject(
+        $teamId: String!,
+        $title: String!,
+        $state: String,
+        $description: String
+    ) {
+        projectCreate(
+            input: {
+                name: $title,
+                description: $description,
+                state: $state,
+                teamIds: [$teamId],
+            }
+        ) {
+            success
+            project {
+                id
+            }
+        }
+    }`;
+
+    return await linearQuery(mutation, token, {
+        teamId,
+        title,
+        ...(description && { description }),
+        state: state || "backlog"
+    });
+};
+
+export const updateLinearProject = async (
+    token: string,
+    projectId: string,
+    name?: string,
+    description?: string,
+    state?: LinearProjectState
+): Promise<{
+    data: {
+        success: boolean;
+    };
+}> => {
+    const mutation = `mutation UpdateProject(
+        $projectId: String!,
+        $name: String,
+        $state: String,
+        $description: String
+    ) {
+        projectUpdate(
+            id: $projectId,
+            input: {
+                name: $name,
+                state: $state,
+                description: $description
+            }
+        ) {
+            success
+        }
+    }`;
+
+    return await linearQuery(mutation, token, {
+        projectId,
+        // Only include the fields that are defined to avoid server error
+        ...(name && { name }),
+        ...(description && { description }),
+        ...(state && { state })
+    });
 };
 
 export const saveLinearContext = async (token: string, team: LinearTeam) => {
