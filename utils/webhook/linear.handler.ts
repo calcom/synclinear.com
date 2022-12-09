@@ -1162,8 +1162,11 @@ export async function linearWebhookHandler(
                     console.log(error);
                     throw new ApiError(error, 500);
                 } else {
-                    console.log(`Created milestone for ${repoFullName}`);
+                    const result = `Created milestone ${project.name} for ${repoFullName}`;
+                    console.log(result);
                     // TODO: Add milestoneId to Projects table in DB
+
+                    return result;
                 }
             }
         }

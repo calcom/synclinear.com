@@ -9,15 +9,23 @@ import {
 } from "../index";
 import { LinearClient } from "@linear/sdk";
 import { replaceMentions, upsertUser } from "../../pages/api/utils";
-import { IssueCommentCreatedEvent, IssuesEvent } from "@octokit/webhooks-types";
-import { generateLinearUUID } from "../linear";
+import {
+    IssueCommentCreatedEvent,
+    IssuesEvent,
+    MilestoneEvent
+} from "@octokit/webhooks-types";
+import {
+    createLinearProject,
+    generateLinearUUID,
+    updateLinearProject
+} from "../linear";
 import { LINEAR } from "../constants";
 import got from "got";
 import { linearQuery } from "../apollo";
 import { ApiError } from "../errors";
 
 export async function githubWebhookHandler(
-    body: IssuesEvent | IssueCommentCreatedEvent,
+    body: IssuesEvent | IssueCommentCreatedEvent | MilestoneEvent,
     signature: string,
     githubEvent: string
 ) {
@@ -107,7 +115,7 @@ export async function githubWebhookHandler(
     if (githubEvent === "issue_comment" && action === "created") {
         // Comment created
 
-        const { comment }: IssueCommentCreatedEvent = body;
+        const { comment } = body as IssueCommentCreatedEvent;
 
         if (comment.body.includes("on Linear")) {
             console.log(skipReason("comment", issue.number, true));
@@ -146,6 +154,53 @@ export async function githubWebhookHandler(
                     });
                 });
             });
+    }
+
+    if (githubEvent === "milestone") {
+        const { milestone } = body as MilestoneEvent;
+        if (!milestone) throw new ApiError("No milestone found", 404);
+
+        // TODO: get project by milestone number from DB here
+
+        if (action === "created") {
+            const result = await createLinearProject(
+                linearKey,
+                linearTeamId,
+                milestone.title,
+                milestone.description
+            );
+
+            if (!result?.data?.projectCreate?.success) {
+                const error = `Could not create project ${milestone.title} for ${repoName}`;
+                console.log(error);
+                throw new ApiError(error, 500);
+            } else {
+                const result = `Created project ${milestone.title} for ${repoName}`;
+                console.log(result);
+                // TODO: Add projectId to Projects table in DB
+
+                return result;
+            }
+        } else if (action === "edited") {
+            const state = milestone.state === "closed" ? "backlog" : "started";
+            const result = await updateLinearProject(
+                linearKey,
+                "6134d557-2b82-4520-8caf-6a7cbec07cd4", // TODO: get this from DB
+                milestone.title,
+                milestone.description,
+                state
+            );
+
+            if (!result?.data?.projectUpdate?.success) {
+                const error = `Could not update project ${milestone.title} for ${repoName}`;
+                console.log(error);
+                throw new ApiError(error, 500);
+            } else {
+                const result = `Updated project ${milestone.title} for ${repoName}`;
+                console.log(result);
+                return result;
+            }
+        }
     }
 
     // Ensure the event is for an issue
