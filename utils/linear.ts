@@ -118,12 +118,7 @@ export const createLinearProject = async (
     description?: string,
     state?: LinearProjectState
 ): Promise<{
-    data: {
-        success: boolean;
-        project: {
-            id: string;
-        };
-    };
+    data: { projectCreate: { success: boolean; project: { id: string } } };
 }> => {
     const mutation = `mutation CreateProject(
         $teamId: String!,
@@ -161,9 +156,7 @@ export const updateLinearProject = async (
     description?: string,
     state?: LinearProjectState
 ): Promise<{
-    data: {
-        success: boolean;
-    };
+    data: { projectUpdate: { success: boolean } };
 }> => {
     const mutation = `mutation UpdateProject(
         $projectId: String!,
