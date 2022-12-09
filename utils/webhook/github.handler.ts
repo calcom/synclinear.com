@@ -160,43 +160,71 @@ export async function githubWebhookHandler(
         const { milestone } = body as MilestoneEvent;
         if (!milestone) throw new ApiError("No milestone found", 404);
 
-        // TODO: get project by milestone number from DB here
+        const syncedMilestone = await prisma.milestone.findFirst({
+            where: {
+                milestoneId: milestone.number,
+                githubRepoId: repository.id
+            }
+        });
 
         if (action === "created") {
-            const result = await createLinearProject(
+            if (syncedMilestone) {
+                const reason = `Skipping over creation for milestone "${milestone.title}" because it is already synced`;
+                console.log(reason);
+                return reason;
+            }
+
+            const projectResponse = await createLinearProject(
                 linearKey,
                 linearTeamId,
                 milestone.title,
                 milestone.description
             );
 
-            if (!result?.data?.projectCreate?.success) {
-                const error = `Could not create project ${milestone.title} for ${repoName}`;
+            if (
+                !projectResponse?.data?.projectCreate?.success ||
+                !projectResponse?.data?.projectCreate?.project?.id
+            ) {
+                const error = `Could not create project "${milestone.title}" for ${repoName}`;
                 console.log(error);
                 throw new ApiError(error, 500);
             } else {
-                const result = `Created project ${milestone.title} for ${repoName}`;
-                console.log(result);
-                // TODO: Add projectId to Projects table in DB
+                await prisma.milestone.create({
+                    data: {
+                        projectId:
+                            projectResponse?.data?.projectCreate?.project?.id,
+                        linearTeamId: linearTeamId,
+                        milestoneId: milestone.number,
+                        githubRepoId: repository.id
+                    }
+                });
 
+                const result = `Created project "${milestone.title}" for ${repoName}`;
+                console.log(result);
                 return result;
             }
         } else if (action === "edited") {
+            if (!syncedMilestone?.projectId) {
+                const reason = `Skipping over update for milestone "${milestone.title}" because it is not synced`;
+                console.log(reason);
+                return reason;
+            }
+
             const state = milestone.state === "closed" ? "backlog" : "started";
-            const result = await updateLinearProject(
+            const projectResponse = await updateLinearProject(
                 linearKey,
-                "6134d557-2b82-4520-8caf-6a7cbec07cd4", // TODO: get this from DB
+                syncedMilestone.projectId,
                 milestone.title,
                 milestone.description,
                 state
             );
 
-            if (!result?.data?.projectUpdate?.success) {
-                const error = `Could not update project ${milestone.title} for ${repoName}`;
+            if (!projectResponse?.data?.projectUpdate?.success) {
+                const error = `Could not update project "${milestone.title}" for ${repoName}`;
                 console.log(error);
                 throw new ApiError(error, 500);
             } else {
-                const result = `Updated project ${milestone.title} for ${repoName}`;
+                const result = `Updated project "${milestone.title}" for ${repoName}`;
                 console.log(result);
                 return result;
             }

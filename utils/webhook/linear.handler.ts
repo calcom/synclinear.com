@@ -68,6 +68,7 @@ export async function linearWebhookHandler(
 
     const {
         linearUserId,
+        linearTeamId,
         linearApiKey,
         linearApiKeyIV,
         githubApiKey,
@@ -502,11 +503,22 @@ export async function linearWebhookHandler(
 
         if (actionType === "Project") {
             const project = await linear.project(data.id);
-
             if (!project) {
                 const error = `Could not find project ${data.id}`;
                 console.log(error);
                 throw new ApiError(error, 404);
+            }
+
+            const syncedMilestone = await prisma.milestone.findFirst({
+                where: {
+                    projectId: project.id,
+                    linearTeamId: linearTeamId
+                }
+            });
+            if (!syncedMilestone?.milestoneId) {
+                const reason = `Skipping over update for project "${project.name}" because it is not synced`;
+                console.log(reason);
+                return reason;
             }
 
             const state = ["completed", "canceled"].includes(project.state)
@@ -520,18 +532,18 @@ export async function linearWebhookHandler(
             const response = await updateMilestone(
                 githubKey,
                 repoFullName,
-                3, // TODO: get milestoneId from Projects table in DB
+                syncedMilestone.milestoneId,
                 project.name,
                 state,
                 descriptionWithFooter
             );
 
             if (response.statusCode > 201) {
-                const error = `Could not update milestone ${project.name} in ${repoFullName}.`;
+                const error = `Could not update milestone "${project.name}" in ${repoFullName}.`;
                 console.log(error);
                 throw new ApiError(error, 500);
             } else {
-                const result = `Updated milestone ${project.name} in ${repoFullName}.`;
+                const result = `Updated milestone "${project.name}" in ${repoFullName}.`;
                 console.log(result);
                 return result;
             }
@@ -1138,14 +1150,24 @@ export async function linearWebhookHandler(
         } else if (actionType === "Project") {
             if (action === "create") {
                 const project = await linear.project(data.id);
-
                 if (!project) {
                     const error = `Could not find project ${data.id}.`;
                     console.log(error);
                     throw new ApiError(error, 403);
                 }
 
-                const title = project.name;
+                const syncedMilestone = await prisma.milestone.findFirst({
+                    where: {
+                        projectId: project.id,
+                        linearTeamId: linearTeamId
+                    }
+                });
+                if (syncedMilestone) {
+                    const reason = `Skipping over creation for project "${project.name}" because it is already synced`;
+                    console.log(reason);
+                    return reason;
+                }
+
                 const descriptionWithFooter = `${
                     project.description || ""
                 }${getProjectFooter(project.name, project.url)}`;
@@ -1153,19 +1175,26 @@ export async function linearWebhookHandler(
                 const response = await createMilestone(
                     githubKey,
                     repoFullName,
-                    title,
+                    project.name,
                     descriptionWithFooter
                 );
 
                 if (!response.milestoneId) {
-                    const error = `Failed to create milestone for project ${data.id} in ${repoFullName}.`;
+                    const error = `Failed to create milestone for project "${project.name}" for ${repoFullName}.`;
                     console.log(error);
                     throw new ApiError(error, 500);
                 } else {
-                    const result = `Created milestone ${project.name} for ${repoFullName}`;
-                    console.log(result);
-                    // TODO: Add milestoneId to Projects table in DB
+                    await prisma.milestone.create({
+                        data: {
+                            projectId: project.id,
+                            linearTeamId: linearTeamId,
+                            milestoneId: response.milestoneId,
+                            githubRepoId: repoId
+                        }
+                    });
 
+                    const result = `Created milestone "${project.name}" for ${repoFullName}`;
+                    console.log(result);
                     return result;
                 }
             }
