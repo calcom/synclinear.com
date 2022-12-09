@@ -83,3 +83,6 @@ export interface Sync {
     GitHubRepo: { id: string; repoName: string };
 }
 
+export type MilestoneState = "open" | "closed";
+
+export type LinearProjectState = "started" | "backlog";
