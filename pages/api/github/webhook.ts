@@ -18,7 +18,7 @@ export default async function handle(
             .send({ error: "Request is missing repo name or webhook URL" });
     }
 
-    const token = req.headers["authorization"];
+    const token = req.headers.authorization;
     if (!token) {
         return res.status(401).send({ error: "Request is missing auth token" });
     }
@@ -36,7 +36,7 @@ export default async function handle(
         const repoHooks = await repoHooksResponse.json();
 
         const hookExists = repoHooks.some(
-            (hook: any) =>
+            hook =>
                 hook.config?.url === webhookUrl &&
                 hook.config?.insecure_ssl === "0" &&
                 hook.active === true
@@ -47,4 +47,3 @@ export default async function handle(
         return res.status(404).send({ error: err });
     }
 }
-
