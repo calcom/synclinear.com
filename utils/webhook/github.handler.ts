@@ -9,7 +9,13 @@ import {
 } from "../index";
 import { LinearClient } from "@linear/sdk";
 import { replaceMentions, upsertUser } from "../../pages/api/utils";
-import { IssueCommentCreatedEvent, IssuesEvent } from "@octokit/webhooks-types";
+import {
+    Issue,
+    IssueCommentCreatedEvent,
+    IssuesEvent,
+    Repository,
+    User
+} from "@octokit/webhooks-types";
 import { generateLinearUUID } from "../linear";
 import { LINEAR } from "../constants";
 import got from "got";
@@ -35,8 +41,13 @@ export async function githubWebhookHandler(
     });
 
     if (!sync?.LinearTeam || !sync?.GitHubRepo) {
-        console.log("Could not find issue's corresponding team.");
+        // Commenter is not found, post as application
+        if (githubEvent === "issue_comment" && action === "created") {
+            await createAnonymousUserComment(body, repository, sender);
+            return;
+        }
 
+        console.log("Could not find issue's corresponding team.");
         throw new ApiError("Could not find issue's corresponding team.", 404);
     }
 
@@ -121,31 +132,8 @@ export async function githubWebhookHandler(
             return reason;
         }
 
-        let modifiedComment = await replaceMentions(comment.body, "github");
-        modifiedComment = replaceImgTags(modifiedComment);
-
-        await linear
-            .commentCreate({
-                id: generateLinearUUID(),
-                issueId: syncedIssue.linearIssueId,
-                body: modifiedComment ?? ""
-            })
-            .then(comment => {
-                comment.comment?.then(commentData => {
-                    commentData.issue?.then(issueData => {
-                        issueData.team?.then(teamData => {
-                            if (!comment.success)
-                                console.log(
-                                    `Failed to create comment for ${syncedIssue.linearIssueNumber} [${syncedIssue.linearIssueNumber}] for GitHub issue #${issue.number} [${issue.id}].`
-                                );
-                            else
-                                console.log(
-                                    `Created comment for ${teamData.key}-${syncedIssue.linearIssueNumber} [${syncedIssue.linearIssueId}] for GitHub issue #${issue.number} [${issue.id}].`
-                                );
-                        });
-                    });
-                });
-            });
+        const modifiedComment = await prepareCommentContent(comment.body);
+        await createLinearComment(linear, syncedIssue, modifiedComment, issue);
     }
 
     // Ensure the event is for an issue
@@ -373,28 +361,16 @@ export async function githubWebhookHandler(
             const comments = JSON.parse(issueCommentsPayload.body);
 
             for (const comment of comments) {
-                let modifiedComment = await replaceMentions(
-                    comment.body,
-                    "github"
+                const modifiedComment = await prepareCommentContent(
+                    comment.body
                 );
-                modifiedComment = replaceImgTags(modifiedComment);
 
-                const commentData = await linear.commentCreate({
-                    id: generateLinearUUID(),
-                    issueId: createdIssue.id,
-                    body: modifiedComment ?? ""
-                });
-
-                if (!commentData.success) {
-                    console.log(
-                        `Failed to create comment on Linear ticket ${createdIssue.id} for GitHub issue #${issue.number}.`
-                    );
-
-                    throw new ApiError(
-                        `Failed creating comment on Linear.`,
-                        500
-                    );
-                }
+                await createLinearComment(
+                    linear,
+                    syncedIssue,
+                    modifiedComment,
+                    issue
+                );
             }
         }
     } else if (["assigned", "unassigned"].includes(action)) {
@@ -455,4 +431,78 @@ export async function githubWebhookHandler(
             }
         }
     }
+}
+
+async function prepareCommentContent(
+    comment: string,
+    sender?: User,
+    anonymous?: boolean
+) {
+    let modifiedComment = await replaceMentions(comment, "github");
+    modifiedComment = replaceImgTags(modifiedComment);
+
+    if (!anonymous) return modifiedComment;
+
+    return `>${modifiedComment}\n\n—[${sender.login} on GitHub](${sender.html_url})`;
+}
+
+async function createLinearComment(
+    linear: LinearClient,
+    syncedIssue,
+    modifiedComment: string,
+    issue: Issue
+) {
+    const comment = await linear.commentCreate({
+        id: generateLinearUUID(),
+        issueId: syncedIssue.linearIssueId,
+        body: modifiedComment ?? ""
+    });
+    const commentData = await comment.comment;
+    const issueData = await commentData.issue;
+    const teamData = await issueData.team;
+
+    if (!comment.success) {
+        throw new ApiError(
+            `Failed to create comment on Linear issue ${syncedIssue.linearIssueId} for GitHub issue ${issue.number}`,
+            500
+        );
+    } else {
+        console.log(
+            `Created comment for ${teamData.key}-${syncedIssue.linearIssueNumber} [${syncedIssue.linearIssueId}] for GitHub issue #${issue.number} [${issue.id}].`
+        );
+    }
+}
+
+async function createAnonymousUserComment(
+    body: IssueCommentCreatedEvent,
+    repository: Repository,
+    sender: User
+) {
+    const { issue }: IssuesEvent = body as unknown as IssuesEvent;
+
+    const syncedIssue = await prisma.syncedIssue.findFirst({
+        where: {
+            githubIssueNumber: issue?.number,
+            githubRepoId: repository.id
+        }
+    });
+
+    if (!syncedIssue) {
+        console.log("Could not find issue's corresponding team.");
+        throw new ApiError("Could not find issue's corresponding team.", 404);
+    }
+
+    const linearKey = process.env.LINEAR_APPLICATION_ADMIN_KEY;
+    const linear = new LinearClient({
+        apiKey: linearKey
+    });
+
+    const { comment: githubComment }: IssueCommentCreatedEvent = body;
+    const modifiedComment = await prepareCommentContent(
+        githubComment.body,
+        sender,
+        true
+    );
+
+    await createLinearComment(linear, syncedIssue, modifiedComment, issue);
 }
