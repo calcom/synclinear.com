@@ -443,7 +443,7 @@ async function prepareCommentContent(
 
     if (!anonymous) return modifiedComment;
 
-    return `*GitHub comment from [${sender.login}](https://github.com/${sender.login}):*\n${modifiedComment}`;
+    return `>${modifiedComment}\n\n—[${sender.login} on GitHub](${sender.html_url})`;
 }
 
 async function createLinearComment(
