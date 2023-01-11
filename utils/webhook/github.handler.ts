@@ -521,31 +521,31 @@ export async function githubWebhookHandler(
 
         let syncedMilestone = await prisma.milestone.findFirst({
             where: {
-                milestoneId: milestone.id,
+                milestoneId: milestone.number,
                 githubRepoId: repository.id
             }
         });
 
-        // Create cycle for milestone
         if (!syncedMilestone) {
-            const endDate = new Date();
-            const startDate = new Date();
-            const createdCycleResponse = await linear.cycleCreate({
-                name: milestone.title,
-                teamId: linearTeamId,
-                endsAt: milestone.due_on
-                    ? new Date(milestone.due_on)
-                    : new Date(endDate.getDate() + 14),
-                startsAt: startDate
-            });
+            const createdCycle = await createLinearCycle(
+                linearKey,
+                linearTeamId,
+                milestone.title,
+                milestone.description,
+                new Date(milestone.due_on)
+            );
 
-            const createdCycle = await createdCycleResponse.cycle;
+            if (!createdCycle?.data?.cycleCreate?.cycle?.id) {
+                const reason = `Failed to create Linear cycle for GitHub milestone #${milestone.number}.`;
+                console.log(reason);
+                throw new ApiError(reason, 500);
+            }
 
             syncedMilestone = await prisma.milestone.create({
                 data: {
-                    milestoneId: milestone.id,
+                    milestoneId: milestone.number,
                     githubRepoId: repository.id,
-                    cycleId: createdCycle.id,
+                    cycleId: createdCycle.data.cycleCreate.cycle.id,
                     linearTeamId: linearTeamId
                 }
             });

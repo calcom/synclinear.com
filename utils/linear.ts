@@ -115,20 +115,25 @@ export const createLinearCycle = async (
     token: string,
     teamId: string,
     title: string,
-    description?: string
+    description?: string,
+    endDate?: Date
 ): Promise<{
     data: { cycleCreate: { success: boolean; cycle: { id: string } } };
 }> => {
     const mutation = `mutation CreateCycle(
         $teamId: String!,
         $title: String!,
-        $description: String
+        $description: String,
+        $startsAt: DateTime!,
+        $endsAt: DateTime!
     ) {
         cycleCreate(
             input: {
                 name: $title,
                 description: $description,
-                teamIds: [$teamId],
+                teamId: $teamId,
+                startsAt: $startsAt,
+                endsAt: $endsAt
             }
         ) {
             success
@@ -141,7 +146,9 @@ export const createLinearCycle = async (
     return await linearQuery(mutation, token, {
         teamId,
         title,
-        ...(description && { description })
+        ...(description && { description }),
+        ...(endDate && { endsAt: endDate }),
+        startsAt: new Date()
     });
 };
 
