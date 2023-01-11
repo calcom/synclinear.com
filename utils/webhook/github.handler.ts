@@ -13,6 +13,7 @@ import {
     Issue,
     IssueCommentCreatedEvent,
     IssuesEvent,
+    MilestoneEvent,
     Repository,
     User
 } from "@octokit/webhooks-types";
@@ -47,7 +48,11 @@ export async function githubWebhookHandler(
     if (!sync?.LinearTeam || !sync?.GitHubRepo) {
         // Commenter is not found, post as application
         if (githubEvent === "issue_comment" && action === "created") {
-            await createAnonymousUserComment(body, repository, sender);
+            await createAnonymousUserComment(
+                body as IssueCommentCreatedEvent,
+                repository,
+                sender
+            );
             return;
         }
 
