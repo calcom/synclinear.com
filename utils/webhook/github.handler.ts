@@ -146,53 +146,18 @@ export async function githubWebhookHandler(
         await createLinearComment(linear, syncedIssue, modifiedComment, issue);
     }
 
-    if (githubEvent === "milestone") {
+    if (githubEvent === "milestone" && syncsMilestones) {
         const { milestone } = body as MilestoneEvent;
         if (!milestone) throw new ApiError("No milestone found", 404);
 
         const syncedMilestone = await prisma.milestone.findFirst({
             where: {
-                milestoneId: milestone.number,
+                milestoneId: milestone.id,
                 githubRepoId: repository.id
             }
         });
 
-        if (action === "created") {
-            if (syncedMilestone) {
-                const reason = `Skipping over creation for milestone "${milestone.title}" because it is already synced`;
-                console.log(reason);
-                return reason;
-            }
-
-            const cycleResponse = await createLinearCycle(
-                linearKey,
-                linearTeamId,
-                milestone.title,
-                milestone.description
-            );
-
-            if (
-                !cycleResponse?.data?.cycleCreate?.cycle ||
-                !cycleResponse?.data?.cycleCreate?.cycle?.id
-            ) {
-                const error = `Could not create cycle "${milestone.title}" for ${repoName}`;
-                console.log(error);
-                throw new ApiError(error, 500);
-            } else {
-                await prisma.milestone.create({
-                    data: {
-                        cycleId: cycleResponse?.data?.cycleCreate?.cycle?.id,
-                        linearTeamId: linearTeamId,
-                        milestoneId: milestone.number,
-                        githubRepoId: repository.id
-                    }
-                });
-
-                const result = `Created cycle "${milestone.title}" for ${repoName}`;
-                console.log(result);
-                return result;
-            }
-        } else if (action === "edited") {
+        if (action === "edited") {
             if (!syncedMilestone?.cycleId) {
                 const reason = `Skipping over update for milestone "${milestone.title}" because it is not synced`;
                 console.log(reason);
@@ -209,7 +174,8 @@ export async function githubWebhookHandler(
                 linearKey,
                 syncedMilestone.cycleId,
                 milestone.title,
-                milestone.description
+                milestone.description,
+                new Date(milestone.due_on)
             );
 
             if (!cycleResponse?.data?.cycleUpdate?.success) {
@@ -541,7 +507,16 @@ export async function githubWebhookHandler(
                     cycleId: null
                 }
             );
-            console.log("Removed cycle");
+
+            if (!response?.success) {
+                const reason = `Failed to remove Linear ticket from cycle for GitHub issue #${issue.number}.`;
+                console.log(reason);
+                throw new ApiError(reason, 500);
+            } else {
+                const reason = `Removed Linear ticket from cycle for GitHub issue #${issue.number}.`;
+                console.log(reason);
+                return reason;
+            }
         }
 
         let syncedMilestone = await prisma.milestone.findFirst({
@@ -551,6 +526,7 @@ export async function githubWebhookHandler(
             }
         });
 
+        // Create cycle for milestone
         if (!syncedMilestone) {
             const endDate = new Date();
             const startDate = new Date();
@@ -588,8 +564,6 @@ export async function githubWebhookHandler(
             console.log(reason);
             return reason;
         }
-    } else {
-        console.log("action", action);
     }
 }
 

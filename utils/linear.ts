@@ -149,20 +149,23 @@ export const updateLinearCycle = async (
     token: string,
     cycleId: string,
     name?: string,
-    description?: string
+    description?: string,
+    endDate?: Date
 ): Promise<{
     data: { cycleUpdate: { success: boolean } };
 }> => {
     const mutation = `mutation UpdateCycle(
         $cycleId: String!,
         $name: String,
-        $description: String
+        $description: String,
+        $endsAt: DateTime
     ) {
         cycleUpdate(
             id: $cycleId,
             input: {
                 name: $name,
-                description: $description
+                description: $description,
+                endsAt: $endsAt
             }
         ) {
             success
@@ -173,7 +176,8 @@ export const updateLinearCycle = async (
         cycleId,
         // Only include the fields that are defined to avoid server error
         ...(name && { name }),
-        ...(description && { description })
+        ...(description && { description }),
+        ...(endDate && { endsAt: endDate })
     });
 };
 
