@@ -40,7 +40,9 @@ model LinearTeam {
     Sync Sync[]
 
     SyncedIssue SyncedIssue[]
-    Milestone   Milestone[]
+
+    Milestone       Milestone[]
+    syncsMilestones Boolean?    @default(false)
 
     @@map("linear_teams")
 }
@@ -100,7 +102,7 @@ model Milestone {
     id String @id @default(cuid())
 
     milestoneId Int
-    projectId   String
+    cycleId     String
 
     GitHubRepo   GitHubRepo @relation(fields: [githubRepoId], references: [repoId])
     githubRepoId Int
@@ -108,6 +110,6 @@ model Milestone {
     LinearTeam   LinearTeam @relation(fields: [linearTeamId], references: [teamId])
     linearTeamId String
 
-    @@unique([milestoneId, githubRepoId, projectId, linearTeamId])
-    @@map("projects")
+    @@unique([milestoneId, githubRepoId, cycleId, linearTeamId])
+    @@map("milestones")
 }
