@@ -85,7 +85,8 @@ export async function githubWebhookHandler(
             doneStateId,
             toDoStateId,
             canceledStateId,
-            teamId: linearTeamId
+            teamId: linearTeamId,
+            syncsMilestones
         },
         GitHubRepo: { repoName }
     } = sync;
@@ -517,6 +518,78 @@ export async function githubWebhookHandler(
                 return reason;
             }
         }
+    } else if (["milestoned", "demilestoned"].includes(action)) {
+        // Milestone added or removed from issue
+
+        if (!syncedIssue) {
+            const reason = skipReason("milestone", issue.number);
+            console.log(reason);
+            return reason;
+        }
+
+        if (!syncsMilestones) {
+            const reason = `Skipping milestone change for issue #${issue.number} as no milestone was found.`;
+            console.log(reason);
+            return reason;
+        }
+
+        const { milestone } = issue;
+        if (milestone === null) {
+            const response = await linear.issueUpdate(
+                syncedIssue.linearIssueId,
+                {
+                    cycleId: null
+                }
+            );
+            console.log("Removed cycle");
+        }
+
+        let syncedMilestone = await prisma.milestone.findFirst({
+            where: {
+                milestoneId: milestone.id,
+                githubRepoId: repository.id
+            }
+        });
+
+        if (!syncedMilestone) {
+            const endDate = new Date();
+            const startDate = new Date();
+            const createdCycleResponse = await linear.cycleCreate({
+                name: milestone.title,
+                teamId: linearTeamId,
+                endsAt: milestone.due_on
+                    ? new Date(milestone.due_on)
+                    : new Date(endDate.getDate() + 14),
+                startsAt: startDate
+            });
+
+            const createdCycle = await createdCycleResponse.cycle;
+
+            syncedMilestone = await prisma.milestone.create({
+                data: {
+                    milestoneId: milestone.id,
+                    githubRepoId: repository.id,
+                    cycleId: createdCycle.id,
+                    linearTeamId: linearTeamId
+                }
+            });
+        }
+
+        const response = await linear.issueUpdate(syncedIssue.linearIssueId, {
+            cycleId: syncedMilestone.cycleId
+        });
+
+        if (!response?.success) {
+            const reason = `Failed to add Linear ticket to cycle for GitHub issue #${issue.number}.`;
+            console.log(reason);
+            throw new ApiError(reason, 500);
+        } else {
+            const reason = `Added Linear ticket to cycle for GitHub issue #${issue.number}.`;
+            console.log(reason);
+            return reason;
+        }
+    } else {
+        console.log("action", action);
     }
 }
 
