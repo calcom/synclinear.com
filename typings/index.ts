@@ -20,6 +20,7 @@ interface LinearData {
     startedAt: string;
     teamId: string;
     projectId: string;
+    cycleId?: string;
     // previousIdentifiers: string[];
     creatorId: string;
     userId?: string;
@@ -85,4 +86,3 @@ export interface Sync {
 
 export type MilestoneState = "open" | "closed";
 
-export type LinearProjectState = "started" | "backlog";

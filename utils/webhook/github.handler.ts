@@ -18,9 +18,9 @@ import {
     User
 } from "@octokit/webhooks-types";
 import {
-    createLinearProject,
+    createLinearCycle,
     generateLinearUUID,
-    updateLinearProject
+    updateLinearCycle
 } from "../linear";
 import { LINEAR } from "../constants";
 import got from "got";
@@ -163,7 +163,7 @@ export async function githubWebhookHandler(
                 return reason;
             }
 
-            const projectResponse = await createLinearProject(
+            const cycleResponse = await createLinearCycle(
                 linearKey,
                 linearTeamId,
                 milestone.title,
@@ -171,29 +171,28 @@ export async function githubWebhookHandler(
             );
 
             if (
-                !projectResponse?.data?.projectCreate?.success ||
-                !projectResponse?.data?.projectCreate?.project?.id
+                !cycleResponse?.data?.cycleCreate?.cycle ||
+                !cycleResponse?.data?.cycleCreate?.cycle?.id
             ) {
-                const error = `Could not create project "${milestone.title}" for ${repoName}`;
+                const error = `Could not create cycle "${milestone.title}" for ${repoName}`;
                 console.log(error);
                 throw new ApiError(error, 500);
             } else {
                 await prisma.milestone.create({
                     data: {
-                        projectId:
-                            projectResponse?.data?.projectCreate?.project?.id,
+                        cycleId: cycleResponse?.data?.cycleCreate?.cycle?.id,
                         linearTeamId: linearTeamId,
                         milestoneId: milestone.number,
                         githubRepoId: repository.id
                     }
                 });
 
-                const result = `Created project "${milestone.title}" for ${repoName}`;
+                const result = `Created cycle "${milestone.title}" for ${repoName}`;
                 console.log(result);
                 return result;
             }
         } else if (action === "edited") {
-            if (!syncedMilestone?.projectId) {
+            if (!syncedMilestone?.cycleId) {
                 const reason = `Skipping over update for milestone "${milestone.title}" because it is not synced`;
                 console.log(reason);
                 return reason;
@@ -205,22 +204,19 @@ export async function githubWebhookHandler(
                 return reason;
             }
 
-            const state = milestone.state === "closed" ? "backlog" : "started";
-
-            const projectResponse = await updateLinearProject(
+            const cycleResponse = await updateLinearCycle(
                 linearKey,
-                syncedMilestone.projectId,
+                syncedMilestone.cycleId,
                 milestone.title,
-                milestone.description,
-                state
+                milestone.description
             );
 
-            if (!projectResponse?.data?.projectUpdate?.success) {
-                const error = `Could not update project "${milestone.title}" for ${repoName}`;
+            if (!cycleResponse?.data?.cycleUpdate?.success) {
+                const error = `Could not update cycle "${milestone.title}" for ${repoName}`;
                 console.log(error);
                 throw new ApiError(error, 500);
             } else {
-                const result = `Updated project "${milestone.title}" for ${repoName}`;
+                const result = `Updated cycle "${milestone.title}" for ${repoName}`;
                 console.log(result);
                 return result;
             }

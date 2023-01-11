@@ -3,7 +3,7 @@ import { getWebhookURL, getSyncFooter } from ".";
 import { linearQuery } from "./apollo";
 import { LINEAR, GENERAL, GITHUB } from "./constants";
 import { v4 as uuid } from "uuid";
-import { LinearProjectState, LinearTeam } from "../typings";
+import { LinearTeam } from "../typings";
 
 export const getLinearTokenURL = (): string => {
     const baseURL = LINEAR.NEW_TOKEN_URL;
@@ -111,31 +111,28 @@ export const createLinearPublicLabel = async (
     return await linearQuery(mutation, token, { teamID });
 };
 
-export const createLinearProject = async (
+export const createLinearCycle = async (
     token: string,
     teamId: string,
     title: string,
-    description?: string,
-    state?: LinearProjectState
+    description?: string
 ): Promise<{
-    data: { projectCreate: { success: boolean; project: { id: string } } };
+    data: { cycleCreate: { success: boolean; cycle: { id: string } } };
 }> => {
-    const mutation = `mutation CreateProject(
+    const mutation = `mutation CreateCycle(
         $teamId: String!,
         $title: String!,
-        $state: String,
         $description: String
     ) {
-        projectCreate(
+        cycleCreate(
             input: {
                 name: $title,
                 description: $description,
-                state: $state,
                 teamIds: [$teamId],
             }
         ) {
             success
-            project {
+            cycle {
                 id
             }
         }
@@ -144,31 +141,27 @@ export const createLinearProject = async (
     return await linearQuery(mutation, token, {
         teamId,
         title,
-        ...(description && { description }),
-        state: state || "backlog"
+        ...(description && { description })
     });
 };
 
-export const updateLinearProject = async (
+export const updateLinearCycle = async (
     token: string,
-    projectId: string,
+    cycleId: string,
     name?: string,
-    description?: string,
-    state?: LinearProjectState
+    description?: string
 ): Promise<{
-    data: { projectUpdate: { success: boolean } };
+    data: { cycleUpdate: { success: boolean } };
 }> => {
-    const mutation = `mutation UpdateProject(
-        $projectId: String!,
+    const mutation = `mutation UpdateCycle(
+        $cycleId: String!,
         $name: String,
-        $state: String,
         $description: String
     ) {
-        projectUpdate(
-            id: $projectId,
+        cycleUpdate(
+            id: $cycleId,
             input: {
                 name: $name,
-                state: $state,
                 description: $description
             }
         ) {
@@ -177,11 +170,10 @@ export const updateLinearProject = async (
     }`;
 
     return await linearQuery(mutation, token, {
-        projectId,
+        cycleId,
         // Only include the fields that are defined to avoid server error
         ...(name && { name }),
-        ...(description && { description }),
-        ...(state && { state })
+        ...(description && { description })
     });
 };
 
