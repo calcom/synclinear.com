@@ -98,8 +98,12 @@ export const GENERAL = {
             githubField: "Label"
         },
         {
-            linearField: "Project",
-            githubField: "Milestone"
+            linearField: "Cycle",
+            githubField: "Milestone",
+            toGithub: true,
+            toLinear: true,
+            notes: "Optional. Milestone due date syncs to cycle end date."
         }
     ]
 };
+
