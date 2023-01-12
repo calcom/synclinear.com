@@ -54,6 +54,27 @@ export const saveGitHubContext = async (
     return response.json();
 };
 
+export const getRepoWebhook = async (
+    repoName: string,
+    token: string
+): Promise<any> => {
+    const webhookUrl = getWebhookURL();
+
+    const response = await fetch(`/api/github/webhook`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            repoName,
+            webhookUrl
+        })
+    });
+
+    return await response.json();
+};
+
 export const setGitHubWebook = async (
     token: string,
     repo: GitHubRepo,
@@ -76,6 +97,37 @@ export const setGitHubWebook = async (
         `https://api.github.com/repos/${repo.name}/hooks`,
         {
             method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/vnd.github+json"
+            },
+            body: JSON.stringify(webhookData)
+        }
+    );
+
+    return await response.json();
+};
+
+export const updateGitHubWebhook = async (
+    token: string,
+    repoName: string,
+    milestoneEvents: boolean
+): Promise<any> => {
+    const webhookData = {
+        ...(milestoneEvents && { add_events: ["milestone"] }),
+        ...(!milestoneEvents && { remove_events: ["milestone"] })
+    };
+
+    const webhook = await getRepoWebhook(repoName, token);
+    if (!webhook.id) {
+        console.error(`Could not find webhook for ${repoName}.`);
+        return;
+    }
+
+    const response = await fetch(
+        `https://api.github.com/repos/${repoName}/hooks/${webhook.id}`,
+        {
+            method: "PATCH",
             headers: {
                 Authorization: `Bearer ${token}`,
                 Accept: "application/vnd.github+json"
@@ -112,27 +164,6 @@ export const getGitHubRepos = async (token: string): Promise<any> => {
 export const getGitHubUser = async (token: string): Promise<any> => {
     const response = await fetch(GITHUB.USER_ENDPOINT, {
         headers: { Authorization: `Bearer ${token}` }
-    });
-
-    return await response.json();
-};
-
-export const getRepoWebhook = async (
-    repoName: string,
-    token: string
-): Promise<any> => {
-    const webhookUrl = getWebhookURL();
-
-    const response = await fetch(`/api/github/webhook`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-            repoName,
-            webhookUrl
-        })
     });
 
     return await response.json();

@@ -1,5 +1,6 @@
 import { Cross1Icon, WidthIcon } from "@radix-ui/react-icons";
 import React, { useContext, useState } from "react";
+import { updateGitHubWebhook } from "../utils/github";
 import { Context } from "./ContextProvider";
 import Tooltip from "./Tooltip";
 
@@ -33,12 +34,37 @@ const Dashboard = () => {
             });
     };
 
+    const handleMilestoneSyncChange = async (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        setLoading(true);
+
+        const checked = e.target.checked || false;
+        await updateGitHubWebhook(
+            gitHubToken,
+            syncs[0].GitHubRepo.repoName,
+            checked
+        );
+
+        setLoading(false);
+    };
+
     if (!syncs?.length) return <></>;
 
     return (
         <div className="center space-y-4">
-            <h3>Your active syncs</h3>
             {loading && <p className="animate-pulse">Loading...</p>}
+            <div className="flex items-center space-x-2 mb-4">
+                <input
+                    type="checkbox"
+                    id="syncsMilestones"
+                    onChange={handleMilestoneSyncChange}
+                />
+                <label htmlFor="syncsMilestones" className="whitespace-nowrap">
+                    Sync milestones to cycles
+                </label>
+            </div>
+            <h3>Your active syncs</h3>
             {syncs.map((sync, index) => (
                 <div
                     key={index}

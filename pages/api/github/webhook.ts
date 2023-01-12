@@ -35,14 +35,14 @@ export default async function handle(
         );
         const repoHooks = await repoHooksResponse.json();
 
-        const hookExists = repoHooks.some(
+        const hook = repoHooks.find(
             hook =>
                 hook.config?.url === webhookUrl &&
                 hook.config?.insecure_ssl === "0" &&
                 hook.active === true
         );
 
-        return res.status(200).json({ exists: hookExists });
+        return res.status(200).json({ exists: !!hook, id: hook?.id });
     } catch (err) {
         return res.status(404).send({ error: err });
     }
