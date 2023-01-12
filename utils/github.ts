@@ -197,3 +197,24 @@ export const updateMilestone = async (
     return response;
 };
 
+export const setIssueMilestone = async (
+    token: string,
+    repoName: string,
+    issueNumber: number,
+    milestoneId: number | null
+): Promise<any> => {
+    const response = await fetch(
+        `https://api.github.com/repos/${repoName}/issues/${issueNumber}`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: "application/vnd.github+json"
+            },
+            method: "PATCH",
+            body: JSON.stringify({ milestone: milestoneId })
+        }
+    );
+
+    return response;
+};
+
