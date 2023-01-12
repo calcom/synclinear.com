@@ -106,7 +106,14 @@ export const getAttachmentQuery = (
 };
 
 export const skipReason = (
-    event: "issue" | "edit" | "comment" | "state change" | "label" | "assignee",
+    event:
+        | "issue"
+        | "edit"
+        | "milestone"
+        | "comment"
+        | "state change"
+        | "label"
+        | "assignee",
     issueNumber: number | string,
     causedBySync: boolean = false
 ): string => {

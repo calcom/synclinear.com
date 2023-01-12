@@ -41,6 +41,9 @@ model LinearTeam {
 
     SyncedIssue SyncedIssue[]
 
+    Milestone       Milestone[]
+    syncsMilestones Boolean?    @default(false)
+
     @@map("linear_teams")
 }
 
@@ -55,6 +58,7 @@ model GitHubRepo {
     Sync Sync[]
 
     SyncedIssue SyncedIssue[]
+    Milestone   Milestone[]
 
     @@map("github_repos")
 }
@@ -92,4 +96,20 @@ model User {
 
     @@unique([githubUserId, linearUserId])
     @@map("users")
+}
+
+model Milestone {
+    id String @id @default(cuid())
+
+    milestoneId Int
+    cycleId     String
+
+    GitHubRepo   GitHubRepo @relation(fields: [githubRepoId], references: [repoId])
+    githubRepoId Int
+
+    LinearTeam   LinearTeam @relation(fields: [linearTeamId], references: [teamId])
+    linearTeamId String
+
+    @@unique([milestoneId, githubRepoId, cycleId, linearTeamId])
+    @@map("milestones")
 }
