@@ -484,17 +484,14 @@ export async function githubWebhookHandler(
                 return reason;
             }
         }
-    } else if (["milestoned", "demilestoned"].includes(action)) {
+    } else if (
+        ["milestoned", "demilestoned"].includes(action) &&
+        syncsMilestones
+    ) {
         // Milestone added or removed from issue
 
         if (!syncedIssue) {
             const reason = skipReason("milestone", issue.number);
-            console.log(reason);
-            return reason;
-        }
-
-        if (!syncsMilestones) {
-            const reason = `Skipping milestone change for issue #${issue.number} as no milestone was found.`;
             console.log(reason);
             return reason;
         }
