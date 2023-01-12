@@ -111,13 +111,8 @@ export const setGitHubWebook = async (
 export const updateGitHubWebhook = async (
     token: string,
     repoName: string,
-    milestoneEvents: boolean
+    updates: { add_events?: string[]; remove_events?: string[] }
 ): Promise<any> => {
-    const webhookData = {
-        ...(milestoneEvents && { add_events: ["milestone"] }),
-        ...(!milestoneEvents && { remove_events: ["milestone"] })
-    };
-
     const webhook = await getRepoWebhook(repoName, token);
     if (!webhook.id) {
         console.error(`Could not find webhook for ${repoName}.`);
@@ -132,7 +127,7 @@ export const updateGitHubWebhook = async (
                 Authorization: `Bearer ${token}`,
                 Accept: "application/vnd.github+json"
             },
-            body: JSON.stringify(webhookData)
+            body: JSON.stringify(updates)
         }
     );
 

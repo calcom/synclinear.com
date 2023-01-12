@@ -11,7 +11,8 @@ export const LINEAR = {
     IP_ORIGINS: ["35.231.147.226", "35.243.134.228"],
     STORAGE_KEY: "linear-context",
     APP_URL: "https://linear.app",
-    GITHUB_LABEL: "linear"
+    GITHUB_LABEL: "linear",
+    WEBHOOK_EVENTS: ["Issue", "Comment", "IssueLabel"]
 };
 
 export const SHARED = {
