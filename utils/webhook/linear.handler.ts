@@ -581,7 +581,7 @@ export async function linearWebhookHandler(
         }
 
         // Cycle change
-        if (updatedFrom.cycleId && actionType === "Issue") {
+        if ("cycleId" in updatedFrom && actionType === "Issue") {
             if (!syncedIssue) {
                 const reason = skipReason("milestone", ticketName);
                 console.log(reason);
