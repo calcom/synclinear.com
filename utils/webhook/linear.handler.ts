@@ -627,7 +627,7 @@ export async function linearWebhookHandler(
                     githubKey,
                     syncedIssue.GitHubRepo.repoName,
                     cycle.name || `Cycle ${cycle.number}`,
-                    "From SyncLinear.com",
+                    getSyncFooter(),
                     state
                 );
 

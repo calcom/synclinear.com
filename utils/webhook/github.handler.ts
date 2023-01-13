@@ -4,6 +4,7 @@ import {
     decrypt,
     formatJSON,
     getAttachmentQuery,
+    getSyncFooter,
     replaceImgTags,
     skipReason
 } from "../index";
@@ -163,12 +164,18 @@ export async function githubWebhookHandler(
                 return reason;
             }
 
+            if (milestone.description?.includes(getSyncFooter())) {
+                const reason = `Skipping over update for milestone "${milestone.title}" because it is caused by sync`;
+                console.log(reason);
+                return reason;
+            }
+
             const cycleResponse = await updateLinearCycle(
                 linearKey,
                 syncedMilestone.cycleId,
                 milestone.title,
-                milestone.description,
-                new Date(milestone.due_on)
+                `${milestone.description}\n\n> ${getSyncFooter()}`,
+                milestone.due_on ? new Date(milestone.due_on) : null
             );
 
             if (!cycleResponse?.data?.cycleUpdate?.success) {
@@ -506,6 +513,12 @@ export async function githubWebhookHandler(
             }
         }
 
+        if (milestone.description?.includes(getSyncFooter())) {
+            const reason = `Skipping over milestone "${milestone.title}" because it is caused by sync`;
+            console.log(reason);
+            return reason;
+        }
+
         let syncedMilestone = await prisma.milestone.findFirst({
             where: {
                 milestoneId: milestone.number,
@@ -518,8 +531,8 @@ export async function githubWebhookHandler(
                 linearKey,
                 linearTeamId,
                 milestone.title,
-                milestone.description,
-                new Date(milestone.due_on)
+                `${milestone.description}\n\n> ${getSyncFooter()}`,
+                milestone.due_on ? new Date(milestone.due_on) : null
             );
 
             if (!createdCycle?.data?.cycleCreate?.cycle?.id) {
