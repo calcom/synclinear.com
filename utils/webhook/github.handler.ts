@@ -163,12 +163,6 @@ export async function githubWebhookHandler(
                 return reason;
             }
 
-            if (milestone.description?.includes("on Linear</sub>")) {
-                const reason = `Skipping over update for milestone "${milestone.title}" because it is caused by sync`;
-                console.log(reason);
-                return reason;
-            }
-
             const cycleResponse = await updateLinearCycle(
                 linearKey,
                 syncedMilestone.cycleId,
