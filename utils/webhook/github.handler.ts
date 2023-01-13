@@ -85,8 +85,7 @@ export async function githubWebhookHandler(
             doneStateId,
             toDoStateId,
             canceledStateId,
-            teamId: linearTeamId,
-            syncsMilestones
+            teamId: linearTeamId
         },
         GitHubRepo: { repoName }
     } = sync;
@@ -146,7 +145,7 @@ export async function githubWebhookHandler(
         await createLinearComment(linear, syncedIssue, modifiedComment, issue);
     }
 
-    if (githubEvent === "milestone" && syncsMilestones) {
+    if (githubEvent === "milestone") {
         const { milestone } = body as MilestoneEvent;
         if (!milestone) throw new ApiError("No milestone found", 404);
 
@@ -484,10 +483,7 @@ export async function githubWebhookHandler(
                 return reason;
             }
         }
-    } else if (
-        ["milestoned", "demilestoned"].includes(action) &&
-        syncsMilestones
-    ) {
+    } else if (["milestoned", "demilestoned"].includes(action)) {
         // Milestone added or removed from issue
 
         if (!syncedIssue) {

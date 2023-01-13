@@ -74,12 +74,7 @@ export async function linearWebhookHandler(
         githubApiKey,
         githubUserId,
         githubApiKeyIV,
-        LinearTeam: {
-            publicLabelId,
-            doneStateId,
-            canceledStateId,
-            syncsMilestones
-        },
+        LinearTeam: { publicLabelId, doneStateId, canceledStateId },
         GitHubRepo: { repoName: repoFullName, repoId }
     } = sync;
 
@@ -586,7 +581,7 @@ export async function linearWebhookHandler(
         }
 
         // Cycle change
-        if (updatedFrom.cycleId && actionType === "Issue" && syncsMilestones) {
+        if (updatedFrom.cycleId && actionType === "Issue") {
             if (!syncedIssue) {
                 const reason = skipReason("milestone", ticketName);
                 console.log(reason);
