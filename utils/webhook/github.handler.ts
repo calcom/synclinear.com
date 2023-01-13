@@ -4,6 +4,7 @@ import {
     decrypt,
     formatJSON,
     getAttachmentQuery,
+    getSyncFooter,
     replaceImgTags,
     skipReason
 } from "../index";
@@ -13,17 +14,22 @@ import {
     Issue,
     IssueCommentCreatedEvent,
     IssuesEvent,
+    MilestoneEvent,
     Repository,
     User
 } from "@octokit/webhooks-types";
-import { generateLinearUUID } from "../linear";
+import {
+    createLinearCycle,
+    generateLinearUUID,
+    updateLinearCycle
+} from "../linear";
 import { LINEAR } from "../constants";
 import got from "got";
 import { linearQuery } from "../apollo";
 import { ApiError } from "../errors";
 
 export async function githubWebhookHandler(
-    body: IssuesEvent | IssueCommentCreatedEvent,
+    body: IssuesEvent | IssueCommentCreatedEvent | MilestoneEvent,
     signature: string,
     githubEvent: string
 ) {
@@ -43,7 +49,11 @@ export async function githubWebhookHandler(
     if (!sync?.LinearTeam || !sync?.GitHubRepo) {
         // Commenter is not found, post as application
         if (githubEvent === "issue_comment" && action === "created") {
-            await createAnonymousUserComment(body, repository, sender);
+            await createAnonymousUserComment(
+                body as IssueCommentCreatedEvent,
+                repository,
+                sender
+            );
             return;
         }
 
@@ -118,7 +128,7 @@ export async function githubWebhookHandler(
     if (githubEvent === "issue_comment" && action === "created") {
         // Comment created
 
-        const { comment }: IssueCommentCreatedEvent = body;
+        const { comment } = body as IssueCommentCreatedEvent;
 
         if (comment.body.includes("on Linear")) {
             console.log(skipReason("comment", issue.number, true));
@@ -134,6 +144,50 @@ export async function githubWebhookHandler(
 
         const modifiedComment = await prepareCommentContent(comment.body);
         await createLinearComment(linear, syncedIssue, modifiedComment, issue);
+    }
+
+    if (githubEvent === "milestone") {
+        const { milestone } = body as MilestoneEvent;
+        if (!milestone) throw new ApiError("No milestone found", 404);
+
+        const syncedMilestone = await prisma.milestone.findFirst({
+            where: {
+                milestoneId: milestone.id,
+                githubRepoId: repository.id
+            }
+        });
+
+        if (action === "edited") {
+            if (!syncedMilestone?.cycleId) {
+                const reason = `Skipping over update for milestone "${milestone.title}" because it is not synced`;
+                console.log(reason);
+                return reason;
+            }
+
+            if (milestone.description?.includes(getSyncFooter())) {
+                const reason = `Skipping over update for milestone "${milestone.title}" because it is caused by sync`;
+                console.log(reason);
+                return reason;
+            }
+
+            const cycleResponse = await updateLinearCycle(
+                linearKey,
+                syncedMilestone.cycleId,
+                milestone.title,
+                `${milestone.description}\n\n> ${getSyncFooter()}`,
+                milestone.due_on ? new Date(milestone.due_on) : null
+            );
+
+            if (!cycleResponse?.data?.cycleUpdate?.success) {
+                const error = `Could not update cycle "${milestone.title}" for ${repoName}`;
+                console.log(error);
+                throw new ApiError(error, 500);
+            } else {
+                const result = `Updated cycle "${milestone.title}" for ${repoName}`;
+                console.log(result);
+                return result;
+            }
+        }
     }
 
     // Ensure the event is for an issue
@@ -429,6 +483,86 @@ export async function githubWebhookHandler(
                 console.log(reason);
                 return reason;
             }
+        }
+    } else if (["milestoned", "demilestoned"].includes(action)) {
+        // Milestone added or removed from issue
+
+        if (!syncedIssue) {
+            const reason = skipReason("milestone", issue.number);
+            console.log(reason);
+            return reason;
+        }
+
+        const { milestone } = issue;
+        if (milestone === null) {
+            const response = await linear.issueUpdate(
+                syncedIssue.linearIssueId,
+                {
+                    cycleId: null
+                }
+            );
+
+            if (!response?.success) {
+                const reason = `Failed to remove Linear ticket from cycle for GitHub issue #${issue.number}.`;
+                console.log(reason);
+                throw new ApiError(reason, 500);
+            } else {
+                const reason = `Removed Linear ticket from cycle for GitHub issue #${issue.number}.`;
+                console.log(reason);
+                return reason;
+            }
+        }
+
+        if (milestone.description?.includes(getSyncFooter())) {
+            const reason = `Skipping over milestone "${milestone.title}" because it is caused by sync`;
+            console.log(reason);
+            return reason;
+        }
+
+        let syncedMilestone = await prisma.milestone.findFirst({
+            where: {
+                milestoneId: milestone.number,
+                githubRepoId: repository.id
+            }
+        });
+
+        if (!syncedMilestone) {
+            const createdCycle = await createLinearCycle(
+                linearKey,
+                linearTeamId,
+                milestone.title,
+                `${milestone.description}\n\n> ${getSyncFooter()}`,
+                milestone.due_on ? new Date(milestone.due_on) : null
+            );
+
+            if (!createdCycle?.data?.cycleCreate?.cycle?.id) {
+                const reason = `Failed to create Linear cycle for GitHub milestone #${milestone.number}.`;
+                console.log(reason);
+                throw new ApiError(reason, 500);
+            }
+
+            syncedMilestone = await prisma.milestone.create({
+                data: {
+                    milestoneId: milestone.number,
+                    githubRepoId: repository.id,
+                    cycleId: createdCycle.data.cycleCreate.cycle.id,
+                    linearTeamId: linearTeamId
+                }
+            });
+        }
+
+        const response = await linear.issueUpdate(syncedIssue.linearIssueId, {
+            cycleId: syncedMilestone.cycleId
+        });
+
+        if (!response?.success) {
+            const reason = `Failed to add Linear ticket to cycle for GitHub issue #${issue.number}.`;
+            console.log(reason);
+            throw new ApiError(reason, 500);
+        } else {
+            const reason = `Added Linear ticket to cycle for GitHub issue #${issue.number}.`;
+            console.log(reason);
+            return reason;
         }
     }
 }

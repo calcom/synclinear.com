@@ -20,6 +20,7 @@ interface LinearData {
     startedAt: string;
     teamId: string;
     projectId: string;
+    cycleId?: string;
     // previousIdentifiers: string[];
     creatorId: string;
     userId?: string;
@@ -82,4 +83,6 @@ export interface Sync {
     LinearTeam: { id: string; teamName: string };
     GitHubRepo: { id: string; repoName: string };
 }
+
+export type MilestoneState = "open" | "closed";
 

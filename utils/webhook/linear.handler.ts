@@ -1,5 +1,5 @@
 import { GITHUB, LINEAR, SHARED } from "../constants";
-import { LinearWebhookPayload } from "../../typings";
+import { LinearWebhookPayload, MilestoneState } from "../../typings";
 import prisma from "../../prisma";
 import {
     decrypt,
@@ -14,7 +14,7 @@ import got from "got";
 import { inviteMember } from "../linear";
 import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
-import { getGitHubFooter } from "../github";
+import { createMilestone, getGitHubFooter, setIssueMilestone } from "../github";
 import { ApiError, getIssueUpdateError, getOtherUpdateError } from "../errors";
 
 export async function linearWebhookHandler(
@@ -68,6 +68,7 @@ export async function linearWebhookHandler(
 
     const {
         linearUserId,
+        linearTeamId,
         linearApiKey,
         linearApiKeyIV,
         githubApiKey,
@@ -577,6 +578,91 @@ export async function linearWebhookHandler(
                             `Updated GitHub issue description for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
                         );
                 });
+        }
+
+        // Cycle change
+        if (updatedFrom.cycleId && actionType === "Issue") {
+            if (!syncedIssue) {
+                const reason = skipReason("milestone", ticketName);
+                console.log(reason);
+                return reason;
+            }
+
+            if (!data.cycleId) {
+                const response = await setIssueMilestone(
+                    githubKey,
+                    syncedIssue.GitHubRepo.repoName,
+                    syncedIssue.githubIssueNumber,
+                    null
+                );
+
+                if (response.status > 201) {
+                    const reason = `Could not remove milestone for ${ticketName}.`;
+                    console.log(reason);
+                    throw new ApiError(reason, 500);
+                } else {
+                    const reason = `Removed milestone for ${ticketName}.`;
+                    console.log(reason);
+                    return reason;
+                }
+            }
+
+            let syncedMilestone = await prisma.milestone.findFirst({
+                where: {
+                    cycleId: data.cycleId,
+                    linearTeamId: linearTeamId
+                }
+            });
+
+            if (!syncedMilestone) {
+                const cycle = await linear.cycle(data.cycleId);
+
+                // Create milestone, considered "closed" if cycle has ended
+                const today = new Date();
+                const state: MilestoneState =
+                    cycle.startsAt < today && cycle.endsAt > today
+                        ? "open"
+                        : "closed";
+                const createdMilestone = await createMilestone(
+                    githubKey,
+                    syncedIssue.GitHubRepo.repoName,
+                    cycle.name || `Cycle ${cycle.number}`,
+                    getSyncFooter(),
+                    state
+                );
+
+                if (!createdMilestone?.milestoneId) {
+                    const reason = `Could not create milestone for ${ticketName}.`;
+                    console.log(reason);
+                    throw new ApiError(reason, 500);
+                }
+
+                syncedMilestone = await prisma.milestone.create({
+                    data: {
+                        milestoneId: createdMilestone.milestoneId,
+                        cycleId: cycle.id,
+                        linearTeamId: linearTeamId,
+                        githubRepoId: syncedIssue.githubRepoId
+                    }
+                });
+            }
+
+            const response = await setIssueMilestone(
+                githubKey,
+                syncedIssue.GitHubRepo.repoName,
+                syncedIssue.githubIssueNumber,
+                syncedMilestone.milestoneId
+            );
+
+            if (response.status > 201) {
+                const reason = `Could not add milestone for ${ticketName}.`;
+                console.log(reason);
+                throw new ApiError(reason, 500);
+            } else {
+                const reason = `Added milestone to #${syncedIssue.githubIssueNumber} for ${ticketName}.`;
+                console.log(reason);
+                return reason;
+            }
         }
 
         // State change (eg. "Open" to "Done")
@@ -1099,9 +1185,5 @@ export async function linearWebhookHandler(
                 );
             }
         }
-    }
-
-    if (actionType === "Project") {
-        console.log("Project event received.");
     }
 }

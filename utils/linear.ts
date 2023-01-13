@@ -4,6 +4,7 @@ import { linearQuery } from "./apollo";
 import { LINEAR, GENERAL, GITHUB } from "./constants";
 import { v4 as uuid } from "uuid";
 import { LinearTeam } from "../typings";
+import { WebhookUpdateInput } from "@linear/sdk/dist/_generated_documents";
 
 export const getLinearTokenURL = (): string => {
     const baseURL = LINEAR.NEW_TOKEN_URL;
@@ -65,6 +66,35 @@ export const getLinearContext = async (token: string) => {
     return await linearQuery(query, token);
 };
 
+export const getLinearWebhook = async (token: string, teamName: string) => {
+    const callbackURL = getWebhookURL();
+
+    const query = `query GetWebhook {
+        webhooks {
+            nodes {
+                url
+                id
+                team {
+                    name
+                }
+            }
+        }
+    }`;
+
+    const response = await linearQuery(query, token);
+    if (!response?.data) {
+        console.error("No webhook response from Linear");
+        return null;
+    }
+
+    const webhook = response.data.webhooks?.nodes?.find(
+        webhook =>
+            webhook.url === callbackURL && webhook.team?.name === teamName
+    );
+
+    return webhook;
+};
+
 export const setLinearWebhook = async (token: string, teamID: string) => {
     const callbackURL = getWebhookURL();
 
@@ -88,6 +118,32 @@ export const setLinearWebhook = async (token: string, teamID: string) => {
     return await linearQuery(mutation, token, { callbackURL, teamID });
 };
 
+export const updateLinearWebhook = async (
+    token: string,
+    teamId: string,
+    updates: WebhookUpdateInput
+) => {
+    const webhook = await getLinearWebhook(token, teamId);
+    if (!webhook?.id) {
+        console.error(`Could not find webhook for Linear team ${teamId}`);
+        return;
+    }
+
+    const mutation = `mutation UpdateWebhook($input: WebhookUpdateInput!, $webhookId: String!) {
+        webhookUpdate(
+            id: $webhookId,
+            input: $input
+        ) {
+            success
+        }
+    }`;
+
+    return await linearQuery(mutation, token, {
+        webhookId: webhook.id,
+        input: updates
+    });
+};
+
 export const createLinearPublicLabel = async (
     token: string,
     teamID: string
@@ -109,6 +165,83 @@ export const createLinearPublicLabel = async (
     }`;
 
     return await linearQuery(mutation, token, { teamID });
+};
+
+export const createLinearCycle = async (
+    token: string,
+    teamId: string,
+    title: string,
+    description?: string,
+    endDate?: Date
+): Promise<{
+    data: { cycleCreate: { success: boolean; cycle: { id: string } } };
+}> => {
+    const mutation = `mutation CreateCycle(
+        $teamId: String!,
+        $title: String!,
+        $description: String,
+        $startsAt: DateTime!,
+        $endsAt: DateTime!
+    ) {
+        cycleCreate(
+            input: {
+                name: $title,
+                description: $description,
+                teamId: $teamId,
+                startsAt: $startsAt,
+                endsAt: $endsAt
+            }
+        ) {
+            success
+            cycle {
+                id
+            }
+        }
+    }`;
+
+    return await linearQuery(mutation, token, {
+        teamId,
+        title,
+        ...(description && { description }),
+        ...(endDate && { endsAt: endDate }),
+        startsAt: new Date()
+    });
+};
+
+export const updateLinearCycle = async (
+    token: string,
+    cycleId: string,
+    name?: string,
+    description?: string,
+    endDate?: Date
+): Promise<{
+    data: { cycleUpdate: { success: boolean } };
+}> => {
+    const mutation = `mutation UpdateCycle(
+        $cycleId: String!,
+        $name: String,
+        $description: String,
+        $endsAt: DateTime
+    ) {
+        cycleUpdate(
+            id: $cycleId,
+            input: {
+                name: $name,
+                description: $description,
+                endsAt: $endsAt
+            }
+        ) {
+            success
+        }
+    }`;
+
+    return await linearQuery(mutation, token, {
+        cycleId,
+        // Only include the fields that are defined to avoid server error
+        ...(name && { name }),
+        ...(description && { description }),
+        ...(endDate && { endsAt: endDate })
+    });
 };
 
 export const saveLinearContext = async (token: string, team: LinearTeam) => {
@@ -192,4 +325,3 @@ export const inviteMember = async (
 export const generateLinearUUID = (): string => {
     return `${uuid().substring(0, 28)}${GITHUB.UUID_SUFFIX}`;
 };
-
