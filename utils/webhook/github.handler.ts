@@ -319,7 +319,7 @@ export async function githubWebhookHandler(
         modifiedDescription = replaceImgTags(modifiedDescription);
 
         if (anonymousUser) {
-            modifiedDescription = `${modifiedDescription}\n\n—[By ${sender.login} on GitHub](${sender.html_url})`;
+            modifiedDescription = `${modifiedDescription}\n\n [${sender.login} on GitHub](${sender.html_url})`;
         }
 
         const assignee = await prisma.user.findFirst({
