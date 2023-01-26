@@ -12,22 +12,7 @@ import { ExternalLinkIcon } from "@radix-ui/react-icons";
 import Header from "../components/Header";
 import { Context } from "../components/ContextProvider";
 import Dashboard from "../components/Dashboard";
-import NovuLogo from "../components/logos/Novu";
-import CalLogo from "../components/logos/Cal";
-import PostHogLogo from "../components/logos/PostHog";
-import CommonKnowledgeLogo from "../components/logos/CommonKnowledgeLogo";
-import AmieLogo from "../components/logos/AmieLogo";
-
-const LOGOS = [
-    { url: "https://cal.com", Logo: CalLogo },
-    { url: "https://posthog.com", Logo: PostHogLogo },
-    { url: "https://amie.so", Logo: AmieLogo },
-    {
-        url: "https://commonknowledge.coop",
-        Logo: CommonKnowledgeLogo
-    },
-    { url: "https://novu.co", Logo: NovuLogo }
-];
+import LogoShelf from "../components/LogoShelf";
 
 const index = () => {
     const { linearContext, setLinearContext, gitHubContext, setGitHubContext } =
@@ -98,18 +83,7 @@ const index = () => {
             <PageHead />
             <Header />
             <section className="w-screen min-h-[80vh] center gap-28 px-6">
-                <div className="space-y-4 text-center max-w-xl">
-                    <h4 className="uppercase font-tertiary tracking-widest">
-                        Used by
-                    </h4>
-                    <div className="flex flex-col md:flex-row gap-6 items-center justify-center">
-                        {LOGOS.map(({ url, Logo }) => (
-                            <a href={url} target="_blank" rel="noreferrer">
-                                <Logo className="h-6 max-w-[14rem]" />
-                            </a>
-                        ))}
-                    </div>
-                </div>
+                <LogoShelf />
                 <div className="space-y-4 text-center">
                     <span className="px-3 py-1 rounded-full bg-gray-500 text-gray-200">
                         Beta
