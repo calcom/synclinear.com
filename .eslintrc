@@ -42,7 +42,8 @@
     "no-console": "off",
     "no-restricted-syntax": "off",
     "@typescript-eslint/no-empty-function": "off",
-    "import/no-unresolved": "off"
+    "import/no-unresolved": "off",
+    "@typescript-eslint/no-use-before-define": "off"
   },
   "parserOptions": {
     "project": "./tsconfig.json"

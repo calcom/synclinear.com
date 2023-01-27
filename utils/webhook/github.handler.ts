@@ -35,7 +35,7 @@ export async function githubWebhookHandler(
 ) {
     const { repository, sender, action } = body;
 
-    const sync = await prisma.sync.findFirst({
+    let sync = await prisma.sync.findFirst({
         where: {
             githubRepoId: repository.id,
             githubUserId: sender.id
@@ -46,19 +46,36 @@ export async function githubWebhookHandler(
         }
     });
 
-    if (!sync?.LinearTeam || !sync?.GitHubRepo) {
-        // Commenter is not found, post as application
-        if (githubEvent === "issue_comment" && action === "created") {
-            await createAnonymousUserComment(
-                body as IssueCommentCreatedEvent,
-                repository,
-                sender
-            );
-            return;
-        }
-
+    if (
+        (!sync?.LinearTeam || !sync?.GitHubRepo) &&
+        !process.env.LINEAR_APPLICATION_ADMIN_KEY
+    ) {
         console.log("Could not find issue's corresponding team.");
         throw new ApiError("Could not find issue's corresponding team.", 404);
+    }
+
+    const { issue }: IssuesEvent = body as unknown as IssuesEvent;
+
+    let anonymousUser = false;
+    if (!sync) {
+        anonymousUser = true;
+        sync = await prisma.sync.findFirst({
+            where: {
+                githubRepoId: repository.id
+            },
+            include: {
+                GitHubRepo: true,
+                LinearTeam: true
+            }
+        });
+
+        if (!sync) {
+            console.log("Could not find issue's corresponding sync.");
+            throw new ApiError(
+                "Could not find issue's corresponding sync.",
+                404
+            );
+        }
     }
 
     const HMAC = createHmac("sha256", sync.GitHubRepo?.webhookSecret ?? "");
@@ -91,9 +108,13 @@ export async function githubWebhookHandler(
         GitHubRepo: { repoName }
     } = sync;
 
-    const linearKey = process.env.LINEAR_API_KEY
+    let linearKey = process.env.LINEAR_API_KEY
         ? process.env.LINEAR_API_KEY
         : decrypt(linearApiKey, linearApiKeyIV);
+
+    if (anonymousUser) {
+        linearKey = process.env.LINEAR_APPLICATION_ADMIN_KEY;
+    }
 
     const linear = new LinearClient({
         apiKey: linearKey
@@ -107,16 +128,16 @@ export async function githubWebhookHandler(
     const userAgentHeader = `${repoName}, linear-github-sync`;
     const issuesEndpoint = `https://api.github.com/repos/${repoName}/issues`;
 
-    // Map the user's GitHub username to their Linear username if not yet mapped
-    await upsertUser(
-        linear,
-        githubUserId,
-        linearUserId,
-        userAgentHeader,
-        githubAuthHeader
-    );
-
-    const { issue }: IssuesEvent = body as IssuesEvent;
+    if (!anonymousUser) {
+        // Map the user's GitHub username to their Linear username if not yet mapped
+        await upsertUser(
+            linear,
+            githubUserId,
+            linearUserId,
+            userAgentHeader,
+            githubAuthHeader
+        );
+    }
 
     const syncedIssue = await prisma.syncedIssue.findFirst({
         where: {
@@ -128,22 +149,35 @@ export async function githubWebhookHandler(
     if (githubEvent === "issue_comment" && action === "created") {
         // Comment created
 
-        const { comment } = body as IssueCommentCreatedEvent;
+        if (anonymousUser) {
+            await createAnonymousUserComment(
+                body as IssueCommentCreatedEvent,
+                repository,
+                sender
+            );
+        } else {
+            const { comment } = body as IssueCommentCreatedEvent;
 
-        if (comment.body.includes("on Linear")) {
-            console.log(skipReason("comment", issue.number, true));
+            if (comment.body.includes("on Linear")) {
+                console.log(skipReason("comment", issue.number, true));
 
-            return skipReason("comment", issue.number, true);
+                return skipReason("comment", issue.number, true);
+            }
+
+            if (!syncedIssue) {
+                const reason = skipReason("comment", issue.number);
+                console.log(reason);
+                return reason;
+            }
+
+            const modifiedComment = await prepareCommentContent(comment.body);
+            await createLinearComment(
+                linear,
+                syncedIssue,
+                modifiedComment,
+                issue
+            );
         }
-
-        if (!syncedIssue) {
-            const reason = skipReason("comment", issue.number);
-            console.log(reason);
-            return reason;
-        }
-
-        const modifiedComment = await prepareCommentContent(comment.body);
-        await createLinearComment(linear, syncedIssue, modifiedComment, issue);
     }
 
     if (githubEvent === "milestone") {
@@ -283,6 +317,10 @@ export async function githubWebhookHandler(
 
         let modifiedDescription = await replaceMentions(issue.body, "github");
         modifiedDescription = replaceImgTags(modifiedDescription);
+
+        if (anonymousUser) {
+            modifiedDescription = `${modifiedDescription}\n\n [${sender.login} on GitHub](${sender.html_url})`;
+        }
 
         const assignee = await prisma.user.findFirst({
             where: { githubUserId: issue.assignee?.id },
