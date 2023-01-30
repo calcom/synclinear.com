@@ -6,6 +6,7 @@ import {
     formatJSON,
     getAttachmentQuery,
     getSyncFooter,
+    isNumber,
     skipReason
 } from "../index";
 import { LinearClient } from "@linear/sdk";
@@ -634,6 +635,11 @@ export async function linearWebhookHandler(
                     return reason;
                 }
 
+                const title = !cycle.name
+                    ? `v${cycle.number}`
+                    : isNumber(cycle.name)
+                    ? `v${cycle.name}`
+                    : cycle.name;
                 const today = new Date();
                 const state: MilestoneState =
                     new Date(cycle.endsAt) > today ? "open" : "closed";
@@ -641,7 +647,7 @@ export async function linearWebhookHandler(
                 const createdMilestone = await createMilestone(
                     githubKey,
                     syncedIssue.GitHubRepo.repoName,
-                    cycle.name || `Cycle ${cycle.number}`,
+                    title,
                     `${cycle.description}\n\n> ${getSyncFooter()}`,
                     state
                 );
