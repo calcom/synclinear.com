@@ -620,9 +620,8 @@ export async function linearWebhookHandler(
                 // Create milestone, considered "closed" if cycle has ended
                 const today = new Date();
                 const state: MilestoneState =
-                    cycle.startsAt < today && cycle.endsAt > today
-                        ? "open"
-                        : "closed";
+                    new Date(cycle.endsAt) > today ? "open" : "closed";
+
                 const createdMilestone = await createMilestone(
                     githubKey,
                     syncedIssue.GitHubRepo.repoName,
