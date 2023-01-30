@@ -11,7 +11,7 @@ import {
 import { LinearClient } from "@linear/sdk";
 import { replaceMentions, upsertUser } from "../../pages/api/utils";
 import got from "got";
-import { inviteMember } from "../linear";
+import { getLinearCycle, inviteMember } from "../linear";
 import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
 import { createMilestone, getGitHubFooter, setIssueMilestone } from "../github";
@@ -615,9 +615,25 @@ export async function linearWebhookHandler(
             });
 
             if (!syncedMilestone) {
-                const cycle = await linear.cycle(data.cycleId);
+                const cycleResponse = await getLinearCycle(
+                    linearKey,
+                    data.cycleId
+                );
+                const cycle = await cycleResponse?.data?.cycle;
 
-                // Create milestone, considered "closed" if cycle has ended
+                if (!cycle) {
+                    const reason = `Could not find cycle for ${ticketName}.`;
+                    console.log(reason);
+                    throw new ApiError(reason, 500);
+                }
+
+                // Skip if cycle was created by bot but not yet synced
+                if (cycle.description?.includes(getSyncFooter())) {
+                    const reason = `Skipping over cycle "${cycle.name}" because it is caused by sync`;
+                    console.log(reason);
+                    return reason;
+                }
+
                 const today = new Date();
                 const state: MilestoneState =
                     new Date(cycle.endsAt) > today ? "open" : "closed";
@@ -626,7 +642,7 @@ export async function linearWebhookHandler(
                     githubKey,
                     syncedIssue.GitHubRepo.repoName,
                     cycle.name || `Cycle ${cycle.number}`,
-                    getSyncFooter(),
+                    `${cycle.description}\n\n> ${getSyncFooter()}`,
                     state
                 );
 
@@ -639,7 +655,7 @@ export async function linearWebhookHandler(
                 syncedMilestone = await prisma.milestone.create({
                     data: {
                         milestoneId: createdMilestone.milestoneId,
-                        cycleId: cycle.id,
+                        cycleId: data.cycleId,
                         linearTeamId: linearTeamId,
                         githubRepoId: syncedIssue.githubRepoId
                     }

@@ -167,6 +167,31 @@ export const createLinearPublicLabel = async (
     return await linearQuery(mutation, token, { teamID });
 };
 
+export const getLinearCycle = async (
+    token: string,
+    cycleId: string
+): Promise<{
+    data: {
+        cycle: {
+            name: string;
+            description: string;
+            number: number;
+            endsAt: string;
+        };
+    };
+}> => {
+    const query = `query GetCycle($cycleId: String!) {
+        cycle(id: $cycleId) {
+            name
+            description
+            number
+            endsAt
+        }
+    }`;
+
+    return await linearQuery(query, token, { cycleId });
+};
+
 export const createLinearCycle = async (
     token: string,
     teamId: string,
@@ -325,3 +350,4 @@ export const inviteMember = async (
 export const generateLinearUUID = (): string => {
     return `${uuid().substring(0, 28)}${GITHUB.UUID_SUFFIX}`;
 };
+
