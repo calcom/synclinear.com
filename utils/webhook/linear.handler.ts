@@ -636,9 +636,9 @@ export async function linearWebhookHandler(
                 }
 
                 const title = !cycle.name
-                    ? `v${cycle.number}`
+                    ? `v.${cycle.number}`
                     : isNumber(cycle.name)
-                    ? `v${cycle.name}`
+                    ? `v.${cycle.name}`
                     : cycle.name;
                 const today = new Date();
                 const state: MilestoneState =
