@@ -551,12 +551,6 @@ export async function githubWebhookHandler(
             }
         }
 
-        if (milestone.description?.includes(getSyncFooter())) {
-            const reason = `Skipping over milestone "${milestone.title}" because it is caused by sync`;
-            console.log(reason);
-            return reason;
-        }
-
         let syncedMilestone = await prisma.milestone.findFirst({
             where: {
                 milestoneId: milestone.number,
@@ -565,6 +559,12 @@ export async function githubWebhookHandler(
         });
 
         if (!syncedMilestone) {
+            if (milestone.description?.includes(getSyncFooter())) {
+                const reason = `Skipping over milestone "${milestone.title}" because it is caused by sync`;
+                console.log(reason);
+                return reason;
+            }
+
             const createdCycle = await createLinearCycle(
                 linearKey,
                 linearTeamId,
