@@ -122,3 +122,6 @@ export const skipReason = (
     }.`;
 };
 
+export const isNumber = (value: string | number): boolean => {
+    return !isNaN(Number(value));
+};
