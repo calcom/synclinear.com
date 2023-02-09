@@ -30,3 +30,7 @@ For finer-grained control, please see the [self-hosting instructions](Setup.md).
 
 If you need any help, feel free to raise an [issue](https://github.com/calcom/synclinear.com/issues/new)!
 
+
+## Troubleshooting
+
+Some common error scenarios and how to work through them can be found here in the [troubleshooting guide](TROUBLESHOOTING.md)
