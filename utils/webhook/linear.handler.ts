@@ -916,7 +916,7 @@ export async function linearWebhookHandler(
 
         if ("estimate" in updatedFrom) {
             // Remove old estimate label
-            const prevLabelName = `${data["estimate"]} points`;
+            const prevLabelName = `${updatedFrom["estimate"]} points`;
 
             const removedLabelResponse = await got.delete(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels/${prevLabelName}`,
@@ -939,7 +939,7 @@ export async function linearWebhookHandler(
                 );
             }
 
-            if (data["estimate"] === null) {
+            if (!data["estimate"]) {
                 return `Removed estimate label "${prevLabelName}" from issue #${syncedIssue.githubIssueNumber}.`;
             }
 
