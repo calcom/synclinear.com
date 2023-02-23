@@ -21,8 +21,8 @@ function LogoShelf() {
         <div className="space-y-4 text-center max-w-xl">
             <h4 className="uppercase font-tertiary tracking-widest">Used by</h4>
             <div className="flex flex-col md:flex-row gap-6 items-center justify-center">
-                {LOGOS.map(({ url, Logo }) => (
-                    <a href={url} target="_blank" rel="noreferrer">
+                {LOGOS.map(({ url, Logo }, index) => (
+                    <a href={url} target="_blank" rel="noreferrer" key={index}>
                         <Logo className="h-6 max-w-[12rem] font-tertiary hover:font-secondary transition-colors" />
                     </a>
                 ))}
