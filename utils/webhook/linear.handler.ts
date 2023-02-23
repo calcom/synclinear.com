@@ -924,7 +924,8 @@ export async function linearWebhookHandler(
                     headers: {
                         Authorization: githubAuthHeader,
                         "User-Agent": userAgentHeader
-                    }
+                    },
+                    throwHttpErrors: false
                 }
             );
 
