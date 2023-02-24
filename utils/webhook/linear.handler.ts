@@ -913,6 +913,94 @@ export async function linearWebhookHandler(
                 );
             }
         }
+
+        if ("estimate" in updatedFrom) {
+            // Remove old estimate label
+            const prevLabelName = `${updatedFrom["estimate"]} points`;
+
+            const removedLabelResponse = await got.delete(
+                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels/${prevLabelName}`,
+                {
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
+                    },
+                    throwHttpErrors: false
+                }
+            );
+
+            if (removedLabelResponse.statusCode > 201) {
+                console.log(
+                    `Did not remove estimate label "${prevLabelName}".`
+                );
+            } else {
+                console.log(
+                    `Removed estimate "${prevLabelName}" from issue #${syncedIssue.githubIssueNumber}.`
+                );
+            }
+
+            if (!data["estimate"]) {
+                return `Removed estimate label "${prevLabelName}" from issue #${syncedIssue.githubIssueNumber}.`;
+            }
+
+            // Create new estimate label if not yet existent
+            const estimateLabel = {
+                name: `${data["estimate"]} points`,
+                color: "666"
+            };
+
+            const createdLabelResponse = await got.post(
+                `https://api.github.com/repos/${repoFullName}/labels`,
+                {
+                    json: {
+                        name: estimateLabel.name,
+                        color: estimateLabel.color,
+                        description: "Created by SyncLinear.com"
+                    },
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
+                    },
+                    throwHttpErrors: false
+                }
+            );
+
+            const createdLabelData = JSON.parse(createdLabelResponse.body);
+
+            const labelExists =
+                createdLabelData.errors?.[0]?.code === "already_exists";
+
+            if (createdLabelResponse.statusCode > 201 && !labelExists) {
+                console.log("Could not create estimate label.");
+                throw new ApiError("Could not create estimate label.", 403);
+            }
+
+            const labelName = labelExists
+                ? estimateLabel.name
+                : createdLabelData.name;
+
+            const appliedLabelResponse = await got.post(
+                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels`,
+                {
+                    json: {
+                        labels: [labelName]
+                    },
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
+                    }
+                }
+            );
+
+            if (appliedLabelResponse.statusCode > 201) {
+                console.log("Could not apply label.");
+                throw new ApiError("Could not apply label.", 403);
+            } else {
+                console.log(
+                    `Applied estimate label "${labelName}" to issue #${syncedIssue.githubIssueNumber}.`
+                );
+            }
+        }
     } else if (action === "create") {
         if (actionType === "Comment") {
             // Comment added
