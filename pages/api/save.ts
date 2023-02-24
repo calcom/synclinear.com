@@ -17,6 +17,29 @@ export default async function handle(
 
     const body = JSON.parse(req.body);
 
+    // Check for each required field
+    if (!body.github?.userId) {
+        return res
+            .status(404)
+            .send({ error: "Failed to save sync: missing GH user ID" });
+    } else if (!body.github?.repoId) {
+        return res
+            .status(404)
+            .send({ error: "Failed to save sync: missing GH repo ID" });
+    } else if (!body.linear?.userId) {
+        return res
+            .status(404)
+            .send({ error: "Failed to save sync: missing Linear user ID" });
+    } else if (!body.linear?.teamId) {
+        return res
+            .status(404)
+            .send({ error: "Failed to save sync: missing Linear team ID" });
+    } else if (!body.linear?.apiKey || !body.github?.apiKey) {
+        return res
+            .status(404)
+            .send({ error: "Failed to save sync: missing API key" });
+    }
+
     // Encrypt the API keys
     const { hash: linearApiKey, initVector: linearApiKeyIV } = encrypt(
         body.linear.apiKey
@@ -59,7 +82,9 @@ export default async function handle(
         return res.status(200).send({ message: "Saved successfully" });
     } catch (err) {
         console.log("Error saving sync:", err.message);
-        return res.status(404).send({ error: "Failed to save sync" });
+        return res.status(404).send({
+            error: `Failed to save sync with error: ${err.message || ""}`
+        });
     }
 }
 
