@@ -15,26 +15,26 @@ export default async function handle(
         });
     }
 
-    const body = JSON.parse(req.body);
+    const { github, linear } = JSON.parse(req.body);
 
     // Check for each required field
-    if (!body.github?.userId) {
+    if (!github?.userId) {
         return res
             .status(404)
             .send({ error: "Failed to save sync: missing GH user ID" });
-    } else if (!body.github?.repoId) {
+    } else if (!github?.repoId) {
         return res
             .status(404)
             .send({ error: "Failed to save sync: missing GH repo ID" });
-    } else if (!body.linear?.userId) {
+    } else if (!linear?.userId) {
         return res
             .status(404)
             .send({ error: "Failed to save sync: missing Linear user ID" });
-    } else if (!body.linear?.teamId) {
+    } else if (!linear?.teamId) {
         return res
             .status(404)
             .send({ error: "Failed to save sync: missing Linear team ID" });
-    } else if (!body.linear?.apiKey || !body.github?.apiKey) {
+    } else if (!linear?.apiKey || !github?.apiKey) {
         return res
             .status(404)
             .send({ error: "Failed to save sync: missing API key" });
@@ -42,20 +42,20 @@ export default async function handle(
 
     // Encrypt the API keys
     const { hash: linearApiKey, initVector: linearApiKeyIV } = encrypt(
-        body.linear.apiKey
+        linear.apiKey
     );
     const { hash: githubApiKey, initVector: githubApiKeyIV } = encrypt(
-        body.github.apiKey
+        github.apiKey
     );
 
     try {
         await prisma.sync.upsert({
             where: {
                 githubUserId_linearUserId_githubRepoId_linearTeamId: {
-                    githubUserId: body.github.userId,
-                    githubRepoId: body.github.repoId,
-                    linearUserId: body.linear.userId,
-                    linearTeamId: body.linear.teamId
+                    githubUserId: github.userId,
+                    githubRepoId: github.repoId,
+                    linearUserId: linear.userId,
+                    linearTeamId: linear.teamId
                 }
             },
             update: {
@@ -66,14 +66,14 @@ export default async function handle(
             },
             create: {
                 // GitHub
-                githubUserId: body.github.userId,
-                githubRepoId: body.github.repoId,
+                githubUserId: github.userId,
+                githubRepoId: github.repoId,
                 githubApiKey,
                 githubApiKeyIV,
 
                 // Linear
-                linearUserId: body.linear.userId,
-                linearTeamId: body.linear.teamId,
+                linearUserId: linear.userId,
+                linearTeamId: linear.teamId,
                 linearApiKey,
                 linearApiKeyIV
             }

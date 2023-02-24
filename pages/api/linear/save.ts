@@ -22,6 +22,24 @@ export default async function handle(
         toDoStateId
     } = JSON.parse(req.body);
 
+    if (!teamId) {
+        return res
+            .status(400)
+            .send({ error: "Failed to save team: missing team ID" });
+    } else if (!teamName) {
+        return res
+            .status(400)
+            .send({ error: "Failed to save team: missing team name" });
+    } else if (
+        [publicLabelId, canceledStateId, doneStateId, toDoStateId].some(
+            id => id === undefined
+        )
+    ) {
+        return res
+            .status(400)
+            .send({ error: "Failed to save team: missing label or state" });
+    }
+
     try {
         const result = await prisma.linearTeam.upsert({
             where: { teamId: teamId },
@@ -44,7 +62,9 @@ export default async function handle(
 
         return res.status(200).json(result);
     } catch (err) {
-        return res.status(404).send({ error: err });
+        return res.status(400).send({
+            error: `Failed to save team with error: ${err.message || ""}`
+        });
     }
 }
 
