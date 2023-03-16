@@ -415,39 +415,34 @@ export async function linearWebhookHandler(
                     comment.body,
                     "linear"
                 );
+                const footer = getGitHubFooter(user.displayName);
 
-                await got
-                    .post(
-                        `${issuesEndpoint}/${createdIssueData.number}/comments`,
-                        {
-                            json: {
-                                body: `${
-                                    modifiedComment ?? ""
-                                }${getGitHubFooter(user.displayName)}`
-                            },
-                            headers: {
-                                Authorization: githubAuthHeader,
-                                "User-Agent": userAgentHeader
-                            }
+                const commentResponse = await got.post(
+                    `${issuesEndpoint}/${createdIssueData.number}/comments`,
+                    {
+                        json: { body: `${modifiedComment || ""}${footer}` },
+                        headers: {
+                            Authorization: githubAuthHeader,
+                            "User-Agent": userAgentHeader
                         }
-                    )
+                    }
+                );
 
-                    .then(commentResponse => {
-                        if (commentResponse.statusCode > 201)
-                            console.log(
-                                getOtherUpdateError(
-                                    "comment",
-                                    data,
-                                    createdIssueData,
-                                    createdIssueResponse,
-                                    JSON.parse(commentResponse.body)
-                                )
-                            );
-                        else
-                            console.log(
-                                `Created comment on GitHub issue #${createdIssueData.number} [${createdIssueData.id}] for Linear issue ${ticketName}.`
-                            );
-                    });
+                if (commentResponse.statusCode > 201) {
+                    console.log(
+                        getOtherUpdateError(
+                            "comment",
+                            data,
+                            createdIssueData,
+                            createdIssueResponse,
+                            JSON.parse(commentResponse.body)
+                        )
+                    );
+                } else {
+                    console.log(
+                        `Created comment on GitHub issue #${createdIssueData.number} [${createdIssueData.id}] for Linear issue ${ticketName}.`
+                    );
+                }
             }
         }
 
@@ -460,34 +455,31 @@ export async function linearWebhookHandler(
 
         // Title change
         if (updatedFrom.title && actionType === "Issue") {
-            await got
-                .patch(
-                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
-                    {
-                        json: {
-                            title: `[${ticketName}] ${data.title}`
-                        },
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        }
+            const updatedIssueResponse = await got.patch(
+                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
+                {
+                    json: { title: `[${ticketName}] ${data.title}` },
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
                     }
-                )
-                .then(updatedIssueResponse => {
-                    if (updatedIssueResponse.statusCode > 201)
-                        console.log(
-                            getIssueUpdateError(
-                                "title",
-                                data,
-                                syncedIssue,
-                                updatedIssueResponse
-                            )
-                        );
-                    else
-                        console.log(
-                            `Updated GitHub issue title for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
-                        );
-                });
+                }
+            );
+
+            if (updatedIssueResponse.statusCode > 201) {
+                console.log(
+                    getIssueUpdateError(
+                        "title",
+                        data,
+                        syncedIssue,
+                        updatedIssueResponse
+                    )
+                );
+            } else {
+                console.log(
+                    `Updated GitHub issue title for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                );
+            }
         }
 
         // Description change
@@ -497,37 +489,35 @@ export async function linearWebhookHandler(
                 "linear"
             );
 
-            await got
-                .patch(
-                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
-                    {
-                        json: {
-                            body: `${
-                                modifiedDescription ?? ""
-                            }\n\n<sub>${getSyncFooter()} | [${ticketName}](${url})</sub>`
-                        },
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        }
+            const updatedIssueResponse = await got.patch(
+                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
+                {
+                    json: {
+                        body: `${
+                            modifiedDescription ?? ""
+                        }\n\n<sub>${getSyncFooter()} | [${ticketName}](${url})</sub>`
+                    },
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
                     }
-                )
+                }
+            );
 
-                .then(updatedIssueResponse => {
-                    if (updatedIssueResponse.statusCode > 201)
-                        console.log(
-                            getIssueUpdateError(
-                                "description",
-                                data,
-                                syncedIssue,
-                                updatedIssueResponse
-                            )
-                        );
-                    else
-                        console.log(
-                            `Updated GitHub issue description for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
-                        );
-                });
+            if (updatedIssueResponse.statusCode > 201) {
+                console.log(
+                    getIssueUpdateError(
+                        "description",
+                        data,
+                        syncedIssue,
+                        updatedIssueResponse
+                    )
+                );
+            } else {
+                console.log(
+                    `Updated GitHub issue description for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                );
+            }
         }
 
         // Cycle change
@@ -637,42 +627,37 @@ export async function linearWebhookHandler(
 
         // State change (eg. "Open" to "Done")
         if (updatedFrom.stateId) {
-            await got
-                .patch(
-                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
-                    {
-                        json: {
-                            state: [doneStateId, canceledStateId].includes(
-                                data.stateId
-                            )
-                                ? "closed"
-                                : "open",
-                            state_reason:
-                                doneStateId === data.stateId
-                                    ? "completed"
-                                    : "not_planned"
-                        },
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        }
+            const state = [doneStateId, canceledStateId].includes(data.stateId)
+                ? "closed"
+                : "open";
+            const reason =
+                doneStateId === data.stateId ? "completed" : "not_planned";
+
+            const updatedIssueResponse = await got.patch(
+                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
+                {
+                    json: { state, state_reason: reason },
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
                     }
-                )
-                .then(updatedIssueResponse => {
-                    if (updatedIssueResponse.statusCode > 201)
-                        console.log(
-                            getIssueUpdateError(
-                                "state",
-                                data,
-                                syncedIssue,
-                                updatedIssueResponse
-                            )
-                        );
-                    else
-                        console.log(
-                            `Updated GitHub issue state for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
-                        );
-                });
+                }
+            );
+
+            if (updatedIssueResponse.statusCode > 201) {
+                console.log(
+                    getIssueUpdateError(
+                        "state",
+                        data,
+                        syncedIssue,
+                        updatedIssueResponse
+                    )
+                );
+            } else {
+                console.log(
+                    `Updated GitHub issue state for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                );
+            }
         }
 
         // Assignee change
@@ -917,7 +902,6 @@ export async function linearWebhookHandler(
 
             if (data.id.includes(GITHUB.UUID_SUFFIX)) {
                 console.log(skipReason("comment", data.issue!.id, true));
-
                 return skipReason("comment", data.issue!.id, true);
             }
 
@@ -941,43 +925,34 @@ export async function linearWebhookHandler(
             }
 
             const modifiedBody = await replaceMentions(data.body, "linear");
+            const footer = getGitHubFooter(data.user?.name);
 
-            await got
-                .post(
-                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/comments`,
-                    {
-                        json: {
-                            body: `${modifiedBody ?? ""}${getGitHubFooter(
-                                data.user?.name
-                            )}`
-                        },
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        }
+            const commentResponse = await got.post(
+                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/comments`,
+                {
+                    json: { body: `${modifiedBody || ""}${footer}` },
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
                     }
-                )
+                }
+            );
 
-                .then(commentResponse => {
-                    if (commentResponse.statusCode > 201)
-                        console.log(
-                            `Failed to update GitHub issue state for ${
-                                data.issue?.id
-                            } on GitHub issue #${
-                                syncedIssue.githubIssueNumber
-                            } [${
-                                syncedIssue.githubIssueId
-                            }], received status code ${
-                                commentResponse.statusCode
-                            }, body of ${formatJSON(
-                                JSON.parse(commentResponse.body)
-                            )}.`
-                        );
-                    else
-                        console.log(
-                            `Synced comment [${data.id}] for ${data.issue?.id} on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
-                        );
-                });
+            if (commentResponse.statusCode > 201) {
+                console.log(
+                    `Failed to update GitHub issue state for ${
+                        data.issue?.id
+                    } on GitHub issue #${syncedIssue.githubIssueNumber} [${
+                        syncedIssue.githubIssueId
+                    }], received status code ${
+                        commentResponse.statusCode
+                    }, body of ${formatJSON(JSON.parse(commentResponse.body))}.`
+                );
+            } else {
+                console.log(
+                    `Synced comment [${data.id}] for ${data.issue?.id} on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                );
+            }
         } else if (actionType === "Issue") {
             // Issue created
 
