@@ -86,3 +86,8 @@ export interface Sync {
 
 export type MilestoneState = "open" | "closed";
 
+export type GitHubIssueLabel = {
+    name: string;
+    color: string;
+};
+

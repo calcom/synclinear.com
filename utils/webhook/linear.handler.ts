@@ -15,7 +15,12 @@ import got from "got";
 import { getLinearCycle, inviteMember } from "../linear";
 import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
-import { createMilestone, getGitHubFooter, setIssueMilestone } from "../github";
+import {
+    createLabel,
+    createMilestone,
+    getGitHubFooter,
+    setIssueMilestone
+} from "../github";
 import { ApiError, getIssueUpdateError, getOtherUpdateError } from "../errors";
 
 export async function linearWebhookHandler(
@@ -175,36 +180,19 @@ export async function linearWebhookHandler(
                     throw new ApiError("Could not find label.", 403);
                 }
 
-                const createdLabelResponse = await got.post(
-                    `https://api.github.com/repos/${repoFullName}/labels`,
-                    {
-                        json: {
-                            name: label.name,
-                            color: label.color.replace("#", ""),
-                            description: "Created by Linear-GitHub Sync"
-                        },
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        },
-                        throwHttpErrors: false
-                    }
-                );
+                const { createdLabel, error } = await createLabel({
+                    repoFullName,
+                    label,
+                    githubAuthHeader,
+                    userAgentHeader
+                });
 
-                const createdLabelData = JSON.parse(createdLabelResponse.body);
-
-                if (
-                    createdLabelResponse.statusCode > 201 &&
-                    createdLabelData.errors?.[0]?.code !== "already_exists"
-                ) {
+                if (error) {
                     console.log("Could not create label.");
                     throw new ApiError("Could not create label.", 403);
                 }
 
-                const labelName =
-                    createdLabelData.errors?.[0]?.code === "already_exists"
-                        ? label.name
-                        : createdLabelData.name;
+                const labelName = createdLabel ? createdLabel.name : label.name;
 
                 const appliedLabelResponse = await got.post(
                     `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels`,
@@ -350,37 +338,21 @@ export async function linearWebhookHandler(
                     continue;
                 }
 
-                const createdLabelResponse = await got.post(
-                    `https://api.github.com/repos/${repoFullName}/labels`,
-                    {
-                        json: {
-                            name: label.name,
-                            color: label.color?.replace("#", ""),
-                            description: "Created by Linear-GitHub Sync"
-                        },
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        },
-                        throwHttpErrors: false
-                    }
-                );
+                const { createdLabel, error } = await createLabel({
+                    repoFullName,
+                    label,
+                    githubAuthHeader,
+                    userAgentHeader
+                });
 
-                const createdLabelData = JSON.parse(createdLabelResponse.body);
-                if (
-                    createdLabelResponse.statusCode > 201 &&
-                    createdLabelData.errors?.[0]?.code !== "already_exists"
-                ) {
+                if (error) {
                     console.log(
                         `Could not create GH label "${label.name}" in ${repoFullName}.`
                     );
                     continue;
                 }
 
-                const labelName =
-                    createdLabelData.errors?.[0]?.code === "already_exists"
-                        ? label.name
-                        : createdLabelData.name;
+                const labelName = createdLabel ? createdLabel.name : label.name;
 
                 labelNames.push(labelName);
             }
@@ -388,35 +360,21 @@ export async function linearWebhookHandler(
             // Add priority label if applicable
             if (!!data.priority && SHARED.PRIORITY_LABELS[data.priority]) {
                 const priorityLabel = SHARED.PRIORITY_LABELS[data.priority];
-                const createdLabelResponse = await got.post(
-                    `https://api.github.com/repos/${repoFullName}/labels`,
-                    {
-                        json: {
-                            name: priorityLabel.name,
-                            color: priorityLabel.color?.replace("#", ""),
-                            description: "Created by Linear-GitHub Sync"
-                        },
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        },
-                        throwHttpErrors: false
-                    }
-                );
+                const { createdLabel, error } = await createLabel({
+                    repoFullName,
+                    label: priorityLabel,
+                    githubAuthHeader,
+                    userAgentHeader
+                });
 
-                const createdLabelData = JSON.parse(createdLabelResponse.body);
-                if (
-                    createdLabelResponse.statusCode > 201 &&
-                    createdLabelData.errors?.[0]?.code !== "already_exists"
-                ) {
+                if (error) {
                     console.log(
                         `Could not create priority label "${priorityLabel.name}" in ${repoFullName}.`
                     );
                 } else {
-                    const labelName =
-                        createdLabelData.errors?.[0]?.code === "already_exists"
-                            ? priorityLabel.name
-                            : createdLabelData.name;
+                    const labelName = createdLabel
+                        ? createdLabel.name
+                        : priorityLabel.name;
 
                     labelNames.push(labelName);
                 }
@@ -860,36 +818,21 @@ export async function linearWebhookHandler(
 
             // Add new priority label if not none
             const priorityLabel = priorityLabels[data.priority];
-            const createdLabelResponse = await got.post(
-                `https://api.github.com/repos/${repoFullName}/labels`,
-                {
-                    json: {
-                        name: priorityLabel.name,
-                        color: priorityLabel.color?.replace("#", ""),
-                        description: "Created by Linear-GitHub Sync"
-                    },
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
-                    },
-                    throwHttpErrors: false
-                }
-            );
+            const { createdLabel, error } = await createLabel({
+                repoFullName,
+                label: priorityLabel,
+                githubAuthHeader,
+                userAgentHeader
+            });
 
-            const createdLabelData = JSON.parse(createdLabelResponse.body);
-
-            if (
-                createdLabelResponse.statusCode > 201 &&
-                createdLabelData.errors?.[0]?.code !== "already_exists"
-            ) {
+            if (error) {
                 console.log("Could not create label.");
                 throw new ApiError("Could not create label.", 403);
             }
 
-            const labelName =
-                createdLabelData.errors?.[0]?.code === "already_exists"
-                    ? priorityLabel.name
-                    : createdLabelData.name;
+            const labelName = createdLabel
+                ? createdLabel.name
+                : priorityLabel.name;
 
             const appliedLabelResponse = await got.post(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels`,
@@ -949,35 +892,21 @@ export async function linearWebhookHandler(
                 color: "666"
             };
 
-            const createdLabelResponse = await got.post(
-                `https://api.github.com/repos/${repoFullName}/labels`,
-                {
-                    json: {
-                        name: estimateLabel.name,
-                        color: estimateLabel.color,
-                        description: "Created by SyncLinear.com"
-                    },
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
-                    },
-                    throwHttpErrors: false
-                }
-            );
+            const { createdLabel, error } = await createLabel({
+                repoFullName,
+                label: estimateLabel,
+                githubAuthHeader,
+                userAgentHeader
+            });
 
-            const createdLabelData = JSON.parse(createdLabelResponse.body);
-
-            const labelExists =
-                createdLabelData.errors?.[0]?.code === "already_exists";
-
-            if (createdLabelResponse.statusCode > 201 && !labelExists) {
+            if (error) {
                 console.log("Could not create estimate label.");
                 throw new ApiError("Could not create estimate label.", 403);
             }
 
-            const labelName = labelExists
-                ? estimateLabel.name
-                : createdLabelData.name;
+            const labelName = createdLabel
+                ? createdLabel.name
+                : estimateLabel.name;
 
             const appliedLabelResponse = await got.post(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels`,
@@ -1188,38 +1117,21 @@ export async function linearWebhookHandler(
                     continue;
                 }
 
-                const createdLabelResponse = await got.post(
-                    `https://api.github.com/repos/${repoFullName}/labels`,
-                    {
-                        json: {
-                            name: label.name,
-                            color: label.color?.replace("#", ""),
-                            description: "Created by Linear-GitHub Sync"
-                        },
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        },
-                        throwHttpErrors: false
-                    }
-                );
+                const { createdLabel, error } = await createLabel({
+                    repoFullName,
+                    label,
+                    githubAuthHeader,
+                    userAgentHeader
+                });
 
-                const createdLabelData = JSON.parse(createdLabelResponse.body);
-
-                if (
-                    createdLabelResponse.statusCode > 201 &&
-                    createdLabelData.errors?.[0]?.code !== "already_exists"
-                ) {
+                if (error) {
                     console.log(
                         `Could not create GH label "${label.name}" in ${repoFullName}.`
                     );
                     continue;
                 }
 
-                const labelName =
-                    createdLabelData.errors?.[0]?.code === "already_exists"
-                        ? label.name
-                        : createdLabelData.name;
+                const labelName = createdLabel ? createdLabel.name : label.name;
 
                 labelNames.push(labelName);
             }
@@ -1227,36 +1139,22 @@ export async function linearWebhookHandler(
             // Add priority label if applicable
             if (!!data.priority && SHARED.PRIORITY_LABELS[data.priority]) {
                 const priorityLabel = SHARED.PRIORITY_LABELS[data.priority];
-                const createdLabelResponse = await got.post(
-                    `https://api.github.com/repos/${repoFullName}/labels`,
-                    {
-                        json: {
-                            name: priorityLabel.name,
-                            color: priorityLabel.color?.replace("#", ""),
-                            description: "Created by Linear-GitHub Sync"
-                        },
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        },
-                        throwHttpErrors: false
-                    }
-                );
 
-                const createdLabelData = JSON.parse(createdLabelResponse.body);
+                const { createdLabel, error } = await createLabel({
+                    repoFullName,
+                    label: priorityLabel,
+                    githubAuthHeader,
+                    userAgentHeader
+                });
 
-                if (
-                    createdLabelResponse.statusCode > 201 &&
-                    createdLabelData.errors?.[0]?.code !== "already_exists"
-                ) {
+                if (error) {
                     console.log(
                         `Could not create priority label "${priorityLabel.name}" in ${repoFullName}.`
                     );
                 } else {
-                    const labelName =
-                        createdLabelData.errors?.[0]?.code === "already_exists"
-                            ? priorityLabel.name
-                            : createdLabelData.name;
+                    const labelName = createdLabel
+                        ? createdLabel.name
+                        : priorityLabel.name;
 
                     labelNames.push(labelName);
                 }
