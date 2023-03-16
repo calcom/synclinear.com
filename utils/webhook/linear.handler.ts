@@ -17,6 +17,7 @@ import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
 import {
     createLabel,
+    applyLabel,
     createMilestone,
     getGitHubFooter,
     setIssueMilestone
@@ -180,34 +181,30 @@ export async function linearWebhookHandler(
                     throw new ApiError("Could not find label.", 403);
                 }
 
-                const { createdLabel, error } = await createLabel({
-                    repoFullName,
-                    label,
-                    githubAuthHeader,
-                    userAgentHeader
-                });
+                const { createdLabel, error: createLabelError } =
+                    await createLabel({
+                        repoFullName,
+                        label,
+                        githubAuthHeader,
+                        userAgentHeader
+                    });
 
-                if (error) {
+                if (createLabelError) {
                     console.log("Could not create label.");
                     throw new ApiError("Could not create label.", 403);
                 }
 
                 const labelName = createdLabel ? createdLabel.name : label.name;
 
-                const appliedLabelResponse = await got.post(
-                    `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels`,
-                    {
-                        json: {
-                            labels: [labelName]
-                        },
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        }
-                    }
-                );
+                const { error: applyLabelError } = await applyLabel({
+                    repoFullName: syncedIssue.GitHubRepo.repoName,
+                    issueNumber: syncedIssue.githubIssueNumber,
+                    labelNames: [labelName],
+                    githubAuthHeader,
+                    userAgentHeader
+                });
 
-                if (appliedLabelResponse.statusCode > 201) {
+                if (applyLabelError) {
                     console.log("Could not apply label.");
                     throw new ApiError("Could not apply label.", 403);
                 } else {
@@ -380,20 +377,15 @@ export async function linearWebhookHandler(
                 }
             }
 
-            const appliedLabelResponse = await got.post(
-                `${issuesEndpoint}/${createdIssueData.number}/labels`,
-                {
-                    json: {
-                        labels: labelNames
-                    },
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
-                    }
-                }
-            );
+            const { error: applyLabelError } = await applyLabel({
+                repoFullName,
+                issueNumber: createdIssueData.number,
+                labelNames,
+                githubAuthHeader,
+                userAgentHeader
+            });
 
-            if (appliedLabelResponse.statusCode > 201) {
+            if (applyLabelError) {
                 console.log(
                     `Could not apply labels to #${createdIssueData.number} in ${repoFullName}.`
                 );
@@ -834,20 +826,15 @@ export async function linearWebhookHandler(
                 ? createdLabel.name
                 : priorityLabel.name;
 
-            const appliedLabelResponse = await got.post(
-                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels`,
-                {
-                    json: {
-                        labels: [labelName]
-                    },
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
-                    }
-                }
-            );
+            const { error: applyLabelError } = await applyLabel({
+                repoFullName: syncedIssue.GitHubRepo.repoName,
+                issueNumber: syncedIssue.githubIssueNumber,
+                labelNames: [labelName],
+                githubAuthHeader,
+                userAgentHeader
+            });
 
-            if (appliedLabelResponse.statusCode > 201) {
+            if (applyLabelError) {
                 console.log("Could not apply label.");
                 throw new ApiError("Could not apply label.", 403);
             } else {
@@ -908,20 +895,15 @@ export async function linearWebhookHandler(
                 ? createdLabel.name
                 : estimateLabel.name;
 
-            const appliedLabelResponse = await got.post(
-                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels`,
-                {
-                    json: {
-                        labels: [labelName]
-                    },
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
-                    }
-                }
-            );
+            const { error: applyLabelError } = await applyLabel({
+                repoFullName: syncedIssue.GitHubRepo.repoName,
+                issueNumber: syncedIssue.githubIssueNumber,
+                labelNames: [labelName],
+                githubAuthHeader,
+                userAgentHeader
+            });
 
-            if (appliedLabelResponse.statusCode > 201) {
+            if (applyLabelError) {
                 console.log("Could not apply label.");
                 throw new ApiError("Could not apply label.", 403);
             } else {
@@ -1160,20 +1142,15 @@ export async function linearWebhookHandler(
                 }
             }
 
-            const appliedLabelResponse = await got.post(
-                `${issuesEndpoint}/${createdIssueData.number}/labels`,
-                {
-                    json: {
-                        labels: labelNames
-                    },
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
-                    }
-                }
-            );
+            const { error: applyLabelError } = await applyLabel({
+                repoFullName,
+                issueNumber: createdIssueData.number,
+                labelNames,
+                githubAuthHeader,
+                userAgentHeader
+            });
 
-            if (appliedLabelResponse.statusCode > 201) {
+            if (applyLabelError) {
                 console.log(
                     `Could not apply labels to #${createdIssueData.number} in ${repoFullName}.`
                 );

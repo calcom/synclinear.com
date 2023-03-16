@@ -262,7 +262,7 @@ export const createLabel = async ({
     let error = false;
 
     const createdLabelResponse = await got.post(
-        `https://api.github.com/repos/${repoFullName}/labels`,
+        `${GITHUB.REPO_ENDPOINT}/${repoFullName}/labels`,
         {
             json: {
                 name: label.name,
@@ -289,5 +289,40 @@ export const createLabel = async ({
     }
 
     return { createdLabel, error };
+};
+
+export const applyLabel = async ({
+    repoFullName,
+    issueNumber,
+    labelNames,
+    githubAuthHeader,
+    userAgentHeader
+}: {
+    repoFullName: string;
+    issueNumber: number;
+    labelNames: string[];
+    githubAuthHeader: string;
+    userAgentHeader: string;
+}): Promise<{ error: boolean }> => {
+    let error = false;
+
+    const appliedLabelResponse = await got.post(
+        `${GITHUB.REPO_ENDPOINT}/${repoFullName}/issues/${issueNumber}/labels`,
+        {
+            json: {
+                labels: labelNames
+            },
+            headers: {
+                Authorization: githubAuthHeader,
+                "User-Agent": userAgentHeader
+            }
+        }
+    );
+
+    if (appliedLabelResponse.statusCode > 201) {
+        error = true;
+    }
+
+    return { error };
 };
 
