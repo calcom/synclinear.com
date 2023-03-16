@@ -15,22 +15,6 @@ export const getIssueUpdateError = (
     }, body of ${formatJSON(JSON.parse(updatedIssueResponse.body))}.`;
 };
 
-export const getOtherUpdateError = (
-    resource: "comment" | "attachment",
-    data: { number: number; id: string; team: { key: string } },
-    createdIssue: { number: number; id: number },
-    createdIssueResponse: any,
-    responseBody: any
-): string => {
-    return `Failed to update GitHub issue ${resource} for ${data.team.key}-${
-        data.number
-    } [${data.id}] on GitHub issue #${createdIssue.number} [${
-        createdIssue.id
-    }], received status code ${
-        createdIssueResponse.statusCode
-    }, body of ${formatJSON(responseBody)}.`;
-};
-
 export class ApiError extends Error {
     constructor(public message: string, public statusCode: number) {
         super(message);

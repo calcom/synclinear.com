@@ -12,6 +12,7 @@ import {
 import { LinearClient } from "@linear/sdk";
 import {
     applyLabel,
+    createComment,
     createLabel,
     replaceMentions,
     upsertUser
@@ -21,7 +22,7 @@ import { getLinearCycle, inviteMember } from "../linear";
 import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
 import { createMilestone, getGitHubFooter, setIssueMilestone } from "../github";
-import { ApiError, getIssueUpdateError, getOtherUpdateError } from "../errors";
+import { ApiError, getIssueUpdateError } from "../errors";
 
 export async function linearWebhookHandler(
     body: LinearWebhookPayload,
@@ -417,26 +418,17 @@ export async function linearWebhookHandler(
                 );
                 const footer = getGitHubFooter(user.displayName);
 
-                const commentResponse = await got.post(
-                    `${issuesEndpoint}/${createdIssueData.number}/comments`,
-                    {
-                        json: { body: `${modifiedComment || ""}${footer}` },
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        }
-                    }
-                );
+                const { error: commentError } = await createComment({
+                    repoFullName,
+                    issueNumber: createdIssueData.number,
+                    body: `${modifiedComment || ""}${footer}`,
+                    githubAuthHeader,
+                    userAgentHeader
+                });
 
-                if (commentResponse.statusCode > 201) {
+                if (commentError) {
                     console.log(
-                        getOtherUpdateError(
-                            "comment",
-                            data,
-                            createdIssueData,
-                            createdIssueResponse,
-                            JSON.parse(commentResponse.body)
-                        )
+                        `Failed to add comment to GitHub issue ${createdIssueData.number} for ${ticketName}.`
                     );
                 } else {
                     console.log(
@@ -927,26 +919,17 @@ export async function linearWebhookHandler(
             const modifiedBody = await replaceMentions(data.body, "linear");
             const footer = getGitHubFooter(data.user?.name);
 
-            const commentResponse = await got.post(
-                `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/comments`,
-                {
-                    json: { body: `${modifiedBody || ""}${footer}` },
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
-                    }
-                }
-            );
+            const { error: commentError } = await createComment({
+                repoFullName: syncedIssue.GitHubRepo.repoName,
+                issueNumber: syncedIssue.githubIssueNumber,
+                body: `${modifiedBody || ""}${footer}`,
+                githubAuthHeader,
+                userAgentHeader
+            });
 
-            if (commentResponse.statusCode > 201) {
+            if (commentError) {
                 console.log(
-                    `Failed to update GitHub issue state for ${
-                        data.issue?.id
-                    } on GitHub issue #${syncedIssue.githubIssueNumber} [${
-                        syncedIssue.githubIssueId
-                    }], received status code ${
-                        commentResponse.statusCode
-                    }, body of ${formatJSON(JSON.parse(commentResponse.body))}.`
+                    `Failed to update GitHub issue state for ${data.issue?.id} on GitHub issue #${syncedIssue.githubIssueNumber}.`
                 );
             } else {
                 console.log(
