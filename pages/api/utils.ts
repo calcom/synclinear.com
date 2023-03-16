@@ -1,6 +1,8 @@
 import { LinearClient } from "@linear/sdk";
 import got from "got";
 import prisma from "../../prisma";
+import { GitHubIssueLabel } from "../../typings";
+import { GITHUB } from "../../utils/constants";
 
 /**
  * Server-only utility functions
@@ -137,4 +139,85 @@ export const replaceMentions = async (
     });
 
     return sanitizedBody;
+};
+
+export const createLabel = async ({
+    repoFullName,
+    label,
+    githubAuthHeader,
+    userAgentHeader
+}: {
+    repoFullName: string;
+    label: GitHubIssueLabel;
+    githubAuthHeader: string;
+    userAgentHeader: string;
+}): Promise<{
+    createdLabel?: { name: string } | undefined;
+    error?: boolean;
+}> => {
+    let error = false;
+
+    const createdLabelResponse = await got.post(
+        `${GITHUB.REPO_ENDPOINT}/${repoFullName}/labels`,
+        {
+            json: {
+                name: label.name,
+                color: label.color?.replace("#", ""),
+                description: "Created by Linear-GitHub Sync"
+            },
+            headers: {
+                Authorization: githubAuthHeader,
+                "User-Agent": userAgentHeader
+            },
+            throwHttpErrors: false
+        }
+    );
+
+    const createdLabel = JSON.parse(createdLabelResponse.body);
+
+    if (
+        createdLabelResponse.statusCode > 201 &&
+        createdLabel.errors?.[0]?.code !== "already_exists"
+    ) {
+        error = true;
+    } else if (createdLabel.errors?.[0]?.code === "already_exists") {
+        return { error: false };
+    }
+
+    return { createdLabel, error };
+};
+
+export const applyLabel = async ({
+    repoFullName,
+    issueNumber,
+    labelNames,
+    githubAuthHeader,
+    userAgentHeader
+}: {
+    repoFullName: string;
+    issueNumber: number;
+    labelNames: string[];
+    githubAuthHeader: string;
+    userAgentHeader: string;
+}): Promise<{ error: boolean }> => {
+    let error = false;
+
+    const appliedLabelResponse = await got.post(
+        `${GITHUB.REPO_ENDPOINT}/${repoFullName}/issues/${issueNumber}/labels`,
+        {
+            json: {
+                labels: labelNames
+            },
+            headers: {
+                Authorization: githubAuthHeader,
+                "User-Agent": userAgentHeader
+            }
+        }
+    );
+
+    if (appliedLabelResponse.statusCode > 201) {
+        error = true;
+    }
+
+    return { error };
 };

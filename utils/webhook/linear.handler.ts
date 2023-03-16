@@ -10,18 +10,17 @@ import {
     skipReason
 } from "../index";
 import { LinearClient } from "@linear/sdk";
-import { replaceMentions, upsertUser } from "../../pages/api/utils";
+import {
+    applyLabel,
+    createLabel,
+    replaceMentions,
+    upsertUser
+} from "../../pages/api/utils";
 import got from "got";
 import { getLinearCycle, inviteMember } from "../linear";
 import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
-import {
-    createLabel,
-    applyLabel,
-    createMilestone,
-    getGitHubFooter,
-    setIssueMilestone
-} from "../github";
+import { createMilestone, getGitHubFooter, setIssueMilestone } from "../github";
 import { ApiError, getIssueUpdateError, getOtherUpdateError } from "../errors";
 
 export async function linearWebhookHandler(
