@@ -7,6 +7,7 @@ import {
     getAttachmentQuery,
     getSyncFooter,
     isNumber,
+    replaceStrikethroughTags,
     skipReason
 } from "../index";
 import { LinearClient } from "@linear/sdk";
@@ -476,10 +477,12 @@ export async function linearWebhookHandler(
 
         // Description change
         if (updatedFrom.description && actionType === "Issue") {
-            const modifiedDescription = await replaceMentions(
+            let modifiedDescription = await replaceMentions(
                 data.description,
                 "linear"
             );
+
+            modifiedDescription = replaceStrikethroughTags(modifiedDescription);
 
             const updatedIssueResponse = await got.patch(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,

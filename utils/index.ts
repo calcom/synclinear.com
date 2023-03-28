@@ -64,6 +64,14 @@ export const replaceImgTags = (text: string): string => {
     );
 };
 
+export const replaceStrikethroughTags = (text: string): string => {
+    // To avoid unforeseen infinite loops, only replace the first 10 occurrences
+    const tildes = text.match(/~+/g);
+    if (tildes.length > 10) return;
+
+    return text.replace(/(?<!\\)~(?!~)/g, "~~");
+};
+
 export const getSyncFooter = (): string => {
     return `From [SyncLinear.com](https://synclinear.com)`;
 };
