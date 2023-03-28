@@ -242,7 +242,7 @@ export const createComment = async ({
     let error = false;
 
     const commentResponse = await got.post(
-        `${GITHUB.REPO_ENDPOINT}/${repoFullName}/${issueNumber}/comments`,
+        `${GITHUB.REPO_ENDPOINT}/${repoFullName}/issues/${issueNumber}/comments`,
         {
             json: {
                 body
