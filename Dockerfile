@@ -14,6 +14,12 @@ RUN pnpm fetch
 COPY . .
 RUN pnpm install --recursive --offline --frozen-lockfile
 
+# https://github.com/vercel/next.js/discussions/17641
+ARG NEXT_PUBLIC_GITHUB_OAUTH_ID
+ARG NEXT_PUBLIC_LINEAR_OAUTH_ID
+ENV NEXT_PUBLIC_GITHUB_OAUTH_ID=$NEXT_PUBLIC_GITHUB_OAUTH_ID
+ENV NEXT_PUBLIC_LINEAR_OAUTH_ID=$NEXT_PUBLIC_LINEAR_OAUTH_ID
+
 RUN pnpm run build
 
 ####################################################################################################
