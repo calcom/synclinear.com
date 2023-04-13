@@ -15,10 +15,17 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
          * Linear webhook consumer
          */
         if (req.headers["user-agent"] === "Linear-Webhook") {
-            const result = await linearWebhookHandler(
-                req.body,
-                req.headers["x-forwarded-for"] as string
-            );
+            let originIp = req.headers["x-forwarded-for"];
+
+            if (Array.isArray(originIp)) {
+                originIp = originIp[0];
+            }
+
+            if (originIp.includes(",")) {
+                originIp = originIp.split(",")[0].trim();
+            }
+
+            const result = await linearWebhookHandler(req.body, originIp);
 
             if (result) {
                 return res.status(200).send({
