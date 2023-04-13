@@ -15,6 +15,7 @@ export default async function handle(_, res: NextApiResponse) {
         await prisma.$connect();
         return res.status(200).send("Successfully connected to the database!");
     } catch (e) {
+        console.error(e);
         return res
             .status(503)
             .send(
