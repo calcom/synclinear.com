@@ -3,7 +3,7 @@
 ####################################################################################################
 ## Build Packages
 
-FROM node:18-slim AS builder
+FROM node:18-alpine AS builder
 WORKDIR /synclinear
 
 COPY package.json .
@@ -25,7 +25,7 @@ RUN pnpm run build
 ####################################################################################################
 ## Create Production Image
 
-FROM node:18-slim AS runtime
+FROM node:18-alpine AS runtime
 WORKDIR /synclinear
 
 ENV NODE_ENV production
