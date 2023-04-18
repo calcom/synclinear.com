@@ -2,6 +2,7 @@ spec:
     name: linear-github-sync
     services:
         - name: app
+          dockerfile_path: Dockerfile
           git:
               branch: main
               repo_clone_url: https://github.com/calcom/synclinear.com.git
@@ -15,4 +16,3 @@ spec:
                 value: ${db.DATABASE_URL}
     databases:
         - name: db
-
