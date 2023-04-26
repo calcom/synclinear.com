@@ -18,7 +18,7 @@ export default async function handle(
     try {
         const result = await prisma.gitHubRepo.upsert({
             where: { repoId: repoId },
-            update: { repoName },
+            update: { repoName, webhookSecret },
             create: {
                 repoId,
                 repoName,
