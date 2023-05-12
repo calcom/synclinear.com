@@ -35,16 +35,19 @@ export async function githubWebhookHandler(
 ) {
     const { repository, sender, action } = body;
 
-    let sync = await prisma.sync.findFirst({
-        where: {
-            githubRepoId: repository.id,
-            githubUserId: sender.id
-        },
-        include: {
-            GitHubRepo: true,
-            LinearTeam: true
-        }
-    });
+    let sync =
+        !!repository?.id && !!sender?.id
+            ? await prisma.sync.findFirst({
+                  where: {
+                      githubRepoId: repository.id,
+                      githubUserId: sender.id
+                  },
+                  include: {
+                      GitHubRepo: true,
+                      LinearTeam: true
+                  }
+              })
+            : null;
 
     if (
         (!sync?.LinearTeam || !sync?.GitHubRepo) &&
@@ -59,15 +62,17 @@ export async function githubWebhookHandler(
     let anonymousUser = false;
     if (!sync) {
         anonymousUser = true;
-        sync = await prisma.sync.findFirst({
-            where: {
-                githubRepoId: repository.id
-            },
-            include: {
-                GitHubRepo: true,
-                LinearTeam: true
-            }
-        });
+        sync = !!repository?.id
+            ? await prisma.sync.findFirst({
+                  where: {
+                      githubRepoId: repository.id
+                  },
+                  include: {
+                      GitHubRepo: true,
+                      LinearTeam: true
+                  }
+              })
+            : null;
 
         if (!sync) {
             console.log("Could not find issue's corresponding sync.");
@@ -139,12 +144,14 @@ export async function githubWebhookHandler(
         );
     }
 
-    const syncedIssue = await prisma.syncedIssue.findFirst({
-        where: {
-            githubIssueNumber: issue?.number,
-            githubRepoId: repository.id
-        }
-    });
+    const syncedIssue = !!repository?.id
+        ? await prisma.syncedIssue.findFirst({
+              where: {
+                  githubIssueNumber: issue?.number,
+                  githubRepoId: repository.id
+              }
+          })
+        : null;
 
     if (githubEvent === "issue_comment" && action === "created") {
         // Comment created
@@ -652,12 +659,14 @@ async function createAnonymousUserComment(
 ) {
     const { issue }: IssuesEvent = body as unknown as IssuesEvent;
 
-    const syncedIssue = await prisma.syncedIssue.findFirst({
-        where: {
-            githubIssueNumber: issue?.number,
-            githubRepoId: repository.id
-        }
-    });
+    const syncedIssue = !!repository?.id
+        ? await prisma.syncedIssue.findFirst({
+              where: {
+                  githubIssueNumber: issue?.number,
+                  githubRepoId: repository.id
+              }
+          })
+        : null;
 
     if (!syncedIssue) {
         console.log("Could not find issue's corresponding team.");
