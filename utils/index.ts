@@ -66,10 +66,10 @@ export const replaceImgTags = (text: string): string => {
 
 export const replaceStrikethroughTags = (text: string): string => {
     // To avoid unforeseen infinite loops, only replace the first 10 occurrences
-    const tildes = text.match(/~+/g);
-    if (tildes.length > 10) return text;
+    const tildes = text?.match(/~+/g);
+    if (tildes?.length > 10) return text;
 
-    return text.replace(/(?<!\\)~(?!~)/g, "~~");
+    return text?.replace(/(?<!\\)~(?!~)/g, "~~") || text;
 };
 
 export const getSyncFooter = (): string => {
