@@ -82,9 +82,8 @@ const index = () => {
         <div>
             <PageHead />
             <Header />
-            <section className="w-screen min-h-[80vh] center gap-28 px-6">
-                <LogoShelf />
-                <div className="space-y-4 text-center">
+            <section className="w-screen min-h-[80vh] center gap-24 px-6">
+                <div className="space-y-4 text-center pt-8">
                     <span className="px-3 py-1 rounded-full bg-gray-500 text-gray-200">
                         Beta
                     </span>
@@ -94,7 +93,7 @@ const index = () => {
                     </p>
                 </div>
                 <Dashboard />
-                <div className="w-full flex flex-col sm:flex-row justify-around items-center sm:items-start gap-4">
+                <div className="w-full flex flex-col sm:flex-row justify-center items-center sm:items-start gap-4">
                     <LinearAuthButton
                         restoredApiKey={linearContext.apiKey}
                         restored={restored}
@@ -147,6 +146,7 @@ const index = () => {
                         <ExternalLinkIcon className="w-6 h-6" />
                     </button>
                 </div>
+                <LogoShelf />
             </section>
             <Landing />
             <Footer />

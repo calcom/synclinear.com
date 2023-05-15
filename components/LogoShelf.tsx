@@ -1,9 +1,9 @@
 import React from "react";
 import AmieLogo from "./logos/AmieLogo";
 import CalLogo from "./logos/Cal";
-import LivepeerLogo from "./logos/Livepeer";
 import NovuLogo from "./logos/Novu";
 import PostHogLogo from "./logos/PostHog";
+import VercelLogo from "./logos/Vercel";
 
 function LogoShelf() {
     const LOGOS = [
@@ -11,8 +11,8 @@ function LogoShelf() {
         { url: "https://posthog.com", Logo: PostHogLogo },
         { url: "https://amie.so", Logo: AmieLogo },
         {
-            url: "https://livepeer.org",
-            Logo: LivepeerLogo
+            url: "https://vercel.com",
+            Logo: VercelLogo
         },
         { url: "https://novu.co", Logo: NovuLogo }
     ];
