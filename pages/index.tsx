@@ -82,7 +82,7 @@ const index = () => {
         <div>
             <PageHead />
             <Header />
-            <section className="w-screen min-h-[80vh] center gap-24 px-6">
+            <section className="w-full min-h-[80vh] center gap-24 px-6">
                 <div className="space-y-4 text-center pt-8">
                     <span className="px-3 py-1 rounded-full bg-gray-500 text-gray-200">
                         Beta
@@ -155,4 +155,3 @@ const index = () => {
 };
 
 export default index;
-

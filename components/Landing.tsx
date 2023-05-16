@@ -11,7 +11,7 @@ import Tooltip from "./Tooltip";
 
 const Landing = () => {
     return (
-        <section className="w-screen min-h-screen center gap-40 py-40 px-6">
+        <section className="w-full min-h-screen center gap-40 py-40 px-6">
             <div className="mx-6 p-6 sm:p-12 w-full rounded-3xl bg-gray-900 center">
                 <div className="space-y-10 max-w-xl text-center">
                     <h2 className="text-gray-200">What does it do?</h2>
@@ -147,4 +147,3 @@ const Landing = () => {
 };
 
 export default Landing;
-

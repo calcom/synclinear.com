@@ -3,7 +3,7 @@ import GitHubLogo from "./icons/GitHubLogo";
 
 const Footer = () => {
     return (
-        <footer className="w-screen p-6 text-lg font-light text-gray-200">
+        <footer className="w-full p-6 text-lg font-light text-gray-200">
             <div className="p-20 flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-900 rounded-3xl">
                 <div className="space-x-1 text-center">
                     <span>An open-source project by</span>
@@ -42,4 +42,3 @@ const Footer = () => {
 };
 
 export default Footer;
-
