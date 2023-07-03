@@ -340,8 +340,10 @@ export async function githubWebhookHandler(
             description: `${modifiedDescription ?? ""}`,
             teamId: linearTeamId,
             labelIds: [publicLabelId],
-            assigneeId:
-                issue.assignee?.id && assignee ? assignee.linearUserId : null
+            ...(issue.assignee?.id &&
+                assignee && {
+                    assigneeId: assignee.linearUserId
+                })
         });
 
         if (!createdIssueData.success) {

@@ -247,11 +247,10 @@ export async function linearWebhookHandler(
                     body: `${
                         modifiedDescription ?? ""
                     }\n\n<sub>${getSyncFooter()} | [${ticketName}](${url})</sub>`,
-                    assignees: [
-                        data.assigneeId && assignee?.githubUsername
-                            ? assignee?.githubUsername
-                            : ""
-                    ]
+                    ...(data.assigneeId &&
+                        assignee?.githubUsername && {
+                            assignees: [assignee?.githubUsername]
+                        })
                 },
                 headers: {
                     Authorization: githubAuthHeader,
@@ -985,11 +984,10 @@ export async function linearWebhookHandler(
                     body: `${
                         modifiedDescription ?? ""
                     }\n\n<sub>${getSyncFooter()} | [${ticketName}](${url})</sub>`,
-                    assignees: [
-                        data.assigneeId && assignee?.githubUsername
-                            ? assignee?.githubUsername
-                            : ""
-                    ]
+                    ...(data.assigneeId &&
+                        assignee?.githubUsername && {
+                            assignees: [assignee?.githubUsername]
+                        })
                 }
             });
 
