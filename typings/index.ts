@@ -91,3 +91,5 @@ export type GitHubIssueLabel = {
     color: string;
 };
 
+export type Platform = "linear" | "github";
+

@@ -52,6 +52,8 @@ export const GENERAL = {
     APP_URL: "https://synclinear.com",
     CONTRIBUTE_URL: "https://github.com/calcom/linear-to-github",
     IMG_TAG_REGEX: /<img.*src=[\'|\"| ]?https?:\/\/(.*?)[\'|\"| ].*\/?>/g,
+    INLINE_IMG_TAG_REGEX:
+        /!\[.*\]\(https?:\/\/(.*?)\)(?!\n\n?\[Source image\]\(https:\/\/.*\))/g,
     LOGIN_KEY: "login",
     SYNCED_ITEMS: [
         {

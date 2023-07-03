@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
-import { GitHubContext, LinearContext } from "../typings";
+import { GitHubContext, LinearContext, Platform } from "../typings";
 import { GENERAL, GITHUB } from "./constants";
 
 export const isDev = (): boolean => {
@@ -56,11 +56,33 @@ export const decrypt = (content: string, initVector: string): string => {
     return decrypted.toString();
 };
 
-export const replaceImgTags = (text: string): string => {
+export const replaceImgTags = (text: string, platform: Platform): string => {
     if (!text) return "";
-    return text.replace(
+
+    const withInlineImages = text.replace(
         GENERAL.IMG_TAG_REGEX,
         (_, args) => `![image](https://${args})`
+    );
+
+    // Temporary solution to broken images: add source image links.
+    try {
+        const withSourceLinks = addSourceLinks(withInlineImages, platform);
+        return withSourceLinks;
+    } catch (err: any) {
+        console.error(err);
+        return withInlineImages;
+    }
+};
+
+export const addSourceLinks = (text: string, platform: Platform): string => {
+    if (!text) return "";
+
+    return text.replace(
+        GENERAL.INLINE_IMG_TAG_REGEX,
+        (_, args) =>
+            `![${
+                platform === "linear" ? "Linear" : "GitHub"
+            }-hosted image](https://${args})\n\n[Source image](https://${args})`
     );
 };
 

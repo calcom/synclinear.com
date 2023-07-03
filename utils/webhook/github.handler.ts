@@ -256,7 +256,7 @@ export async function githubWebhookHandler(
             description?.join("<sub>"),
             "github"
         );
-        modifiedDescription = replaceImgTags(modifiedDescription);
+        modifiedDescription = replaceImgTags(modifiedDescription, "github");
 
         await linear
             .issueUpdate(syncedIssue.linearIssueId, {
@@ -323,7 +323,7 @@ export async function githubWebhookHandler(
         }
 
         let modifiedDescription = await replaceMentions(issue.body, "github");
-        modifiedDescription = replaceImgTags(modifiedDescription);
+        modifiedDescription = replaceImgTags(modifiedDescription, "github");
 
         if (anonymousUser) {
             modifiedDescription = `${modifiedDescription}\n\n [${sender.login} on GitHub](${sender.html_url})`;
@@ -618,7 +618,7 @@ async function prepareCommentContent(
     anonymous?: boolean
 ) {
     let modifiedComment = await replaceMentions(comment, "github");
-    modifiedComment = replaceImgTags(modifiedComment);
+    modifiedComment = replaceImgTags(modifiedComment, "github");
 
     if (!anonymous) return modifiedComment;
 

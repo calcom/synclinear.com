@@ -2,7 +2,7 @@ import { LinearClient } from "@linear/sdk";
 import got from "got";
 import type { NextApiResponse } from "next/types";
 import prisma from "../../prisma";
-import { GitHubIssueLabel } from "../../typings";
+import { GitHubIssueLabel, Platform } from "../../typings";
 import { GITHUB } from "../../utils/constants";
 
 /**
@@ -115,10 +115,7 @@ export const mapUsernames = async (
  * @param {string} body the message to be sent
  * @returns {string} the message with all mentions replaced
  */
-export const replaceMentions = async (
-    body: string,
-    platform: "linear" | "github"
-) => {
+export const replaceMentions = async (body: string, platform: Platform) => {
     if (!body?.match(/(?<=@)\w+/g)) return body;
 
     console.log(`Replacing ${platform} mentions`);

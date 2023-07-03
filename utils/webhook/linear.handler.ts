@@ -7,6 +7,7 @@ import {
     getAttachmentQuery,
     getSyncFooter,
     isNumber,
+    replaceImgTags,
     replaceStrikethroughTags,
     skipReason
 } from "../index";
@@ -228,10 +229,12 @@ export async function linearWebhookHandler(
                 return "Issue already exists on GitHub.";
             }
 
-            const modifiedDescription = await replaceMentions(
+            let modifiedDescription = await replaceMentions(
                 data.description,
                 "linear"
             );
+            modifiedDescription = replaceStrikethroughTags(modifiedDescription);
+            modifiedDescription = replaceImgTags(modifiedDescription, "linear");
 
             const assignee = await prisma.user.findFirst({
                 where: { linearUserId: data.assigneeId },
@@ -481,8 +484,8 @@ export async function linearWebhookHandler(
                 data.description,
                 "linear"
             );
-
             modifiedDescription = replaceStrikethroughTags(modifiedDescription);
+            modifiedDescription = replaceImgTags(modifiedDescription, "linear");
 
             const updatedIssueResponse = await got.patch(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
@@ -960,10 +963,12 @@ export async function linearWebhookHandler(
                 return reason;
             }
 
-            const modifiedDescription = await replaceMentions(
+            let modifiedDescription = await replaceMentions(
                 data.description,
                 "linear"
             );
+            modifiedDescription = replaceStrikethroughTags(modifiedDescription);
+            modifiedDescription = replaceImgTags(modifiedDescription, "linear");
 
             const assignee = await prisma.user.findFirst({
                 where: { linearUserId: data.assigneeId },
