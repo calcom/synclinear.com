@@ -485,7 +485,7 @@ export async function githubWebhookHandler(
 
         const { assignee } = issue;
 
-        if (!assignee?.id) {
+        if (!assignee?.id && action === "unassigned") {
             // Remove assignee
 
             const response = await linear.issueUpdate(
