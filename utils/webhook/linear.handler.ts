@@ -673,7 +673,7 @@ export async function linearWebhookHandler(
 
             const prevAssignees = (
                 (await issueResponse.body) as Issue
-            ).assignees?.map((assignee: User) => assignee.login);
+            ).assignees?.map((assignee: User) => assignee?.login);
 
             // Set new assignee
             const newAssignee = data?.assigneeId
@@ -687,10 +687,15 @@ export async function linearWebhookHandler(
                   })
                 : null;
 
-            if (
-                prevAssignees.length > 0 &&
-                !prevAssignees.includes(newAssignee?.githubUsername)
-            ) {
+            if (data?.assigneeId && !newAssignee?.githubUsername) {
+                console.log(
+                    `Skipping assignee for ${ticketName} as no GitHub username was found for Linear user ${data.assigneeId}.`
+                );
+            } else if (prevAssignees?.includes(newAssignee?.githubUsername)) {
+                console.log(
+                    `Skipping assignee for ${ticketName} as Linear user ${data.assigneeId} is already assigned.`
+                );
+            } else {
                 const assigneeEndpoint = `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/assignees`;
 
                 const response = await got.post(assigneeEndpoint, {
@@ -743,10 +748,6 @@ export async function linearWebhookHandler(
                         `Removed assignee from GitHub issue #${syncedIssue.githubIssueNumber} for ${ticketName}.`
                     );
                 }
-            } else {
-                console.log(
-                    `Skipping assignee for ${ticketName} as Linear user ${data.assigneeId} is already assigned.`
-                );
             }
         }
 
