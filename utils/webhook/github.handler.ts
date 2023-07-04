@@ -13,7 +13,9 @@ import { replaceMentions, upsertUser } from "../../pages/api/utils";
 import {
     Issue,
     IssueCommentCreatedEvent,
+    IssuesAssignedEvent,
     IssuesEvent,
+    IssuesUnassignedEvent,
     MilestoneEvent,
     Repository,
     User
@@ -483,61 +485,71 @@ export async function githubWebhookHandler(
             return reason;
         }
 
-        const { assignee } = issue;
+        const { assignee: modifiedAssignee } = body as
+            | IssuesAssignedEvent
+            | IssuesUnassignedEvent;
+
+        const ticket = await linear.issue(syncedIssue.linearIssueId);
+        const linearAssignee = await ticket?.assignee;
+
+        const remainingAssignee = issue?.assignee?.id
+            ? await prisma.user.findFirst({
+                  where: { githubUserId: issue?.assignee?.id },
+                  select: { linearUserId: true }
+              })
+            : null;
 
         if (action === "unassigned") {
             // Remove assignee
 
-            const remainingAssignee = assignee?.id
-                ? await prisma.user.findFirst({
-                      where: { githubUserId: assignee?.id },
-                      select: { linearUserId: true }
-                  })
-                : null;
+            // Set remaining assignee only if different from current
+            if (linearAssignee?.id != remainingAssignee?.linearUserId) {
+                const response = await linear.issueUpdate(
+                    syncedIssue.linearIssueId,
+                    { assigneeId: remainingAssignee?.linearUserId || null }
+                );
 
-            const response = await linear.issueUpdate(
-                syncedIssue.linearIssueId,
-                { assigneeId: remainingAssignee?.linearUserId || null }
-            );
-
-            if (!response?.success) {
-                const reason = `Failed to remove assignee on Linear ticket for GitHub issue #${issue.number}.`;
-                console.log(reason);
-                throw new ApiError(reason, 500);
-            } else {
-                const reason = `Removed assignee from Linear ticket for GitHub issue #${issue.number}.`;
-                console.log(reason);
-                return reason;
+                if (!response?.success) {
+                    const reason = `Failed to remove assignee on Linear ticket for GitHub issue #${issue.number}.`;
+                    console.log(reason);
+                    throw new ApiError(reason, 500);
+                } else {
+                    const reason = `Removed assignee from Linear ticket for GitHub issue #${issue.number}.`;
+                    console.log(reason);
+                    return reason;
+                }
             }
         } else if (action === "assigned") {
             // Add assignee
 
-            const newAssignee = assignee?.id
+            const newAssignee = modifiedAssignee?.id
                 ? await prisma.user.findFirst({
-                      where: { githubUserId: assignee?.id },
+                      where: { githubUserId: modifiedAssignee?.id },
                       select: { linearUserId: true }
                   })
                 : null;
 
             if (!newAssignee) {
-                const reason = `Skipping assignee change for issue #${issue.number} as no Linear username was found for GitHub user ${assignee?.login}.`;
+                const reason = `Skipping assignee for issue #${issue.number} as no Linear user was found for GitHub user ${modifiedAssignee?.login}.`;
                 console.log(reason);
                 return reason;
             }
 
-            const response = await linear.issueUpdate(
-                syncedIssue.linearIssueId,
-                { assigneeId: newAssignee.linearUserId }
-            );
+            if (linearAssignee?.id != newAssignee?.linearUserId) {
+                const response = await linear.issueUpdate(
+                    syncedIssue.linearIssueId,
+                    { assigneeId: newAssignee.linearUserId }
+                );
 
-            if (!response?.success) {
-                const reason = `Failed to add assignee on Linear ticket for GitHub issue #${issue.number}.`;
-                console.log(reason);
-                throw new ApiError(reason, 500);
-            } else {
-                const reason = `Added assignee to Linear ticket for GitHub issue #${issue.number}.`;
-                console.log(reason);
-                return reason;
+                if (!response?.success) {
+                    const reason = `Failed to add assignee on Linear ticket for GitHub issue #${issue.number}.`;
+                    console.log(reason);
+                    throw new ApiError(reason, 500);
+                } else {
+                    const reason = `Added assignee to Linear ticket for GitHub issue #${issue.number}.`;
+                    console.log(reason);
+                    return reason;
+                }
             }
         }
     } else if (["milestoned", "demilestoned"].includes(action)) {
