@@ -25,6 +25,7 @@ import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
 import { createMilestone, getGitHubFooter, setIssueMilestone } from "../github";
 import { ApiError, getIssueUpdateError } from "../errors";
+import { Issue, User } from "@octokit/webhooks-types";
 
 export async function linearWebhookHandler(
     body: LinearWebhookPayload,
@@ -659,13 +660,26 @@ export async function linearWebhookHandler(
 
         // Assignee change
         if ("assigneeId" in updatedFrom) {
-            const assigneeEndpoint = `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/assignees`;
+            // Remove all assignees before re-assigning to avoid false re-assignment events
+            const issueEndpoint = `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`;
 
-            // Assignee added
-            const assignee = data.assigneeId
+            const issueResponse = await got.get(issueEndpoint, {
+                headers: {
+                    Authorization: githubAuthHeader,
+                    "User-Agent": userAgentHeader
+                },
+                responseType: "json"
+            });
+
+            const prevAssignees = (
+                (await issueResponse.body) as Issue
+            ).assignees?.map((assignee: User) => assignee?.login);
+
+            // Set new assignee
+            const newAssignee = data?.assigneeId
                 ? await prisma.user.findFirst({
                       where: {
-                          linearUserId: data.assigneeId
+                          linearUserId: data?.assigneeId
                       },
                       select: {
                           githubUsername: true
@@ -673,10 +687,20 @@ export async function linearWebhookHandler(
                   })
                 : null;
 
-            if (assignee) {
+            if (data?.assigneeId && !newAssignee?.githubUsername) {
+                console.log(
+                    `Skipping assignee for ${ticketName} as no GitHub username was found for Linear user ${data.assigneeId}.`
+                );
+            } else if (prevAssignees?.includes(newAssignee?.githubUsername)) {
+                console.log(
+                    `Skipping assignee for ${ticketName} as Linear user ${data.assigneeId} is already assigned.`
+                );
+            } else {
+                const assigneeEndpoint = `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/assignees`;
+
                 const response = await got.post(assigneeEndpoint, {
                     json: {
-                        assignees: [assignee.githubUsername]
+                        assignees: [newAssignee?.githubUsername]
                     },
                     headers: {
                         Authorization: githubAuthHeader,
@@ -698,54 +722,30 @@ export async function linearWebhookHandler(
                         `Added assignee to GitHub issue #${syncedIssue.githubIssueNumber} for ${ticketName}.`
                     );
                 }
-            } else {
-                console.log(
-                    `Skipping assignee for ${ticketName} as no GitHub username was found for Linear user ${data.assigneeId}.`
-                );
-            }
 
-            // Remove previous assignee only if reassigned or deassigned explicitly
-            if (
-                updatedFrom.assigneeId !== null &&
-                (assignee || data.assigneeId === undefined)
-            ) {
-                const prevAssignee = await prisma.user.findFirst({
-                    where: {
-                        linearUserId: updatedFrom.assigneeId
+                // Remove old assignees on GitHub
+                const unassignResponse = await got.delete(assigneeEndpoint, {
+                    json: {
+                        assignees: [prevAssignees]
                     },
-                    select: {
-                        githubUsername: true
+                    headers: {
+                        Authorization: githubAuthHeader,
+                        "User-Agent": userAgentHeader
                     }
                 });
 
-                if (prevAssignee) {
-                    const response = await got.delete(assigneeEndpoint, {
-                        json: {
-                            assignees: [prevAssignee.githubUsername]
-                        },
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        }
-                    });
-
-                    if (response.statusCode > 201) {
-                        console.log(
-                            getIssueUpdateError(
-                                "assignee",
-                                data,
-                                syncedIssue,
-                                response
-                            )
-                        );
-                    } else {
-                        console.log(
-                            `Removed assignee on GitHub issue #${syncedIssue.githubIssueNumber} for ${ticketName}.`
-                        );
-                    }
+                if (unassignResponse.statusCode > 201) {
+                    console.log(
+                        getIssueUpdateError(
+                            "assignee",
+                            data,
+                            syncedIssue,
+                            unassignResponse
+                        )
+                    );
                 } else {
                     console.log(
-                        `Skipping assignee removal for ${ticketName} as no GitHub username was found for Linear user ${updatedFrom.assigneeId}.`
+                        `Removed assignee from GitHub issue #${syncedIssue.githubIssueNumber} for ${ticketName}.`
                     );
                 }
             }
