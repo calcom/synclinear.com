@@ -485,12 +485,19 @@ export async function githubWebhookHandler(
 
         const { assignee } = issue;
 
-        if (!assignee?.id && action === "unassigned") {
+        if (action === "unassigned") {
             // Remove assignee
+
+            const remainingAssignee = assignee?.id
+                ? await prisma.user.findFirst({
+                      where: { githubUserId: assignee?.id },
+                      select: { linearUserId: true }
+                  })
+                : null;
 
             const response = await linear.issueUpdate(
                 syncedIssue.linearIssueId,
-                { assigneeId: null }
+                { assigneeId: remainingAssignee?.linearUserId || null }
             );
 
             if (!response?.success) {
@@ -502,15 +509,17 @@ export async function githubWebhookHandler(
                 console.log(reason);
                 return reason;
             }
-        } else {
+        } else if (action === "assigned") {
             // Add assignee
 
-            const user = await prisma.user.findFirst({
-                where: { githubUserId: assignee?.id },
-                select: { linearUserId: true }
-            });
+            const newAssignee = assignee?.id
+                ? await prisma.user.findFirst({
+                      where: { githubUserId: assignee?.id },
+                      select: { linearUserId: true }
+                  })
+                : null;
 
-            if (!user) {
+            if (!newAssignee) {
                 const reason = `Skipping assignee change for issue #${issue.number} as no Linear username was found for GitHub user ${assignee?.login}.`;
                 console.log(reason);
                 return reason;
@@ -518,7 +527,7 @@ export async function githubWebhookHandler(
 
             const response = await linear.issueUpdate(
                 syncedIssue.linearIssueId,
-                { assigneeId: user.linearUserId }
+                { assigneeId: newAssignee.linearUserId }
             );
 
             if (!response?.success) {
