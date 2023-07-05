@@ -120,12 +120,12 @@ export const setLinearWebhook = async (token: string, teamID: string) => {
 
 export const updateLinearWebhook = async (
     token: string,
-    teamId: string,
+    teamName: string,
     updates: WebhookUpdateInput
 ) => {
-    const webhook = await getLinearWebhook(token, teamId);
+    const webhook = await getLinearWebhook(token, teamName);
     if (!webhook?.id) {
-        console.error(`Could not find webhook for Linear team ${teamId}`);
+        console.error(`Could not find webhook for Linear team ${teamName}`);
         return;
     }
 
@@ -315,9 +315,21 @@ export const exchangeLinearToken = async (
     return await response.json();
 };
 
-export const checkForExistingTeam = async (teamId: string): Promise<any> => {
-    const response = await fetch(`/api/linear/team/${teamId}`, {
-        method: "GET"
+export const checkTeamWebhook = async (
+    teamId: string,
+    teamName: string,
+    token: string
+): Promise<any> => {
+    const response = await fetch("/api/linear/webhook", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            teamId,
+            teamName
+        })
     });
 
     return await response.json();

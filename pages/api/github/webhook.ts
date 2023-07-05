@@ -6,7 +6,7 @@ export default async function handle(
     res: NextApiResponse
 ) {
     if (req.method !== "POST") {
-        return res.status(405).send({
+        return res.setHeader("Allow", "POST").status(405).send({
             error: "Only POST requests are accepted"
         });
     }

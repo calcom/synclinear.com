@@ -47,7 +47,9 @@ export async function linearQuery(
         variables,
         context: {
             headers: {
-                authorization: `Bearer ${token}`
+                authorization: `${
+                    !token.startsWith("Bearer") ? "Bearer " : ""
+                }${token}`
             }
         }
     });
