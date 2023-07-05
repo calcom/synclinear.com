@@ -8,7 +8,7 @@ import DeployButton from "./DeployButton";
 import {
     exchangeLinearToken,
     getLinearContext,
-    checkForExistingTeam,
+    checkTeamWebhook,
     getLinearAuthURL,
     saveLinearContext,
     setLinearWebhook
@@ -58,7 +58,6 @@ const LinearAuthButton = ({
             .then(body => {
                 if (body.access_token) setAccessToken(body.access_token);
                 else {
-                    alert("No Linear access token returned. Please try again.");
                     clearURLParams();
                     localStorage.removeItem(LINEAR.STORAGE_KEY);
                 }
@@ -68,7 +67,7 @@ const LinearAuthButton = ({
                 alert(`Error fetching access token: ${err}`);
                 setLoading(false);
             });
-    }, []);
+    }, [accessToken]);
 
     // Restore the Linear context from local storage
     useEffect(() => {
@@ -93,15 +92,15 @@ const LinearAuthButton = ({
             .catch(err => alert(`Error fetching labels: ${err}`));
     }, [accessToken]);
 
-    // Disable webhook deployment button if the team already exists
+    // Disable deployment button if the webhook and team are already saved
     useEffect(() => {
-        if (!chosenTeam) return;
+        if (!chosenTeam || !accessToken) return;
 
         setLoading(true);
 
-        checkForExistingTeam(chosenTeam.id)
+        checkTeamWebhook(chosenTeam.id, chosenTeam.name, accessToken)
             .then(res => {
-                if (res?.exists) {
+                if (res?.webhookExists && res?.teamInDB) {
                     setDeployed(true);
                     onDeployWebhook({
                         userId: user.id,
@@ -117,7 +116,7 @@ const LinearAuthButton = ({
                 alert(`Error checking for existing labels: ${err}`);
                 setLoading(false);
             });
-    }, [chosenTeam]);
+    }, [chosenTeam, accessToken, user]);
 
     const openLinearAuth = () => {
         // Generate random code to validate against CSRF attack
@@ -144,7 +143,15 @@ const LinearAuthButton = ({
                     apiKey: accessToken
                 });
             })
-            .catch(err => alert(`Error deploying webhook: ${err}`));
+            .catch(err => {
+                if (err?.message?.includes("url not unique")) {
+                    alert("Webhook already deployed");
+                    return;
+                }
+
+                setDeployed(false);
+                alert(`Error deploying webhook: ${err}`);
+            });
 
         setDeployed(true);
     }, [accessToken, chosenTeam, deployed, user]);

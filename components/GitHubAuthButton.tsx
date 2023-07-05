@@ -58,11 +58,11 @@ const GitHubAuthButton = ({
 
         // Exchange auth code for access token
         const refreshToken = authResponse.get("code");
+
         exchangeGitHubToken(refreshToken)
             .then(body => {
                 if (body.access_token) setGitHubToken(body.access_token);
                 else {
-                    alert("No access token returned. Please try again.");
                     clearURLParams();
                     localStorage.removeItem(GITHUB.STORAGE_KEY);
                 }
@@ -88,7 +88,6 @@ const GitHubAuthButton = ({
 
         getGitHubRepos(gitHubToken)
             .then(res => {
-                if (!res?.length) throw new Error("No repos retrieved");
                 setRepos(
                     res?.map(repo => {
                         return { id: repo.id, name: repo.full_name };
