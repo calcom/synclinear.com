@@ -15,6 +15,7 @@ import {
     setGitHubWebook
 } from "../utils/github";
 import { Context } from "./ContextProvider";
+import SelectWithSearch from "./SelectWithSearch";
 
 interface IProps {
     onAuth: (apiKey: string) => void;
@@ -179,25 +180,16 @@ const GitHubAuthButton = ({
                 {!!gitHubToken && <CheckIcon className="w-6 h-6" />}
             </button>
             {repos?.length > 0 && gitHubUser && restored && (
-                <div className="flex flex-col items-center space-y-4">
-                    <select
-                        name="GitHub repository"
+                <div className="flex flex-col w-full items-center space-y-4">
+                    <SelectWithSearch
+                        values={repos}
+                        chosenValue={chosenRepo?.name}
+                        onChange={repoId =>
+                            setChosenRepo(repos.find(repo => repo.id == repoId))
+                        }
+                        placeholder="4. Search your repo..."
                         disabled={loading}
-                        onChange={e => {
-                            setChosenRepo(
-                                repos.find(repo => repo.id == e.target.value)
-                            );
-                        }}
-                    >
-                        <option value="" disabled selected>
-                            4. Select your repo
-                        </option>
-                        {repos.map(repo => (
-                            <option key={repo.id} value={repo.id}>
-                                {repo.name}
-                            </option>
-                        ))}
-                    </select>
+                    />
                     {chosenRepo && (
                         <DeployButton
                             loading={loading}
