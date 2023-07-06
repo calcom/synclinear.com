@@ -1,6 +1,6 @@
 import * as Select from "@radix-ui/react-select";
 import { ChevronDownIcon, Cross1Icon } from "@radix-ui/react-icons";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Props = {
     values: Array<{ id: string; name: string }>;
@@ -8,6 +8,8 @@ type Props = {
     chosenValue?: string;
     placeholder?: string;
     disabled?: boolean;
+    action?: string;
+    onAction?: () => void;
 };
 
 const SelectWithSearch: React.FC<Props> = ({
@@ -15,7 +17,9 @@ const SelectWithSearch: React.FC<Props> = ({
     onChange,
     chosenValue,
     placeholder = "Select a value",
-    disabled
+    disabled,
+    action,
+    onAction
 }) => {
     const [filteredValues, setFilteredValues] = useState(values);
     const [query, setQuery] = useState("");
@@ -30,10 +34,15 @@ const SelectWithSearch: React.FC<Props> = ({
         });
 
         // Hack to retain focus on text input
-        setTimeout(() => inputRef.current.focus(), 10);
+        setTimeout(() => refocusTextInput(), 10);
     }, [query, values]);
 
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const refocusTextInput = useCallback(
+        () => inputRef?.current?.focus(),
+        [inputRef]
+    );
 
     return (
         <Select.Root
@@ -43,7 +52,7 @@ const SelectWithSearch: React.FC<Props> = ({
                 setQuery("");
             }}
             onOpenChange={() => {
-                setTimeout(() => inputRef.current.focus(), 10);
+                setTimeout(() => refocusTextInput(), 10);
             }}
         >
             <Select.Trigger className="border-2 bg-gray-100 border-gray-900 disabled:border-gray-400 overflow-hidden font-primary disabled:font-tertiary font-medium text-xl p-3 pl-1 h-14 w-full max-w-md rounded-[2rem] enabled:hover:rounded-2xl transition-rounded active:outline-none flex items-center justify-between gap-2">
@@ -75,7 +84,7 @@ const SelectWithSearch: React.FC<Props> = ({
                         />
                         {chosenValue || query.length > 0 ? (
                             <Cross1Icon
-                                className="w-6 h-6 ml-auto p-1 hover:text-danger transition-colors"
+                                className="w-6 h-6 ml-auto p-1 hover:text-danger transition-colors cursor-pointer"
                                 onClick={() => {
                                     setQuery("");
                                     onChange("");
@@ -84,9 +93,10 @@ const SelectWithSearch: React.FC<Props> = ({
                         ) : null}
                         {filteredValues?.map(value => (
                             <Select.Item
+                                onMouseLeave={refocusTextInput}
                                 key={value.id}
                                 value={value.id}
-                                className="h-8 flex items-center hover:bg-gray-200 outline-none rounded-full relative px-4 select-none"
+                                className="h-8 flex items-center cursor-pointer hover:bg-gray-200 outline-none rounded-full relative px-4 select-none"
                             >
                                 <Select.ItemText>{value.name}</Select.ItemText>
                             </Select.Item>
@@ -94,6 +104,14 @@ const SelectWithSearch: React.FC<Props> = ({
                         {filteredValues.length === 0 && (
                             <div className="flex items-center px-2 justify-center h-8">
                                 No results.
+                            </div>
+                        )}
+                        {action && (
+                            <div
+                                onClick={onAction}
+                                className="flex items-center px-2 justify-center h-8 hover:bg-gray-300 rounded-full cursor-pointer"
+                            >
+                                {action}
                             </div>
                         )}
                     </Select.Viewport>

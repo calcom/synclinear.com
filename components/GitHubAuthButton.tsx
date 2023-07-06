@@ -7,7 +7,7 @@ import { GITHUB } from "../utils/constants";
 import DeployButton from "./DeployButton";
 import {
     exchangeGitHubToken,
-    getGitHubRepos,
+    listReposForUser,
     getGitHubUser,
     getRepoWebhook,
     getGitHubAuthURL,
@@ -31,6 +31,7 @@ const GitHubAuthButton = ({
     restored
 }: IProps) => {
     const [repos, setRepos] = useState<GitHubRepo[]>([]);
+    const [reposPage, setReposPage] = useState(0);
     const [chosenRepo, setChosenRepo] = useState<GitHubRepo>();
     const [deployed, setDeployed] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -87,7 +88,7 @@ const GitHubAuthButton = ({
 
         onAuth(gitHubToken);
 
-        getGitHubRepos(gitHubToken)
+        listReposForUser(gitHubToken)
             .then(res => {
                 setRepos(
                     res?.map(repo => {
@@ -161,6 +162,21 @@ const GitHubAuthButton = ({
             .catch(err => alert(`Error deploying webhook: ${err}`));
     }, [gitHubToken, chosenRepo, deployed, gitHubUser]);
 
+    const loadMoreRepos = useCallback(async () => {
+        setReposPage(current => current + 1);
+
+        await listReposForUser(gitHubToken, reposPage + 1)
+            .then(res => {
+                setRepos(current => [
+                    ...current,
+                    ...(res?.map(repo => {
+                        return { id: repo.id, name: repo.full_name };
+                    }) ?? [])
+                ]);
+            })
+            .catch(err => alert(`Error fetching more repos: ${err}`));
+    }, [gitHubToken, repos, reposPage]);
+
     return (
         <div className="center space-y-8 w-80">
             <button
@@ -189,7 +205,10 @@ const GitHubAuthButton = ({
                         }
                         placeholder="4. Search your repo..."
                         disabled={loading}
+                        action="Load more..."
+                        onAction={loadMoreRepos}
                     />
+
                     {chosenRepo && (
                         <DeployButton
                             loading={loading}
