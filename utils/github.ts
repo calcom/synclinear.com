@@ -148,10 +148,16 @@ export const exchangeGitHubToken = async (
     return await response.json();
 };
 
-export const getGitHubRepos = async (token: string): Promise<any> => {
-    const response = await fetch(GITHUB.LIST_REPOS_ENDPOINT, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+export const listReposForUser = async (
+    token: string,
+    page = 0
+): Promise<any> => {
+    const response = await fetch(
+        `${GITHUB.LIST_REPOS_ENDPOINT}&page=${page + 1}`,
+        {
+            headers: { Authorization: `Bearer ${token}` }
+        }
+    );
 
     return await response.json();
 };
