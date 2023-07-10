@@ -91,7 +91,7 @@ const GitHubAuthButton = ({
         listReposForUser(gitHubToken)
             .then(res => {
                 setRepos(
-                    res?.map(repo => {
+                    res?.map?.(repo => {
                         return { id: repo.id, name: repo.full_name };
                     }) ?? []
                 );
@@ -169,7 +169,7 @@ const GitHubAuthButton = ({
             .then(res => {
                 setRepos(current => [
                     ...current,
-                    ...(res?.map(repo => {
+                    ...(res?.map?.(repo => {
                         return { id: repo.id, name: repo.full_name };
                     }) ?? [])
                 ]);
