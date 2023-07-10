@@ -73,20 +73,6 @@ const Dashboard = () => {
     return (
         <div className="center space-y-4">
             {loading && <p className="animate-pulse">Loading...</p>}
-            <div className="flex items-center space-x-2 mb-4">
-                <input
-                    disabled={!linearContext.apiKey}
-                    type="checkbox"
-                    id="syncsMilestones"
-                    onChange={handleMilestoneSyncChange}
-                />
-                <label htmlFor="syncsMilestones" className="whitespace-nowrap">
-                    Sync milestones to cycles
-                </label>
-                <Tooltip content="Requires connecting to Linear first">
-                    <InfoCircledIcon className="w-6 h-6 text-gray-400 hover:font-secondary transition-colors duration-200" />
-                </Tooltip>
-            </div>
             <h3>Your active syncs</h3>
             {syncs.map((sync, index) => (
                 <div
@@ -118,6 +104,20 @@ const Dashboard = () => {
                     </Tooltip>
                 </div>
             ))}
+            <div className="flex items-center space-x-2 mb-4">
+                <input
+                    disabled={!linearContext.apiKey}
+                    type="checkbox"
+                    id="syncsMilestones"
+                    onChange={handleMilestoneSyncChange}
+                />
+                <label htmlFor="syncsMilestones" className="whitespace-nowrap">
+                    Sync milestones to cycles
+                </label>
+                <Tooltip content="Requires connecting to Linear first">
+                    <InfoCircledIcon className="w-6 h-6 text-gray-400 hover:font-secondary transition-colors duration-200" />
+                </Tooltip>
+            </div>
         </div>
     );
 };
