@@ -1,3 +1,5 @@
+import { LINEAR } from "../utils/constants";
+
 export interface LinearWebhookPayload {
     action: "create" | "update" | "remove";
     type: string;
@@ -60,6 +62,8 @@ export interface LinearTeam extends LinearObject {
     labels: { nodes: LinearObject[] };
     states: { nodes: LinearState[] };
 }
+
+export type TicketState = keyof typeof LINEAR.TICKET_STATES;
 
 export interface GitHubRepo {
     id: string;

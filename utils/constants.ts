@@ -12,7 +12,12 @@ export const LINEAR = {
     STORAGE_KEY: "linear-context",
     APP_URL: "https://linear.app",
     GITHUB_LABEL: "linear",
-    WEBHOOK_EVENTS: ["Issue", "Comment", "IssueLabel"]
+    WEBHOOK_EVENTS: ["Issue", "Comment", "IssueLabel"],
+    TICKET_STATES: {
+        todo: "Todo",
+        done: "Done",
+        canceled: "Canceled"
+    }
 };
 
 export const SHARED = {

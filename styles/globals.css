@@ -27,6 +27,9 @@
     button > span {
         @apply grow;
     }
+    button.primary {
+        @apply bg-gray-900 text-white disabled:bg-gray-300;
+    }
     select {
         @apply rounded-[2rem] enabled:hover:rounded-2xl text-center bg-gray-300 enabled:hover:bg-gray-400 transition-all p-3 max-w-xs w-full font-secondary text-ellipsis text-xl;
     }

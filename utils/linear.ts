@@ -3,7 +3,7 @@ import { getWebhookURL, getSyncFooter } from ".";
 import { linearQuery } from "./apollo";
 import { LINEAR, GENERAL, GITHUB } from "./constants";
 import { v4 as uuid } from "uuid";
-import { LinearTeam } from "../typings";
+import { LinearObject, LinearTeam, TicketState } from "../typings";
 import { WebhookUpdateInput } from "@linear/sdk/dist/_generated_documents";
 
 export const getLinearTokenURL = (): string => {
@@ -269,28 +269,35 @@ export const updateLinearCycle = async (
     });
 };
 
-export const saveLinearContext = async (token: string, team: LinearTeam) => {
-    const labels = [
-        ...(team.states?.nodes ?? []),
-        ...(team.labels?.nodes ?? [])
-    ];
+export const saveLinearContext = async (
+    token: string,
+    team: LinearTeam,
+    stateLabels: { [key in TicketState]: LinearObject }
+) => {
+    let publicLabel = team.labels?.nodes?.find?.(n => n.name === "Public");
 
-    if (!labels.find(n => n.name === "Public")) {
+    if (!publicLabel) {
         const { data } = await createLinearPublicLabel(token, team.id);
 
-        if (!data?.issueLabelCreate?.issueLabel)
+        if (!data?.issueLabelCreate?.issueLabel) {
             alert('Please create a Linear label called "Public"');
+        }
 
-        labels.push(data?.issueLabelCreate?.issueLabel);
+        publicLabel = data?.issueLabelCreate?.issueLabel;
+    }
+
+    if (!stateLabels) {
+        alert("Please select a label for each ticket state");
+        return;
     }
 
     const data = {
         teamId: team.id,
         teamName: team.name,
-        publicLabelId: labels.find(n => n.name === "Public")?.id,
-        canceledStateId: labels.find(n => n.name === "Canceled")?.id,
-        doneStateId: labels.find(n => n.name === "Done")?.id,
-        toDoStateId: labels.find(n => n.name === "Todo")?.id
+        publicLabelId: publicLabel?.id,
+        toDoStateId: stateLabels["todo"]?.id,
+        doneStateId: stateLabels["done"]?.id,
+        canceledStateId: stateLabels["canceled"]?.id
     };
 
     const response = await fetch("/api/linear/save", {

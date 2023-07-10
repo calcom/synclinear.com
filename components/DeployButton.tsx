@@ -8,15 +8,21 @@ import React from "react";
 interface IProps {
     loading: boolean;
     deployed: boolean;
+    disabled?: boolean;
     onDeploy: () => void;
 }
 
-const DeployButton = ({ loading, deployed, onDeploy }: IProps) => {
+const DeployButton = ({
+    loading,
+    deployed,
+    disabled = false,
+    onDeploy
+}: IProps) => {
     return (
         <button
             onClick={onDeploy}
-            disabled={deployed || loading}
-            className={`${loading ? "animate-pulse" : ""}`}
+            disabled={disabled || deployed || loading}
+            className={`primary ${loading ? "animate-pulse" : ""}`}
             aria-label="Deploy webhook"
         >
             {deployed ? (
