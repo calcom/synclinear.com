@@ -1,6 +1,6 @@
 import { GitHubRepo, MilestoneState } from "../typings";
 import { getWebhookURL } from ".";
-import { GITHUB } from "./constants";
+import { GITHUB, LINEAR } from "./constants";
 
 export const getGitHubFooter = (userName: string): string => {
     // To avoid exposing a user email if their username is an email address
@@ -38,7 +38,8 @@ export const getGitHubAuthURL = (verificationCode: string): string => {
 
 export const saveGitHubContext = async (
     repo: GitHubRepo,
-    webhookSecret: string
+    webhookSecret: string,
+    token: string
 ) => {
     const data = {
         repoId: repo.id,
@@ -46,12 +47,34 @@ export const saveGitHubContext = async (
         webhookSecret
     };
 
-    const response = await fetch("/api/github/save", {
+    const saveResponse = await fetch("/api/github/save", {
         method: "POST",
         body: JSON.stringify(data)
     });
 
-    return response.json();
+    const saveData = await saveResponse.json();
+
+    const syncLabelResponse = await fetch("/api/github/label", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `token ${token}`
+        },
+        body: JSON.stringify({
+            repoName: repo.name,
+            label: {
+                name: LINEAR.GITHUB_LABEL,
+                color: LINEAR.GITHUB_LABEL_COLOR
+            }
+        })
+    });
+
+    const syncLabelData = await syncLabelResponse.json();
+
+    return {
+        saveData,
+        syncLabelData
+    };
 };
 
 export const getRepoWebhook = async (

@@ -12,6 +12,7 @@ export const LINEAR = {
     STORAGE_KEY: "linear-context",
     APP_URL: "https://linear.app",
     GITHUB_LABEL: "linear",
+    GITHUB_LABEL_COLOR: "#4941DA",
     WEBHOOK_EVENTS: ["Issue", "Comment", "IssueLabel"],
     TICKET_STATES: {
         todo: "Todo",
