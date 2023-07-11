@@ -13,7 +13,7 @@ export default async function handle(
     }
 
     const { repoName, label } = req.body;
-    if (!repoName || !label) {
+    if (!repoName || !label?.name || !label?.color) {
         return res
             .status(400)
             .send({ error: "Request is missing repo name or label details" });
@@ -33,7 +33,7 @@ export default async function handle(
         });
 
         if (error) {
-            throw error;
+            throw new Error(`Could not create GitHub label "${label.name}"`);
         }
 
         return res.status(200).json({ createdLabel });
