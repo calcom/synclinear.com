@@ -64,31 +64,40 @@ export const decrypt = (content: string, initVector: string): string => {
 export const replaceImgTags = (text: string, platform: Platform): string => {
     if (!text) return "";
 
-    const withInlineImages = text.replace(
-        GENERAL.IMG_TAG_REGEX,
-        (_, args) => `![image](https://${args})`
-    );
+    // To preserve images through re-uploading by each platform,
+    // we store the original image URL in the source tag
+    // then unroll (?) it.
+    const swapImageWithSource = (
+        imgUrl: string,
+        sourceUrl: string | undefined,
+        platform: Platform
+    ): string => {
+        return `![${
+            platform === "linear" ? "Linear" : "GitHub"
+        }-hosted image](https://${
+            sourceUrl ? sourceUrl : imgUrl
+        })\n[Image source](https://${sourceUrl ? sourceUrl : imgUrl})\n`;
+    };
 
-    // Temporary solution to broken images: add source image links.
-    try {
-        const withSourceLinks = addSourceLinks(withInlineImages, platform);
-        return withSourceLinks;
-    } catch (err: any) {
-        console.error(err);
-        return withInlineImages;
-    }
-};
-
-export const addSourceLinks = (text: string, platform: Platform): string => {
-    if (!text) return "";
-
-    return text.replace(
+    let replaced = text.replace(
+        // Regex that matches inline markdown images, optionally with source links
         GENERAL.INLINE_IMG_TAG_REGEX,
-        (_, args) =>
-            `![${
-                platform === "linear" ? "Linear" : "GitHub"
-            }-hosted image](https://${args})\n\n[Source image](https://${args})`
+        (_, imgUrl, sourceUrl) => {
+            return swapImageWithSource(imgUrl, sourceUrl, platform);
+        }
     );
+
+    // To account for HTML-style image tags supported by GitHub markdown
+    if (platform === "github") {
+        replaced = replaced.replace(
+            GENERAL.IMG_TAG_REGEX,
+            (_, imgUrl, sourceUrl) => {
+                return swapImageWithSource(imgUrl, sourceUrl, platform);
+            }
+        );
+    }
+
+    return replaced;
 };
 
 export const replaceStrikethroughTags = (text: string): string => {

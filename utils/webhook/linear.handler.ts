@@ -1011,8 +1011,6 @@ export async function linearWebhookHandler(
                 repoFullName
             );
 
-            console.log(attachmentQuery, createdIssueData);
-
             await Promise.all([
                 linearQuery(attachmentQuery, linearKey).then(response => {
                     if (!response?.data?.attachmentCreate?.success) {
