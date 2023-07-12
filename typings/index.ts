@@ -1,3 +1,4 @@
+import { User } from "@octokit/webhooks-types";
 import { LINEAR } from "../utils/constants";
 
 export interface LinearWebhookPayload {
@@ -23,7 +24,6 @@ interface LinearData {
     teamId: string;
     projectId: string;
     cycleId?: string;
-    // previousIdentifiers: string[];
     creatorId: string;
     userId?: string;
     assigneeId: string;
@@ -96,4 +96,9 @@ export type GitHubIssueLabel = {
 };
 
 export type Platform = "linear" | "github";
+
+export type GitHubMarkdownOptions = {
+    anonymous?: boolean;
+    sender?: User;
+};
 
