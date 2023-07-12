@@ -9,7 +9,11 @@ import {
     skipReason
 } from "../index";
 import { LinearClient } from "@linear/sdk";
-import { replaceMentions, upsertUser } from "../../pages/api/utils";
+import {
+    prepareMarkdownContent,
+    replaceMentions,
+    upsertUser
+} from "../../pages/api/utils";
 import {
     Issue,
     IssueCommentCreatedEvent,
@@ -179,7 +183,11 @@ export async function githubWebhookHandler(
                 return reason;
             }
 
-            const modifiedComment = await prepareCommentContent(comment.body);
+            const modifiedComment = await prepareMarkdownContent(
+                comment.body,
+                "github"
+            );
+
             await createLinearComment(
                 linear,
                 syncedIssue,
@@ -252,6 +260,7 @@ export async function githubWebhookHandler(
         if (title.length > 1) title.shift();
 
         const description = issue.body?.split("<sub>");
+
         if ((description?.length || 0) > 1) description?.pop();
 
         let modifiedDescription = await replaceMentions(
@@ -324,12 +333,14 @@ export async function githubWebhookHandler(
             return reason;
         }
 
-        let modifiedDescription = await replaceMentions(issue.body, "github");
-        modifiedDescription = replaceImgTags(modifiedDescription, "github");
-
-        if (anonymousUser) {
-            modifiedDescription = `${modifiedDescription}\n\n [${sender.login} on GitHub](${sender.html_url})`;
-        }
+        const modifiedDescription = await prepareMarkdownContent(
+            issue.body,
+            "github",
+            {
+                anonymous: anonymousUser,
+                sender: sender
+            }
+        );
 
         const assignee = await prisma.user.findFirst({
             where: { githubUserId: issue.assignee?.id },
@@ -464,8 +475,9 @@ export async function githubWebhookHandler(
             const comments = JSON.parse(issueCommentsPayload.body);
 
             for (const comment of comments) {
-                const modifiedComment = await prepareCommentContent(
-                    comment.body
+                const modifiedComment = await prepareMarkdownContent(
+                    comment.body,
+                    "github"
                 );
 
                 await createLinearComment(
@@ -635,19 +647,6 @@ export async function githubWebhookHandler(
     }
 }
 
-async function prepareCommentContent(
-    comment: string,
-    sender?: User,
-    anonymous?: boolean
-) {
-    let modifiedComment = await replaceMentions(comment, "github");
-    modifiedComment = replaceImgTags(modifiedComment, "github");
-
-    if (!anonymous) return modifiedComment;
-
-    return `>${modifiedComment}\n\n—[${sender.login} on GitHub](${sender.html_url})`;
-}
-
 async function createLinearComment(
     linear: LinearClient,
     syncedIssue,
@@ -702,10 +701,13 @@ async function createAnonymousUserComment(
     });
 
     const { comment: githubComment }: IssueCommentCreatedEvent = body;
-    const modifiedComment = await prepareCommentContent(
+    const modifiedComment = await prepareMarkdownContent(
         githubComment.body,
-        sender,
-        true
+        "github",
+        {
+            anonymous: true,
+            sender: sender
+        }
     );
 
     await createLinearComment(linear, syncedIssue, modifiedComment, issue);

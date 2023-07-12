@@ -2,8 +2,13 @@ import { LinearClient } from "@linear/sdk";
 import got from "got";
 import type { NextApiResponse } from "next/types";
 import prisma from "../../prisma";
-import { GitHubIssueLabel, Platform } from "../../typings";
+import {
+    GitHubIssueLabel,
+    GitHubMarkdownOptions,
+    Platform
+} from "../../typings";
 import { GITHUB } from "../../utils/constants";
+import { replaceImgTags, replaceStrikethroughTags } from "../../utils";
 
 /**
  * Server-only utility functions
@@ -256,4 +261,25 @@ export const createComment = async ({
     }
 
     return { error };
+};
+
+export const prepareMarkdownContent = async (
+    markdown: string,
+    platform: Platform,
+    githubOptions: GitHubMarkdownOptions = {}
+): Promise<string> => {
+    try {
+        let modifiedMarkdown = await replaceMentions(markdown, platform);
+        modifiedMarkdown = replaceStrikethroughTags(modifiedMarkdown);
+        modifiedMarkdown = replaceImgTags(modifiedMarkdown, platform);
+
+        if (githubOptions?.anonymous && githubOptions?.sender) {
+            return `>${modifiedMarkdown}\n\n—[${githubOptions.sender.login} on GitHub](${githubOptions.sender.html_url})`;
+        }
+
+        return modifiedMarkdown;
+    } catch (error) {
+        console.error(error);
+        return "An error occurred while preparing the markdown content.";
+    }
 };

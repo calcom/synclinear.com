@@ -7,8 +7,6 @@ import {
     getAttachmentQuery,
     getSyncFooter,
     isNumber,
-    replaceImgTags,
-    replaceStrikethroughTags,
     skipReason
 } from "../index";
 import { LinearClient } from "@linear/sdk";
@@ -16,6 +14,7 @@ import {
     applyLabel,
     createComment,
     createLabel,
+    prepareMarkdownContent,
     replaceMentions,
     upsertUser
 } from "../../pages/api/utils";
@@ -230,12 +229,10 @@ export async function linearWebhookHandler(
                 return "Issue already exists on GitHub.";
             }
 
-            let modifiedDescription = await replaceMentions(
+            const modifiedDescription = await prepareMarkdownContent(
                 data.description,
                 "linear"
             );
-            modifiedDescription = replaceStrikethroughTags(modifiedDescription);
-            modifiedDescription = replaceImgTags(modifiedDescription, "linear");
 
             const assignee = await prisma.user.findFirst({
                 where: { linearUserId: data.assigneeId },
@@ -480,12 +477,10 @@ export async function linearWebhookHandler(
 
         // Description change
         if (updatedFrom.description && actionType === "Issue") {
-            let modifiedDescription = await replaceMentions(
+            const modifiedDescription = await prepareMarkdownContent(
                 data.description,
                 "linear"
             );
-            modifiedDescription = replaceStrikethroughTags(modifiedDescription);
-            modifiedDescription = replaceImgTags(modifiedDescription, "linear");
 
             const updatedIssueResponse = await got.patch(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
@@ -962,12 +957,10 @@ export async function linearWebhookHandler(
                 return reason;
             }
 
-            let modifiedDescription = await replaceMentions(
+            const modifiedDescription = await prepareMarkdownContent(
                 data.description,
                 "linear"
             );
-            modifiedDescription = replaceStrikethroughTags(modifiedDescription);
-            modifiedDescription = replaceImgTags(modifiedDescription, "linear");
 
             const assignee = await prisma.user.findFirst({
                 where: { linearUserId: data.assigneeId },
