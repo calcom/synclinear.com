@@ -262,7 +262,12 @@ export async function linearWebhookHandler(
                         sync.linearUserId === (data.userId ?? data.creatorId)
                 )
             ) {
-                inviteMember(data.creatorId, data.teamId, repoFullName, linear);
+                await inviteMember(
+                    data.creatorId,
+                    data.teamId,
+                    repoFullName,
+                    linear
+                );
             }
 
             if (createdIssueResponse.statusCode > 201) {
