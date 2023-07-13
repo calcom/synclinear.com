@@ -81,9 +81,9 @@ export async function githubWebhookHandler(
             : null;
 
         if (!sync) {
-            console.log("Could not find issue's corresponding sync.");
+            console.log(`Could not find sync for ${repository?.full_name}`);
             throw new ApiError(
-                "Could not find issue's corresponding sync.",
+                `Could not find sync for ${repository?.full_name}`,
                 404
             );
         }

@@ -15,7 +15,7 @@ import {
     setGitHubWebook
 } from "../utils/github";
 import { Context } from "./ContextProvider";
-import SelectWithSearch from "./SelectWithSearch";
+import Select from "./Select";
 
 interface IProps {
     onAuth: (apiKey: string) => void;
@@ -31,7 +31,7 @@ const GitHubAuthButton = ({
     restored
 }: IProps) => {
     const [repos, setRepos] = useState<GitHubRepo[]>([]);
-    const [reposPage, setReposPage] = useState(0);
+    const [reposLoading, setReposLoading] = useState(false);
     const [chosenRepo, setChosenRepo] = useState<GitHubRepo>();
     const [deployed, setDeployed] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -83,20 +83,32 @@ const GitHubAuthButton = ({
 
     // Fetch the user's repos when a token is available
     useEffect(() => {
-        if (!gitHubToken) return;
-        if (gitHubUser?.id) return;
+        if (!gitHubToken || gitHubUser?.id) return;
 
         onAuth(gitHubToken);
 
-        listReposForUser(gitHubToken)
-            .then(res => {
-                setRepos(
-                    res?.map?.(repo => {
-                        return { id: repo.id, name: repo.full_name };
-                    }) ?? []
-                );
-            })
-            .catch(err => alert(`Error fetching repos: ${err}`));
+        const startingPage = 0;
+
+        const listReposRecursively = async (page: number): Promise<void> => {
+            const res = await listReposForUser(gitHubToken, page);
+
+            if (!res || res.length < 1) {
+                setReposLoading(false);
+                return;
+            }
+
+            setRepos((current: GitHubRepo[]) => [
+                ...current,
+                ...(res?.map?.(repo => {
+                    return { id: repo.id, name: repo.full_name };
+                }) ?? [])
+            ]);
+
+            return await listReposRecursively(page + 1);
+        };
+
+        setReposLoading(true);
+        listReposRecursively(startingPage);
 
         getGitHubUser(gitHubToken)
             .then(res => setGitHubUser({ id: res.id, name: res.login }))
@@ -162,21 +174,6 @@ const GitHubAuthButton = ({
             .catch(err => alert(`Error deploying webhook: ${err}`));
     }, [gitHubToken, chosenRepo, deployed, gitHubUser]);
 
-    const loadMoreRepos = useCallback(async () => {
-        setReposPage(current => current + 1);
-
-        await listReposForUser(gitHubToken, reposPage + 1)
-            .then(res => {
-                setRepos(current => [
-                    ...current,
-                    ...(res?.map?.(repo => {
-                        return { id: repo.id, name: repo.full_name };
-                    }) ?? [])
-                ]);
-            })
-            .catch(err => alert(`Error fetching more repos: ${err}`));
-    }, [gitHubToken, repos, reposPage]);
-
     return (
         <div className="center space-y-8 w-80">
             <button
@@ -197,18 +194,17 @@ const GitHubAuthButton = ({
             </button>
             {repos?.length > 0 && gitHubUser && restored && (
                 <div className="flex flex-col w-full items-center space-y-4">
-                    <SelectWithSearch
-                        values={repos}
-                        chosenValue={chosenRepo?.name}
+                    <Select
+                        values={repos.map((repo: GitHubRepo) => ({
+                            value: repo.id,
+                            label: repo.name
+                        }))}
                         onChange={repoId =>
                             setChosenRepo(repos.find(repo => repo.id == repoId))
                         }
-                        placeholder="4. Search your repo..."
-                        disabled={loading}
-                        action="Load more..."
-                        onAction={loadMoreRepos}
+                        placeholder="4. Find your repo"
+                        loading={reposLoading}
                     />
-
                     {chosenRepo && (
                         <DeployButton
                             loading={loading}

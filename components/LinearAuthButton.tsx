@@ -205,12 +205,15 @@ const LinearAuthButton = ({
             {teams.length > 0 && restored && (
                 <div className="flex flex-col items-center w-full space-y-4">
                     <Select
-                        values={teams}
+                        values={teams.map(team => ({
+                            value: team.id,
+                            label: team.name
+                        }))}
                         onChange={(id: string) =>
                             setChosenTeam(teams.find(team => team.id === id))
                         }
                         disabled={loading}
-                        placeholder="3. Select your team"
+                        placeholder="3. Find your team"
                     />
                     {chosenTeam?.states?.nodes && (
                         <div className="w-full space-y-4 pb-4">
@@ -228,7 +231,12 @@ const LinearAuthButton = ({
                                                 ticketStates?.[key]?.name ||
                                                 "Select a label"
                                             }
-                                            values={chosenTeam.states.nodes}
+                                            values={chosenTeam.states.nodes.map(
+                                                state => ({
+                                                    value: state.id,
+                                                    label: state.name
+                                                })
+                                            )}
                                             onChange={(id: string) =>
                                                 setTicketStates({
                                                     ...ticketStates,
