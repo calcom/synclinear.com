@@ -61,45 +61,6 @@ export const decrypt = (content: string, initVector: string): string => {
     return decrypted.toString();
 };
 
-export const replaceImgTags = (text: string, platform: Platform): string => {
-    if (!text) return "";
-
-    // To preserve images through re-uploading by each platform,
-    // we store the original image URL in the source tag
-    // then unroll (?) it.
-    const swapImageWithSource = (
-        imgUrl: string,
-        sourceUrl: string | undefined,
-        platform: Platform
-    ): string => {
-        return `![${
-            platform === "linear" ? "Linear" : "GitHub"
-        }-hosted image](https://${
-            sourceUrl ? sourceUrl : imgUrl
-        })\n[Image source](https://${sourceUrl ? sourceUrl : imgUrl})\n`;
-    };
-
-    let replaced = text.replace(
-        // Regex that matches inline markdown images, optionally with source links
-        GENERAL.INLINE_IMG_TAG_REGEX,
-        (_, imgUrl, sourceUrl) => {
-            return swapImageWithSource(imgUrl, sourceUrl, platform);
-        }
-    );
-
-    // To account for HTML-style image tags supported by GitHub markdown
-    if (platform === "github") {
-        replaced = replaced.replace(
-            GENERAL.IMG_TAG_REGEX,
-            (_, imgUrl, sourceUrl) => {
-                return swapImageWithSource(imgUrl, sourceUrl, platform);
-            }
-        );
-    }
-
-    return replaced;
-};
-
 export const replaceStrikethroughTags = (text: string): string => {
     // To avoid unforeseen infinite loops, only replace the first 10 occurrences
     const tildes = text?.match(/~+/g);

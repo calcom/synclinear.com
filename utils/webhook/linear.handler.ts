@@ -1,4 +1,4 @@
-import { GITHUB, LINEAR, SHARED } from "../constants";
+import { GENERAL, GITHUB, LINEAR, SHARED } from "../constants";
 import { LinearWebhookPayload, MilestoneState } from "../../typings";
 import prisma from "../../prisma";
 import {
@@ -92,7 +92,10 @@ export async function linearWebhookHandler(
         : decrypt(linearApiKey, linearApiKeyIV);
 
     const linear = new LinearClient({
-        apiKey: linearKey
+        apiKey: linearKey,
+        headers: {
+            ...LINEAR.PUBLIC_QUERY_HEADERS
+        }
     });
 
     const ticketName = `${data.team?.key ?? ""}-${data.number}`;
@@ -229,8 +232,17 @@ export async function linearWebhookHandler(
                 return "Issue already exists on GitHub.";
             }
 
+            let markdown = data.description;
+
+            if (markdown?.match(GENERAL.INLINE_IMG_TAG_REGEX)) {
+                const publicIssue = await linear.issue(data.id);
+                if (publicIssue?.description) {
+                    markdown = publicIssue.description;
+                }
+            }
+
             const modifiedDescription = await prepareMarkdownContent(
-                data.description,
+                markdown,
                 "linear"
             );
 
@@ -482,8 +494,17 @@ export async function linearWebhookHandler(
 
         // Description change
         if (updatedFrom.description && actionType === "Issue") {
+            let markdown = data.description;
+
+            if (markdown?.match(GENERAL.INLINE_IMG_TAG_REGEX)) {
+                const publicIssue = await linear.issue(data.id);
+                if (publicIssue?.description) {
+                    markdown = publicIssue.description;
+                }
+            }
+
             const modifiedDescription = await prepareMarkdownContent(
-                data.description,
+                markdown,
                 "linear"
             );
 
@@ -962,8 +983,17 @@ export async function linearWebhookHandler(
                 return reason;
             }
 
+            let markdown = data.description;
+
+            if (markdown?.match(GENERAL.INLINE_IMG_TAG_REGEX)) {
+                const publicIssue = await linear.issue(data.id);
+                if (publicIssue?.description) {
+                    markdown = publicIssue.description;
+                }
+            }
+
             const modifiedDescription = await prepareMarkdownContent(
-                data.description,
+                markdown,
                 "linear"
             );
 

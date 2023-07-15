@@ -8,7 +8,7 @@ import {
     Platform
 } from "../../typings";
 import { GITHUB } from "../../utils/constants";
-import { replaceImgTags, replaceStrikethroughTags } from "../../utils";
+import { replaceStrikethroughTags } from "../../utils";
 
 /**
  * Server-only utility functions
@@ -271,7 +271,6 @@ export const prepareMarkdownContent = async (
     try {
         let modifiedMarkdown = await replaceMentions(markdown, platform);
         modifiedMarkdown = replaceStrikethroughTags(modifiedMarkdown);
-        modifiedMarkdown = replaceImgTags(modifiedMarkdown, platform);
 
         if (githubOptions?.anonymous && githubOptions?.sender) {
             return `>${modifiedMarkdown}\n\n—[${githubOptions.sender.login} on GitHub](${githubOptions.sender.html_url})`;

@@ -18,6 +18,9 @@ export const LINEAR = {
         todo: "Todo",
         done: "Done",
         canceled: "Canceled"
+    },
+    PUBLIC_QUERY_HEADERS: {
+        "public-file-urls-expire-in": "86400"
     }
 };
 
@@ -58,8 +61,7 @@ export const GENERAL = {
     APP_URL: "https://synclinear.com",
     CONTRIBUTE_URL: "https://github.com/calcom/linear-to-github",
     IMG_TAG_REGEX: /<img.*src=[\'|\"| ]?https?:\/\/(.*?)[\'|\"| ].*\/?>/g,
-    INLINE_IMG_TAG_REGEX:
-        /!\[.*?\]\(https:\/\/(.*?)\)[\s]*(?:\[Image source\]\(https:\/\/(.*?)\))?/g,
+    INLINE_IMG_TAG_REGEX: /!\[.*?\]\((https:\/\/(?!.*\?signature=).*?)\)/g,
     LOGIN_KEY: "login",
     SYNCED_ITEMS: [
         {
