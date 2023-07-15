@@ -5,7 +5,6 @@ import {
     formatJSON,
     getAttachmentQuery,
     getSyncFooter,
-    replaceImgTags,
     skipReason
 } from "../index";
 import { LinearClient } from "@linear/sdk";
@@ -267,7 +266,6 @@ export async function githubWebhookHandler(
             description?.join("<sub>"),
             "github"
         );
-        modifiedDescription = replaceImgTags(modifiedDescription, "github");
 
         await linear
             .issueUpdate(syncedIssue.linearIssueId, {
