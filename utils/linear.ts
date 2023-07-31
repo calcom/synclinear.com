@@ -144,15 +144,17 @@ export const updateLinearWebhook = async (
     });
 };
 
-export const createLinearPublicLabel = async (
+export const createLinearLabel = async (
     token: string,
-    teamID: string
+    teamID: string,
+    labelName: string,
+    color: string
 ) => {
-    const mutation = `mutation CreateLabel($teamID: String!) {
+    const mutation = `mutation CreateLabel($teamID: String!, $labelName: String!, $color: String!) {
         issueLabelCreate(
             input: {
-                name: "Public"
-                color: "#2DA54E"
+                name: $labelName,
+                color: $color,
                 teamId: $teamID
             }
         ) {
@@ -164,7 +166,11 @@ export const createLinearPublicLabel = async (
         }
     }`;
 
-    return await linearQuery(mutation, token, { teamID });
+    return await linearQuery(mutation, token, {
+        teamID,
+        labelName,
+        color
+    });
 };
 
 export const getLinearCycle = async (
@@ -277,7 +283,12 @@ export const saveLinearContext = async (
     let publicLabel = team.labels?.nodes?.find?.(n => n.name === "Public");
 
     if (!publicLabel) {
-        const { data } = await createLinearPublicLabel(token, team.id);
+        const { data } = await createLinearLabel(
+            token,
+            team.id,
+            "Public",
+            "#2DA54E"
+        );
 
         if (!data?.issueLabelCreate?.issueLabel) {
             alert('Please create a Linear label called "Public"');

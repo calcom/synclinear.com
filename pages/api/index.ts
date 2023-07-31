@@ -28,6 +28,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             const result = await linearWebhookHandler(req.body, originIp);
 
             if (result) {
+                console.log(result);
                 return res.status(200).send({
                     success: true,
                     message: result
@@ -44,6 +45,7 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
             );
 
             if (result) {
+                console.log(result);
                 return res.status(200).send({
                     success: true,
                     message: result
