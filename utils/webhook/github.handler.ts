@@ -644,6 +644,8 @@ export async function githubWebhookHandler(
             : null;
 
         if (!linearLabels?.nodes?.length) {
+            // Could create the label in Linear here, but we'll skip it
+            // to avoid cluttering Linear with priority/estimate labels.
             const reason = `Skipping label "${label?.name}" for issue #${issue.number} as no Linear label was found.`;
             return reason;
         }
