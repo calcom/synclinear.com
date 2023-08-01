@@ -30,7 +30,7 @@ import {
     generateLinearUUID,
     updateLinearCycle
 } from "../linear";
-import { LINEAR } from "../constants";
+import { LINEAR, SHARED } from "../constants";
 import got from "got";
 import { linearQuery } from "../apollo";
 import { ApiError } from "../errors";
@@ -643,11 +643,22 @@ export async function githubWebhookHandler(
               })
             : null;
 
+        const priorityLabels = Object.values(SHARED.PRIORITY_LABELS);
+        if (priorityLabels.map(l => l.name).includes(label?.name)) {
+            await linear.issueUpdate(syncedIssue.linearIssueId, {
+                priority:
+                    // Ignore removal of priority labels since it's triggered by priority change from Linear
+                    action === "unlabeled"
+                        ? null
+                        : priorityLabels.find(l => l.name === label?.name)
+                              ?.value
+            });
+        }
+
         if (!linearLabels?.nodes?.length) {
             // Could create the label in Linear here, but we'll skip it
             // to avoid cluttering Linear with priority/estimate labels.
-            const reason = `Skipping label "${label?.name}" for issue #${issue.number} as no Linear label was found.`;
-            return reason;
+            return `Skipping label "${label?.name}" for issue #${issue.number} as no Linear label was found.`;
         }
 
         const linearLabelIDs = linearLabels.nodes.map(label => label.id);
