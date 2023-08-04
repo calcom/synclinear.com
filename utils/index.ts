@@ -61,6 +61,20 @@ export const decrypt = (content: string, initVector: string): string => {
     return decrypted.toString();
 };
 
+export const replaceImgTags = (text: string): string => {
+    try {
+        const withInlineImages = text.replace(
+            GENERAL.IMG_TAG_REGEX,
+            (_, args) => `![image](https://${args})`
+        );
+
+        return withInlineImages;
+    } catch (error) {
+        console.error(error);
+        return text;
+    }
+};
+
 export const replaceStrikethroughTags = (text: string): string => {
     // To avoid unforeseen infinite loops, only replace the first 10 occurrences
     const tildes = text?.match(/~+/g);

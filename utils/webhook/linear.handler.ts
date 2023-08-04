@@ -234,6 +234,7 @@ export async function linearWebhookHandler(
 
             let markdown = data.description;
 
+            // Re-fetching the issue description returns it with public image URLs
             if (markdown?.match(GENERAL.INLINE_IMG_TAG_REGEX)) {
                 const publicIssue = await linear.issue(data.id);
                 if (publicIssue?.description) {

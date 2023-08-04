@@ -8,11 +8,7 @@ import {
     skipReason
 } from "../index";
 import { LinearClient } from "@linear/sdk";
-import {
-    prepareMarkdownContent,
-    replaceMentions,
-    upsertUser
-} from "../../pages/api/utils";
+import { prepareMarkdownContent, upsertUser } from "../../pages/api/utils";
 import {
     Issue,
     IssueCommentCreatedEvent,
@@ -260,7 +256,7 @@ export async function githubWebhookHandler(
 
         if ((description?.length || 0) > 1) description?.pop();
 
-        let modifiedDescription = await replaceMentions(
+        let modifiedDescription = await prepareMarkdownContent(
             description?.join("<sub>"),
             "github"
         );
