@@ -84,7 +84,7 @@ const index = () => {
             <Header />
             <section className="w-full min-h-[80vh] center gap-24 px-6">
                 <div className="space-y-4 text-center pt-8">
-                    <span className="px-3 py-1 rounded-full bg-gray-500 text-gray-200">
+                    <span className="px-3 py-1 rounded-full bg-blue-500 text-gray-200">
                         Beta
                     </span>
                     <h1>Linear-GitHub Sync</h1>
