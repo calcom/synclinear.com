@@ -1,6 +1,6 @@
 # To start the web app
 
-web: pnpm start
+web: npm start
 
 # To migrate the database during release. Runs after build.
 
