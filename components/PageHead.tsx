@@ -9,7 +9,7 @@ import React from "react";
  */
 function PageHead({
     title = "Linear-GitHub Sync",
-    description = "Full end-to-end sync of Linear tickets and GitHub issues. An open-source project by Cal.com and Neat.run.",
+    description = "Full end-to-end sync of Linear tickets and GitHub issues. An open-source project by Cal.com.",
     linkPreview = "https://user-images.githubusercontent.com/8019099/188273531-5ce9fa14-b8cf-4c9b-994b-2e00e3e5d537.png"
 }) {
     return (

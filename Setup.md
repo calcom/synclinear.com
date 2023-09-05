@@ -1,6 +1,6 @@
 # Self-Hosting Setup
 
-Welcome to the self-hosting page for **SyncLinear.com**. If something doesn't seem right, please feel free to [open a PR](https://github.com/calcom/synclinear.com/pulls) or [raise an issue](https://github.com/calcom/linear-to-github/issues/new)!
+Welcome to the self-hosting page for **SyncLinear.com**. If something doesn't seem right, please feel free to [open a PR](https://github.com/calcom/synclinear.com/pulls) or [raise an issue](https://github.com/calcom/synclinear.com/issues/new)!
 
 ## Getting Started
 
@@ -34,5 +34,5 @@ To point the app to your database,
 
 That's it! Try creating a Linear issue with the `Public` tag to trigger the webhook and generate a GitHub issue.
 
-> **Warning** 
+> **Warning**
 > Manually modifying a webhook may break the sync.

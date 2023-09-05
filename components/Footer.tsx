@@ -16,19 +16,10 @@ const Footer = () => {
                     >
                         Cal.com
                     </a>
-                    <span>and</span>
-                    <a
-                        href="https://studio.neat.run"
-                        rel="noreferrer"
-                        target="_blank"
-                        aria-label="Visit Neat studio"
-                    >
-                        Neat.run
-                    </a>
                 </div>
                 <div></div>
                 <a
-                    href="https://github.com/calcom/linear-to-github"
+                    href="https://github.com/calcom/synclinear.com"
                     rel="noreferrer"
                     target="_blank"
                     className="text-gray-400 hover:text-gray-100 sm:order-first"
@@ -42,3 +33,4 @@ const Footer = () => {
 };
 
 export default Footer;
+

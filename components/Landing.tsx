@@ -136,10 +136,9 @@ const Landing = () => {
             <div className="space-y-10 max-w-xl text-center center">
                 <h2 className="text-center">Pricing</h2>
                 <h3>
-                    SyncLinear.com is completely free. If you want to donate,
-                    subscribe to a <a href="https://cal.com/pricing">Cal.com</a>{" "}
-                    or <a href="https://neat.run/pro">Neat</a> plan to support
-                    the development.
+                    SyncLinear.com is completely free. If you want to support
+                    its development, please subscribe to a<br />
+                    <a href="https://cal.com/pricing">Cal.com</a> plan.
                 </h3>
             </div>
         </section>
@@ -147,3 +146,4 @@ const Landing = () => {
 };
 
 export default Landing;
+

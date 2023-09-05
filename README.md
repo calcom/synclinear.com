@@ -1,6 +1,6 @@
 ![image](https://user-images.githubusercontent.com/36117635/228115207-e9392f16-5a5b-4a27-9219-9cb91e3adf7e.png)
 
-Initially created by [Haris Mehrzad](https://github.com/xPolar) from [Spacedrive](https://github.com/spacedriveapp/linear-github-sync), now extended and maintained by [Cal.com](https://cal.com/) and [Neat.run](https://neat.run/)
+Initially created by [Haris Mehrzad](https://github.com/xPolar) and [Spacedrive](https://github.com/spacedriveapp/linear-github-sync), now extended and maintained by [Cal.com](https://cal.com/) and [Ted Spare](https://github.com/tedspare).
 
 # SyncLinear.com
 
@@ -28,9 +28,9 @@ If you prefer to host your own database and webhook consumer, we offer one-click
 
 For finer-grained control, please see the [self-hosting instructions](Setup.md).
 
-If you need any help, feel free to raise an [issue](https://github.com/calcom/synclinear.com/issues/new)!
-
+If you need any help, please check for related [issues](https://github.com/calcom/synclinear.com/issues) or open a new one.
 
 ## Troubleshooting
 
 Some common error scenarios and how to work through them can be found here in the [troubleshooting guide](TROUBLESHOOTING.md)
+
