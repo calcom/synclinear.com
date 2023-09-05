@@ -132,16 +132,19 @@ export const replaceMentions = async (body: string, platform: Platform) => {
         Array.from(mentionMatches)?.map(mention => mention?.[0]) ?? [];
 
     const userMentionReplacements = await mapUsernames(userMentions, platform);
+    const swapPlatform = platform === "linear" ? "github" : "linear";
 
     userMentionReplacements.forEach(mention => {
-        sanitizedBody = sanitizedBody.replace(
-            new RegExp(`@${mention[`${platform}Username`]}`, "g"),
-            `@${
-                mention[
-                    `${platform === "linear" ? "github" : "linear"}Username`
-                ]
-            }`
+        const mentionRegex = new RegExp(
+            `@${mention[`${platform}Username`]}`,
+            "g"
         );
+
+        sanitizedBody =
+            sanitizedBody?.replace(
+                mentionRegex,
+                `@${mention[`${swapPlatform}Username`]}`
+            ) || "";
     });
 
     return sanitizedBody;
@@ -168,7 +171,7 @@ export const createLabel = async ({
         {
             json: {
                 name: label.name,
-                color: label.color?.replace("#", ""),
+                color: label?.color?.replace("#", "") || "888888",
                 description: "Created by Linear-GitHub Sync"
             },
             headers: {

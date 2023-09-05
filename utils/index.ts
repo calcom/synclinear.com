@@ -63,10 +63,11 @@ export const decrypt = (content: string, initVector: string): string => {
 
 export const replaceImgTags = (text: string): string => {
     try {
-        const withInlineImages = text.replace(
-            GENERAL.IMG_TAG_REGEX,
-            (_, args) => `![image](https://${args})`
-        );
+        const withInlineImages =
+            text?.replace(
+                GENERAL.IMG_TAG_REGEX,
+                (_, args) => `![image](https://${args})`
+            ) || "";
 
         return withInlineImages;
     } catch (error) {
