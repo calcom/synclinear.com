@@ -22,9 +22,12 @@ To get started, see the [contributor docs](CONTRIBUTING.md)!
 
 If you prefer to host your own database and webhook consumer, we offer one-click deployment on Railway and DigitalOcean:
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/L__0PR?referralCode=ted)
-
 [![Deploy to DO](https://www.deploytodo.com/do-btn-blue-ghost.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/calcom/synclinear.com/tree/main)
+
+> **Note**
+> To deploy to Railway, delete the Dockerfile in your fork. Working on a permanent solution.
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/L__0PR?referralCode=ted)
 
 For finer-grained control, please see the [self-hosting instructions](Setup.md).
 
