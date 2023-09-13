@@ -2,24 +2,25 @@ import prisma from "../../prisma";
 import { createHmac, timingSafeEqual } from "crypto";
 import {
     decrypt,
-    formatJSON,
     getAttachmentQuery,
     getSyncFooter,
     skipReason
 } from "../index";
 import { LinearClient } from "@linear/sdk";
-import { prepareMarkdownContent, upsertUser } from "../../pages/api/utils";
 import {
-    Issue,
+    createAnonymousUserComment,
+    createLinearComment,
+    prepareMarkdownContent,
+    upsertUser
+} from "../../pages/api/utils";
+import {
     IssueCommentCreatedEvent,
     IssuesAssignedEvent,
     IssuesEvent,
     IssuesLabeledEvent,
     IssuesUnassignedEvent,
     IssuesUnlabeledEvent,
-    MilestoneEvent,
-    Repository,
-    User
+    MilestoneEvent
 } from "@octokit/webhooks-types";
 import {
     createLinearCycle,
@@ -134,6 +135,13 @@ export async function githubWebhookHandler(
 
     const githubAuthHeader = `token ${githubKey}`;
     const userAgentHeader = `${repoName}, linear-github-sync`;
+    const defaultHeaders = {
+        headers: {
+            "User-Agent": userAgentHeader,
+            Authorization: githubAuthHeader
+        }
+    };
+
     const issuesEndpoint = `https://api.github.com/repos/${repoName}/issues`;
 
     if (!anonymousUser) {
@@ -356,11 +364,11 @@ export async function githubWebhookHandler(
 
         const createdIssue = await createdIssueData.issue;
 
-        if (!createdIssue)
+        if (!createdIssue) {
             console.log(
                 `Failed to fetch ticket I just created for GitHub issue #${issue.number}.`
             );
-        else {
+        } else {
             const team = await createdIssue.team;
 
             if (!team) {
@@ -375,49 +383,11 @@ export async function githubWebhookHandler(
                     repoName
                 );
 
-                await Promise.all([
-                    got
-                        .patch(`${issuesEndpoint}/${issue.number}`, {
-                            json: {
-                                title: `[${ticketName}] ${issue.title}`,
-                                body: `${issue.body}\n\n<sub>[${ticketName}](${createdIssue.url})</sub>`
-                            },
-                            headers: {
-                                "User-Agent": userAgentHeader,
-                                Authorization: githubAuthHeader
-                            }
-                        })
-                        .then(titleRenameResponse => {
-                            if (titleRenameResponse.statusCode > 201)
-                                console.log(
-                                    `Failed to update GitHub issue title for ${ticketName} on GitHub issue #${
-                                        issue.number
-                                    }, received status code ${
-                                        titleRenameResponse.statusCode
-                                    }, body of ${formatJSON(
-                                        JSON.parse(titleRenameResponse.body)
-                                    )}.`
-                                );
-                            else
-                                console.log(
-                                    `Created comment on GitHub issue #${issue.number} for Linear issue ${ticketName}.`
-                                );
-                        }),
-                    linearQuery(attachmentQuery, linearKey).then(response => {
-                        if (!response?.data?.attachmentCreate?.success) {
-                            console.log(
-                                `Failed to create attachment on ${ticketName} for GitHub issue #${
-                                    issue.number
-                                }, received response ${
-                                    response?.error ?? response?.data ?? ""
-                                }.`
-                            );
-                        } else {
-                            console.log(
-                                `Created attachment on ${ticketName} for GitHub issue #${issue.number}.`
-                            );
-                        }
-                    }),
+                const [
+                    newSyncedIssue,
+                    titleRenameResponse,
+                    attachmentResponse
+                ] = await Promise.all([
                     prisma.syncedIssue.create({
                         data: {
                             githubIssueNumber: issue.number,
@@ -427,54 +397,64 @@ export async function githubWebhookHandler(
                             linearTeamId: team.id,
                             githubRepoId: repository.id
                         }
-                    })
+                    }),
+                    got.patch(`${issuesEndpoint}/${issue.number}`, {
+                        json: {
+                            title: `[${ticketName}] ${issue.title}`,
+                            body: `${issue.body}\n\n<sub>[${ticketName}](${createdIssue.url})</sub>`
+                        },
+                        ...defaultHeaders
+                    }),
+                    linearQuery(attachmentQuery, linearKey)
                 ]);
-            }
-        }
 
-        // Add issue comment history to newly-created Linear ticket
-        if (action === "labeled") {
-            const issueCommentsPayload = await got.get(
-                `${issuesEndpoint}/${issue.number}/comments`,
-                {
-                    headers: {
-                        "User-Agent": userAgentHeader,
-                        Authorization: githubAuthHeader
+                if (titleRenameResponse.statusCode > 201) {
+                    console.log(
+                        `Failed to update title for ${ticketName} on GitHub issue #${issue.number} with status ${titleRenameResponse.statusCode}.`
+                    );
+                }
+
+                if (!attachmentResponse?.data?.attachmentCreate?.success) {
+                    console.log(
+                        `Failed to add attachment to ${ticketName} for GitHub issue #${
+                            issue.number
+                        }: ${attachmentResponse?.error || ""}.`
+                    );
+                }
+
+                // Add issue comment history to newly-created Linear ticket
+                if (action === "labeled") {
+                    const issueCommentsPayload = await got.get(
+                        `${issuesEndpoint}/${issue.number}/comments`,
+                        { ...defaultHeaders }
+                    );
+
+                    if (issueCommentsPayload.statusCode > 201) {
+                        console.log(
+                            `Failed to fetch comments for GitHub issue #${issue.number} with status ${issueCommentsPayload.statusCode}.`
+                        );
+                        throw new ApiError(
+                            `Could not fetch comments for GitHub issue #${issue.number}`,
+                            403
+                        );
+                    }
+
+                    const comments = JSON.parse(issueCommentsPayload.body);
+
+                    for await (const comment of comments) {
+                        const modifiedComment = await prepareMarkdownContent(
+                            comment.body,
+                            "github"
+                        );
+
+                        await createLinearComment(
+                            linear,
+                            newSyncedIssue,
+                            modifiedComment,
+                            issue
+                        );
                     }
                 }
-            );
-
-            if (issueCommentsPayload.statusCode > 201) {
-                console.log(
-                    `Failed to fetch comments for GitHub issue #${
-                        issue.number
-                    } [${issue.id}], received status code ${
-                        issueCommentsPayload.statusCode
-                    }, body of ${formatJSON(
-                        JSON.parse(issueCommentsPayload.body)
-                    )}.`
-                );
-
-                throw new ApiError(
-                    `Could not fetch comments for GitHub issue #${issue.number} [${issue.id}]`,
-                    403
-                );
-            }
-
-            const comments = JSON.parse(issueCommentsPayload.body);
-
-            for (const comment of comments) {
-                const modifiedComment = await prepareMarkdownContent(
-                    comment.body,
-                    "github"
-                );
-
-                await createLinearComment(
-                    linear,
-                    syncedIssue,
-                    modifiedComment,
-                    issue
-                );
             }
         }
     } else if (["assigned", "unassigned"].includes(action)) {
@@ -550,12 +530,139 @@ export async function githubWebhookHandler(
     } else if (["milestoned", "demilestoned"].includes(action)) {
         // Milestone added or removed from issue
 
+        // Sync the newly-milestoned issue
         if (!syncedIssue) {
-            const reason = skipReason("milestone", issue.number);
-            return reason;
+            if (action === "demilestoned") {
+                return `Skipping over removal of milestone for issue #${issue.number} because it is not synced`;
+            }
+
+            const modifiedDescription = await prepareMarkdownContent(
+                issue.body,
+                "github",
+                {
+                    anonymous: anonymousUser,
+                    sender: sender
+                }
+            );
+
+            const assignee = await prisma.user.findFirst({
+                where: { githubUserId: issue.assignee?.id },
+                select: { linearUserId: true }
+            });
+
+            const createdIssueData = await linear.issueCreate({
+                id: generateLinearUUID(),
+                title: issue.title,
+                description: `${modifiedDescription ?? ""}`,
+                teamId: linearTeamId,
+                labelIds: [publicLabelId],
+                ...(issue.assignee?.id &&
+                    assignee && {
+                        assigneeId: assignee.linearUserId
+                    })
+            });
+
+            if (!createdIssueData.success) {
+                const reason = `Failed to create ticket for GitHub issue #${issue.number}.`;
+                throw new ApiError(reason, 500);
+            }
+
+            const createdIssue = await createdIssueData.issue;
+
+            if (!createdIssue) {
+                console.log(
+                    `Failed to fetch ticket I just created for GitHub issue #${issue.number}.`
+                );
+            } else {
+                const team = await createdIssue.team;
+
+                if (!team) {
+                    console.log(
+                        `Failed to fetch team for ticket, ${createdIssue.id} for GitHub issue #${issue.number}.`
+                    );
+                } else {
+                    const ticketName = `${team.key}-${createdIssue.number}`;
+                    const attachmentQuery = getAttachmentQuery(
+                        createdIssue.id,
+                        issue.number,
+                        repoName
+                    );
+
+                    // Add to DB, update title, add attachment to issue, and fetch comments in parallel
+                    const [
+                        newSyncedIssue,
+                        titleRenameResponse,
+                        attachmentResponse,
+                        issueCommentsPayload
+                    ] = await Promise.all([
+                        prisma.syncedIssue.create({
+                            data: {
+                                githubIssueNumber: issue.number,
+                                githubIssueId: issue.id,
+                                linearIssueId: createdIssue.id,
+                                linearIssueNumber: createdIssue.number,
+                                linearTeamId: team.id,
+                                githubRepoId: repository.id
+                            }
+                        }),
+                        got.patch(`${issuesEndpoint}/${issue.number}`, {
+                            json: {
+                                title: `[${ticketName}] ${issue.title}`,
+                                body: `${issue.body}\n\n<sub>[${ticketName}](${createdIssue.url})</sub>`
+                            },
+                            ...defaultHeaders
+                        }),
+                        linearQuery(attachmentQuery, linearKey),
+                        got.get(`${issuesEndpoint}/${issue.number}/comments`, {
+                            ...defaultHeaders
+                        })
+                    ]);
+
+                    if (titleRenameResponse.statusCode > 201) {
+                        console.log(
+                            `Failed to update title for ${ticketName} on GitHub issue #${issue.number} with status ${titleRenameResponse.statusCode}.`
+                        );
+                    }
+
+                    if (!attachmentResponse?.data?.attachmentCreate?.success) {
+                        console.log(
+                            `Failed to add attachment to ${ticketName} for GitHub issue #${
+                                issue.number
+                            }: ${attachmentResponse?.error || ""}.`
+                        );
+                    }
+
+                    if (issueCommentsPayload.statusCode > 201) {
+                        console.log(
+                            `Failed to fetch comments for GitHub issue #${issue.number} with status ${issueCommentsPayload.statusCode}.`
+                        );
+                        throw new ApiError(
+                            `Could not fetch comments for GitHub issue #${issue.number}`,
+                            403
+                        );
+                    }
+
+                    // Add issue comment history to newly-created Linear ticket
+                    const comments = JSON.parse(issueCommentsPayload.body);
+                    for await (const comment of comments) {
+                        const modifiedComment = await prepareMarkdownContent(
+                            comment.body,
+                            "github"
+                        );
+
+                        await createLinearComment(
+                            linear,
+                            newSyncedIssue,
+                            modifiedComment,
+                            issue
+                        );
+                    }
+                }
+            }
         }
 
         const { milestone } = issue;
+
         if (milestone === null) {
             const response = await linear.issueUpdate(
                 syncedIssue.linearIssueId,
@@ -652,8 +759,7 @@ export async function githubWebhookHandler(
         }
 
         if (!linearLabels?.nodes?.length) {
-            // Could create the label in Linear here, but we'll skip it
-            // to avoid cluttering Linear with priority/estimate labels.
+            // Could create the label in Linear here, but we'll skip it to avoid cluttering Linear.
             return `Skipping label "${label?.name}" for issue #${issue.number} as no Linear label was found.`;
         }
 
@@ -682,70 +788,4 @@ export async function githubWebhookHandler(
 
         return `Added label "${label?.name}" to Linear ticket for GitHub issue #${issue.number}.`;
     }
-}
-
-async function createLinearComment(
-    linear: LinearClient,
-    syncedIssue,
-    modifiedComment: string,
-    issue: Issue
-) {
-    const comment = await linear.commentCreate({
-        id: generateLinearUUID(),
-        issueId: syncedIssue.linearIssueId,
-        body: modifiedComment ?? ""
-    });
-    const commentData = await comment.comment;
-    const issueData = await commentData.issue;
-    const teamData = await issueData.team;
-
-    if (!comment.success) {
-        throw new ApiError(
-            `Failed to create comment on Linear issue ${syncedIssue.linearIssueId} for GitHub issue ${issue.number}`,
-            500
-        );
-    } else {
-        console.log(
-            `Created comment for ${teamData.key}-${syncedIssue.linearIssueNumber} [${syncedIssue.linearIssueId}] for GitHub issue #${issue.number} [${issue.id}].`
-        );
-    }
-}
-
-async function createAnonymousUserComment(
-    body: IssueCommentCreatedEvent,
-    repository: Repository,
-    sender: User
-) {
-    const { issue }: IssuesEvent = body as unknown as IssuesEvent;
-
-    const syncedIssue = !!repository?.id
-        ? await prisma.syncedIssue.findFirst({
-              where: {
-                  githubIssueNumber: issue?.number,
-                  githubRepoId: repository.id
-              }
-          })
-        : null;
-
-    if (!syncedIssue) {
-        console.log("Could not find issue's corresponding team.");
-        throw new ApiError("Could not find issue's corresponding team.", 404);
-    }
-
-    const linearKey = process.env.LINEAR_APPLICATION_ADMIN_KEY;
-    const linear = new LinearClient({
-        apiKey: linearKey
-    });
-
-    const { comment: githubComment }: IssueCommentCreatedEvent = body;
-    const modifiedComment = await prepareMarkdownContent(
-        githubComment.body,
-        "github",
-        {
-            anonymous: true,
-            sender: sender
-        }
-    );
-
-    await createLinearComment(linear, syncedIssue, modifiedComment, issue);
 }
