@@ -3,7 +3,6 @@ import { LinearWebhookPayload, MilestoneState } from "../../typings";
 import prisma from "../../prisma";
 import {
     decrypt,
-    formatJSON,
     getAttachmentQuery,
     getSyncFooter,
     isNumber,
@@ -285,13 +284,7 @@ export async function linearWebhookHandler(
 
             if (createdIssueResponse.statusCode > 201) {
                 console.log(
-                    `Failed to create GitHub issue for ${data.team.key}-${
-                        data.number
-                    }, received status code ${
-                        createdIssueResponse.statusCode
-                    }, body of ${formatJSON(
-                        JSON.parse(createdIssueResponse.body)
-                    )}.`
+                    `Failed to create GitHub issue for ${data.team.key}-${data.number} with status ${createdIssueResponse.statusCode}.`
                 );
 
                 throw new ApiError(
@@ -316,11 +309,9 @@ export async function linearWebhookHandler(
                 linearQuery(attachmentQuery, linearKey).then(response => {
                     if (!response?.data?.attachmentCreate?.success) {
                         console.log(
-                            `Failed to create attachment on ${ticketName} for GitHub issue #${
+                            `Failed to add attachment to ${ticketName} for GitHub issue #${
                                 createdIssueData.number
-                            }, received response ${
-                                response?.error ?? response?.data ?? ""
-                            }.`
+                            }: ${response?.error || ""}.`
                         );
                     } else {
                         console.log(
@@ -960,7 +951,7 @@ export async function linearWebhookHandler(
                 );
             } else {
                 console.log(
-                    `Synced comment [${data.id}] for ${data.issue?.id} on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                    `Synced comment for GitHub issue #${syncedIssue.githubIssueNumber}.`
                 );
             }
         } else if (actionType === "Issue") {
@@ -1022,13 +1013,7 @@ export async function linearWebhookHandler(
 
             if (createdIssueResponse.statusCode > 201) {
                 console.log(
-                    `Failed to create GitHub issue for ${data.team.key}-${
-                        data.number
-                    }, received status code ${
-                        createdIssueResponse.statusCode
-                    }, body of ${formatJSON(
-                        JSON.parse(createdIssueResponse.body)
-                    )}.`
+                    `Failed to create issue for ${data.team.key}-${data.number} with status ${createdIssueResponse.statusCode}.`
                 );
 
                 throw new ApiError(
@@ -1051,11 +1036,9 @@ export async function linearWebhookHandler(
                 linearQuery(attachmentQuery, linearKey).then(response => {
                     if (!response?.data?.attachmentCreate?.success) {
                         console.log(
-                            `Failed to create attachment on ${ticketName} for GitHub issue #${
+                            `Failed to add attachment to ${ticketName} for GitHub issue #${
                                 createdIssueData.number
-                            }, received response ${
-                                response?.error ?? response?.data ?? ""
-                            }.`
+                            }: ${response?.error || ""}.`
                         );
                     } else {
                         console.log(
