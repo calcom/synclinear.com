@@ -1,6 +1,6 @@
 ![image](https://user-images.githubusercontent.com/36117635/228115207-e9392f16-5a5b-4a27-9219-9cb91e3adf7e.png)
 
-Initially created by [Haris Mehrzad](https://github.com/xPolar) and [Spacedrive](https://github.com/spacedriveapp/linear-github-sync), now extended and maintained by [Cal.com](https://cal.com/) and [Ted Spare](https://github.com/tedspare).
+Initially created by [Haris Mehrzad](https://github.com/xPolar) and [Spacedrive](https://github.com/spacedriveapp/linear-github-sync), now extended and maintained by [Ted Spare](https://github.com/tedspare) and [Cal.com](https://cal.com/).
 
 # SyncLinear.com
 
@@ -8,7 +8,7 @@ This is a system to synchronize Linear tickets and GitHub issues when a specific
 
 This allows contributors to work with open source projects without having to give them access to your internal Linear team.
 
-:wave: **Visit [SyncLinear.com](https://synclinear.com) to get started!**
+:wave: **Visit [SyncLinear.com](https://synclinear.com) to try it!**
 
 ---
 
@@ -35,5 +35,4 @@ If you need any help, please check for related [issues](https://github.com/calco
 
 ## Troubleshooting
 
-Some common error scenarios and how to work through them can be found here in the [troubleshooting guide](TROUBLESHOOTING.md)
-
+Some common error scenarios and how to work through them can be found here in the [troubleshooting guide](TROUBLESHOOTING.md).
