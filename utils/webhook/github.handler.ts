@@ -264,7 +264,7 @@ export async function githubWebhookHandler(
 
         if ((description?.length || 0) > 1) description?.pop();
 
-        let modifiedDescription = await prepareMarkdownContent(
+        const modifiedDescription = await prepareMarkdownContent(
             description?.join("<sub>"),
             "github"
         );
@@ -763,7 +763,7 @@ export async function githubWebhookHandler(
             return `Skipping label "${label?.name}" for issue #${issue.number} as no Linear label was found.`;
         }
 
-        const linearLabelIDs = linearLabels.nodes.map(label => label.id);
+        const linearLabelIDs = linearLabels.nodes.map(l => l.id);
 
         const ticket = await linear.issue(syncedIssue.linearIssueId);
 
