@@ -340,6 +340,41 @@ export async function githubWebhookHandler(
             }
         );
 
+        /** In case if user has added some other labels on issue */
+        const githubLabels = issue.labels.filter(
+            label => label.name !== "linear"
+        );
+
+        const linearCreatedLabels: Array<string> = [];
+        for (const githubLabel of githubLabels) {
+            const existingLinearLabel = await linear.issueLabels({
+                includeArchived: true,
+                filter: {
+                    name: { eqIgnoreCase: githubLabel.name },
+                    team: { id: { eq: linearTeamId } }
+                }
+            });
+
+            /** A label is already created with the same name */
+            if (existingLinearLabel.nodes.length > 0) {
+                linearCreatedLabels.push(existingLinearLabel.nodes[0].id);
+            }
+
+            /** If not, then create it */
+            if (existingLinearLabel.nodes.length === 0) {
+                const createdLabel = await linear.issueLabelCreate({
+                    name: githubLabel.name,
+                    description: githubLabel.description,
+                    color: `#${githubLabel.color}`,
+                    teamId: linearTeamId
+                });
+                if (createdLabel.success) {
+                    const fetchedLabel = await createdLabel.issueLabel;
+                    linearCreatedLabels.push(fetchedLabel.id);
+                }
+            }
+        }
+
         const assignee = await prisma.user.findFirst({
             where: { githubUserId: issue.assignee?.id },
             select: { linearUserId: true }
@@ -350,7 +385,7 @@ export async function githubWebhookHandler(
             title: issue.title,
             description: `${modifiedDescription ?? ""}`,
             teamId: linearTeamId,
-            labelIds: [publicLabelId],
+            labelIds: [...linearCreatedLabels, publicLabelId],
             ...(issue.assignee?.id &&
                 assignee && {
                     assigneeId: assignee.linearUserId
