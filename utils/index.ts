@@ -84,6 +84,12 @@ export const replaceStrikethroughTags = (text: string): string => {
     return text?.replace(/(?<!\\)~(?!~)/g, "~~") || text;
 };
 
+export const replaceGithubComment = (text: string): string => {
+    const regex = /<!--(.*?)-->/g;
+    const stringWithoutComments = text.replace(regex, "");
+    return stringWithoutComments;
+};
+
 export const getSyncFooter = (): string => {
     return `From [SyncLinear.com](https://synclinear.com)`;
 };

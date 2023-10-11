@@ -8,7 +8,11 @@ import {
     Platform
 } from "../../typings";
 import { GITHUB } from "../../utils/constants";
-import { replaceImgTags, replaceStrikethroughTags } from "../../utils";
+import {
+    replaceImgTags,
+    replaceStrikethroughTags,
+    replaceGithubComment
+} from "../../utils";
 import {
     Issue,
     IssueCommentCreatedEvent,
@@ -284,6 +288,7 @@ export const prepareMarkdownContent = async (
         let modifiedMarkdown = await replaceMentions(markdown, platform);
         modifiedMarkdown = await replaceStrikethroughTags(modifiedMarkdown);
         modifiedMarkdown = await replaceImgTags(modifiedMarkdown);
+        modifiedMarkdown = await replaceGithubComment(modifiedMarkdown);
 
         if (githubOptions?.anonymous && githubOptions?.sender) {
             return `>${modifiedMarkdown}\n\n—[${githubOptions.sender.login} on GitHub](${githubOptions.sender.html_url})`;
@@ -315,6 +320,29 @@ export const createLinearComment = async (
         );
     } else {
         console.log(`Created comment for GitHub issue #${issue.number}.`);
+    }
+};
+
+export const updateLinearComment = async (
+    linearCommentId: string,
+    linear: LinearClient,
+    syncedIssue,
+    modifiedComment: string,
+    issue
+) => {
+    const comment = await linear.commentUpdate(linearCommentId, {
+        body: modifiedComment || ""
+    });
+
+    if (!comment.success) {
+        throw new ApiError(
+            `Failed to Update comment on Linear issue ${syncedIssue.linearIssueId} for GitHub issue ${issue.number} of id ${linearCommentId}`,
+            500
+        );
+    } else {
+        console.log(
+            `Update comment for GitHub issue #${issue.number} with Id ${linearCommentId}.`
+        );
     }
 };
 

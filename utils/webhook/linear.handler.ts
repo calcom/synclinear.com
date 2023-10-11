@@ -21,7 +21,12 @@ import got from "got";
 import { getLinearCycle, inviteMember } from "../linear";
 import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
-import { createMilestone, getGitHubFooter, setIssueMilestone } from "../github";
+import {
+    createMilestone,
+    getGitHubFooter,
+    getGithubFooterWithLinearCommentId,
+    setIssueMilestone
+} from "../github";
 import { ApiError, getIssueUpdateError } from "../errors";
 import { Issue, User } from "@octokit/webhooks-types";
 
@@ -41,6 +46,8 @@ export async function linearWebhookHandler(
         url,
         type: actionType
     }: LinearWebhookPayload = body;
+
+    console.log("BODY_LINEAR", body);
 
     const syncs = await prisma.sync.findMany({
         where: {
@@ -426,7 +433,10 @@ export async function linearWebhookHandler(
                     comment.body,
                     "linear"
                 );
-                const footer = getGitHubFooter(user.displayName);
+                const footer = getGithubFooterWithLinearCommentId(
+                    user.displayName,
+                    comment.id
+                );
 
                 const { error: commentError } = await createComment({
                     repoFullName,
@@ -935,7 +945,11 @@ export async function linearWebhookHandler(
             }
 
             const modifiedBody = await replaceMentions(data.body, "linear");
-            const footer = getGitHubFooter(data.user?.name);
+
+            const footer = getGithubFooterWithLinearCommentId(
+                data.user?.name,
+                data.id
+            );
 
             const { error: commentError } = await createComment({
                 repoFullName: syncedIssue.GitHubRepo.repoName,
