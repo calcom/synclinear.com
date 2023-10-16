@@ -33,7 +33,6 @@ import { LINEAR, SHARED } from "../constants";
 import got from "got";
 import { linearQuery } from "../apollo";
 import { ApiError } from "../errors";
-import { ActivityLogIcon } from "@radix-ui/react-icons";
 
 export async function githubWebhookHandler(
     body: IssuesEvent | IssueCommentCreatedEvent | MilestoneEvent,
@@ -186,9 +185,9 @@ export async function githubWebhookHandler(
             await updateLinearComment(
                 linearCommentId,
                 linear,
-                syncedIssue,
+                syncedIssue.linearIssueId,
                 modifiedComment,
-                issue
+                issue.number
             );
         }
     }

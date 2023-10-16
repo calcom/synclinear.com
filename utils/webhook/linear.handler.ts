@@ -47,8 +47,6 @@ export async function linearWebhookHandler(
         type: actionType
     }: LinearWebhookPayload = body;
 
-    console.log("BODY_LINEAR", body);
-
     const syncs = await prisma.sync.findMany({
         where: {
             linearUserId: data.userId ?? data.creatorId

@@ -326,9 +326,9 @@ export const createLinearComment = async (
 export const updateLinearComment = async (
     linearCommentId: string,
     linear: LinearClient,
-    syncedIssue,
+    linearIssueId: string,
     modifiedComment: string,
-    issue
+    issueNumber: number
 ) => {
     const comment = await linear.commentUpdate(linearCommentId, {
         body: modifiedComment || ""
@@ -336,12 +336,12 @@ export const updateLinearComment = async (
 
     if (!comment.success) {
         throw new ApiError(
-            `Failed to Update comment on Linear issue ${syncedIssue.linearIssueId} for GitHub issue ${issue.number} of id ${linearCommentId}`,
+            `Failed to Update comment on Linear issue ${linearIssueId} for GitHub issue ${issueNumber} of id ${linearCommentId}`,
             500
         );
     } else {
         console.log(
-            `Update comment for GitHub issue #${issue.number} with Id ${linearCommentId}.`
+            `Update comment for GitHub issue #${issueNumber} with Id ${linearCommentId}.`
         );
     }
 };
