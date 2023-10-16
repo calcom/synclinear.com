@@ -340,6 +340,23 @@ export async function githubWebhookHandler(
             }
         );
 
+        /** In case if user has added some other labels on issue */
+        const githubLabels = issue.labels.filter(
+            label => label.name !== "linear"
+        );
+
+        const linearLabels = await linear.issueLabels({
+            includeArchived: true,
+            filter: {
+                team: { id: { eq: linearTeamId } },
+                name: {
+                    in: githubLabels.map(label =>
+                        label.name.trim().toLowerCase()
+                    )
+                }
+            }
+        });
+
         const assignee = await prisma.user.findFirst({
             where: { githubUserId: issue.assignee?.id },
             select: { linearUserId: true }
@@ -350,7 +367,10 @@ export async function githubWebhookHandler(
             title: issue.title,
             description: `${modifiedDescription ?? ""}`,
             teamId: linearTeamId,
-            labelIds: [publicLabelId],
+            labelIds: [
+                ...linearLabels?.nodes?.map(node => node.id),
+                publicLabelId
+            ],
             ...(issue.assignee?.id &&
                 assignee && {
                     assigneeId: assignee.linearUserId
