@@ -11,7 +11,8 @@ import {
     createAnonymousUserComment,
     createLinearComment,
     prepareMarkdownContent,
-    upsertUser
+    upsertUser,
+    updateLinearComment
 } from "../../pages/api/utils";
 import {
     IssueCommentCreatedEvent,
@@ -20,7 +21,8 @@ import {
     IssuesLabeledEvent,
     IssuesUnassignedEvent,
     IssuesUnlabeledEvent,
-    MilestoneEvent
+    MilestoneEvent,
+    IssueCommentEditedEvent
 } from "@octokit/webhooks-types";
 import {
     createLinearCycle,
@@ -163,6 +165,32 @@ export async function githubWebhookHandler(
               }
           })
         : null;
+
+    if (githubEvent === "issue_comment" && action === "edited") {
+        if (!syncedIssue) {
+            const reason = skipReason("comment", issue.number);
+            return reason;
+        }
+        const { comment } = body as IssueCommentEditedEvent;
+        const regex = /LinearCommentId:(.*?):/;
+        const match = comment.body.match(regex);
+        const isLinearCommentIdPresent = match && match[1];
+
+        if (isLinearCommentIdPresent) {
+            const linearCommentId = match[1];
+            const modifiedComment = await prepareMarkdownContent(
+                comment.body,
+                "github"
+            );
+            await updateLinearComment(
+                linearCommentId,
+                linear,
+                syncedIssue.linearIssueId,
+                modifiedComment,
+                issue.number
+            );
+        }
+    }
 
     if (githubEvent === "issue_comment" && action === "created") {
         // Comment created

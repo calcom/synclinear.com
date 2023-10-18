@@ -9,6 +9,16 @@ export const getGitHubFooter = (userName: string): string => {
     return `\n\n<!-- From ${sanitizedUsername} on Linear -->`;
 };
 
+export const getGithubFooterWithLinearCommentId = (
+    userName: string,
+    commentId: string
+): string => {
+    // To avoid exposing a user email if their username is an email address
+    const sanitizedUsername = userName.split("@")?.[0];
+
+    return `\n\n<!-- From ${sanitizedUsername} on Linear. LinearCommentId:${commentId}: -->`;
+};
+
 export const getGitHubTokenURL = (): string => {
     const scopes = GITHUB.SCOPES.join(",");
     const description = GITHUB.TOKEN_NOTE.split(" ").join("%20");
