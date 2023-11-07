@@ -12,13 +12,13 @@ In order for data to sync from linear to GitHub, your Linear account must have b
 
 ### Linear application
 
-To ensure the application is installed, see [Linear application settings](https://linear.app/settings/account/applications). You should see the app installed.
+To ensure the application is installed, see [Linear application settings](https://linear.app/settings/account/security). You should see the app installed.
 
 ![Screenshot 2023-02-09 at 18 39 57](https://user-images.githubusercontent.com/11256663/217907001-09ebda00-bb55-40aa-b71d-ad99513f8328.png)
 
 ### Linear webhook
 
-For the webhook, you can see your existing webhooks under [webhook settings](https://linear.app/settings/api/webhooks).
+For the webhook, you can see your existing webhooks under [webhook settings](https://linear.app/settings/api).
 
 You should have a Linear webhook with the following configuration. If it's not there and you've already set SyncLinear up, you can add it manually.
 
