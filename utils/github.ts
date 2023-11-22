@@ -90,7 +90,7 @@ export const saveGitHubContext = async (
 export const getRepoWebhook = async (
     repoName: string,
     token: string
-): Promise<any> => {
+): Promise<{ id: string }> => {
     const webhookUrl = getWebhookURL();
 
     const response = await fetch(`/api/github/webhook`, {
@@ -112,7 +112,7 @@ export const setGitHubWebook = async (
     token: string,
     repo: GitHubRepo,
     webhookSecret: string
-): Promise<any> => {
+): Promise<object> => {
     const webhookURL = getWebhookURL();
     const webhookData = {
         name: "web",
@@ -145,7 +145,7 @@ export const updateGitHubWebhook = async (
     token: string,
     repoName: string,
     updates: { add_events?: string[]; remove_events?: string[] }
-): Promise<any> => {
+): Promise<object> => {
     const webhook = await getRepoWebhook(repoName, token);
     if (!webhook.id) {
         console.error(`Could not find webhook for ${repoName}.`);
@@ -169,7 +169,7 @@ export const updateGitHubWebhook = async (
 
 export const exchangeGitHubToken = async (
     refreshToken: string
-): Promise<any> => {
+): Promise<object> => {
     const redirectURI = window.location.origin;
 
     const response = await fetch("/api/github/token", {
@@ -184,7 +184,7 @@ export const exchangeGitHubToken = async (
 export const listReposForUser = async (
     token: string,
     page = 0
-): Promise<any> => {
+): Promise<object> => {
     const response = await fetch(
         `${GITHUB.LIST_REPOS_ENDPOINT}&page=${page + 1}`,
         {
@@ -195,7 +195,7 @@ export const listReposForUser = async (
     return await response.json();
 };
 
-export const getGitHubUser = async (token: string): Promise<any> => {
+export const getGitHubUser = async (token: string): Promise<object> => {
     const response = await fetch(GITHUB.USER_ENDPOINT, {
         headers: { Authorization: `Bearer ${token}` }
     });
@@ -240,7 +240,7 @@ export const updateMilestone = async (
     title?: string,
     state?: MilestoneState,
     description?: string
-): Promise<any> => {
+): Promise<Response> => {
     const milestoneData = {
         ...(title && { title }),
         ...(state && { state }),
@@ -267,7 +267,7 @@ export const setIssueMilestone = async (
     repoName: string,
     issueNumber: number,
     milestoneId: number | null
-): Promise<any> => {
+): Promise<Response> => {
     const response = await fetch(
         `https://api.github.com/repos/${repoName}/issues/${issueNumber}`,
         {

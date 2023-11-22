@@ -307,7 +307,7 @@ export const createLinearComment = async (
     modifiedComment: string,
     issue: Issue
 ) => {
-    const comment = await linear.commentCreate({
+    const comment = await linear.createComment({
         id: generateLinearUUID(),
         issueId: syncedIssue.linearIssueId,
         body: modifiedComment || ""
@@ -330,7 +330,7 @@ export const updateLinearComment = async (
     modifiedComment: string,
     issueNumber: number
 ) => {
-    const comment = await linear.commentUpdate(linearCommentId, {
+    const comment = await linear.updateComment(linearCommentId, {
         body: modifiedComment || ""
     });
 

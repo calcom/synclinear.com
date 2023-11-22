@@ -88,8 +88,7 @@ export const getLinearWebhook = async (token: string, teamName: string) => {
     }
 
     const webhook = response.data.webhooks?.nodes?.find(
-        webhook =>
-            webhook.url === callbackURL && webhook.team?.name === teamName
+        w => w.url === callbackURL && w.team?.name === teamName
     );
 
     return webhook;
@@ -306,9 +305,9 @@ export const saveLinearContext = async (
         teamId: team.id,
         teamName: team.name,
         publicLabelId: publicLabel?.id,
-        toDoStateId: stateLabels["todo"]?.id,
-        doneStateId: stateLabels["done"]?.id,
-        canceledStateId: stateLabels["canceled"]?.id
+        toDoStateId: stateLabels.todo?.id,
+        doneStateId: stateLabels.done?.id,
+        canceledStateId: stateLabels.canceled?.id
     };
 
     const response = await fetch("/api/linear/save", {
@@ -321,7 +320,7 @@ export const saveLinearContext = async (
 
 export const exchangeLinearToken = async (
     refreshToken: string
-): Promise<any> => {
+): Promise<object> => {
     const redirectURI = window.location.origin;
 
     const response = await fetch("/api/linear/token", {
@@ -337,7 +336,7 @@ export const checkTeamWebhook = async (
     teamId: string,
     teamName: string,
     token: string
-): Promise<any> => {
+): Promise<object> => {
     const response = await fetch("/api/linear/webhook", {
         method: "POST",
         headers: {
@@ -369,7 +368,7 @@ export const inviteMember = async (
         getSyncFooter()
     ].join("\n");
 
-    linearClient.issueCreate({
+    linearClient.createIssue({
         title: `GitHub Sync — ${issueCreator.name}, please join our workspace`,
         description: message,
         teamId: teamId,
