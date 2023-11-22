@@ -27,3 +27,4 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 .idea
+.vercel
