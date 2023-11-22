@@ -332,7 +332,7 @@ export async function linearWebhookHandler(
                         githubRepoId: repoId
                     }
                 })
-            ] as Promise<any>[]);
+            ] as Promise<void>[]);
 
             // Apply all labels to newly-created issue
             const labelIds = data.labelIds.filter(id => id != publicLabelId);
@@ -1066,7 +1066,7 @@ export async function linearWebhookHandler(
                         githubRepoId: repoId
                     }
                 })
-            ] as Promise<any>[]);
+            ] as Promise<void>[]);
 
             // Apply all labels to newly-created issue
             const labelIds = data.labelIds.filter(id => id != publicLabelId);
