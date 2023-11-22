@@ -298,7 +298,7 @@ export async function githubWebhookHandler(
         );
 
         await linear
-            .issueUpdate(syncedIssue.linearIssueId, {
+            .updateIssue(syncedIssue.linearIssueId, {
                 title: title.join(`${syncedIssue.linearIssueNumber}]`),
                 description: modifiedDescription
             })
@@ -325,7 +325,7 @@ export async function githubWebhookHandler(
         }
 
         await linear
-            .issueUpdate(syncedIssue.linearIssueId, {
+            .updateIssue(syncedIssue.linearIssueId, {
                 stateId:
                     issue.state_reason === "not_planned"
                         ? canceledStateId
@@ -390,7 +390,7 @@ export async function githubWebhookHandler(
             select: { linearUserId: true }
         });
 
-        const createdIssueData = await linear.issueCreate({
+        const createdIssueData = await linear.createIssue({
             id: generateLinearUUID(),
             title: issue.title,
             description: `${modifiedDescription ?? ""}`,
@@ -532,7 +532,7 @@ export async function githubWebhookHandler(
 
             // Set remaining assignee only if different from current
             if (linearAssignee?.id != remainingAssignee?.linearUserId) {
-                const response = await linear.issueUpdate(
+                const response = await linear.updateIssue(
                     syncedIssue.linearIssueId,
                     { assigneeId: remainingAssignee?.linearUserId || null }
                 );
@@ -561,7 +561,7 @@ export async function githubWebhookHandler(
             }
 
             if (linearAssignee?.id != newAssignee?.linearUserId) {
-                const response = await linear.issueUpdate(
+                const response = await linear.updateIssue(
                     syncedIssue.linearIssueId,
                     { assigneeId: newAssignee.linearUserId }
                 );
@@ -598,7 +598,7 @@ export async function githubWebhookHandler(
                 select: { linearUserId: true }
             });
 
-            const createdIssueData = await linear.issueCreate({
+            const createdIssueData = await linear.createIssue({
                 id: generateLinearUUID(),
                 title: issue.title,
                 description: `${modifiedDescription ?? ""}`,
@@ -712,7 +712,7 @@ export async function githubWebhookHandler(
         const { milestone } = issue;
 
         if (milestone === null) {
-            const response = await linear.issueUpdate(
+            const response = await linear.updateIssue(
                 syncedIssue.linearIssueId,
                 {
                     cycleId: null
@@ -764,7 +764,7 @@ export async function githubWebhookHandler(
             });
         }
 
-        const response = await linear.issueUpdate(syncedIssue.linearIssueId, {
+        const response = await linear.updateIssue(syncedIssue.linearIssueId, {
             cycleId: syncedMilestone.cycleId
         });
 
@@ -796,7 +796,7 @@ export async function githubWebhookHandler(
 
         const priorityLabels = Object.values(SHARED.PRIORITY_LABELS);
         if (priorityLabels.map(l => l.name).includes(label?.name)) {
-            await linear.issueUpdate(syncedIssue.linearIssueId, {
+            await linear.updateIssue(syncedIssue.linearIssueId, {
                 priority:
                     // Ignore removal of priority labels since it's triggered by priority change from Linear
                     action === "unlabeled"
@@ -820,7 +820,7 @@ export async function githubWebhookHandler(
             n => n.id
         );
 
-        const response = await linear.issueUpdate(syncedIssue.linearIssueId, {
+        const response = await linear.updateIssue(syncedIssue.linearIssueId, {
             labelIds: [
                 ...(action === "labeled" ? linearLabelIDs : []),
                 ...currentTicketLabelIDs.filter(

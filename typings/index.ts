@@ -24,6 +24,7 @@ interface LinearData {
     teamId: string;
     projectId: string;
     cycleId?: string;
+    estimate?: number;
     creatorId: string;
     userId?: string;
     assigneeId: string;

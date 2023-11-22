@@ -32,7 +32,7 @@
     },
     "dependencies": {
         "@apollo/client": "^3.6.9",
-        "@linear/sdk": "^1.22.0",
+        "@linear/sdk": "^11.0.0",
         "@prisma/client": "^4.12.0",
         "@radix-ui/react-icons": "^1.1.1",
         "@radix-ui/react-tooltip": "^1.0.2",

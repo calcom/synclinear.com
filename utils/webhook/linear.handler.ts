@@ -23,7 +23,6 @@ import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
 import {
     createMilestone,
-    getGitHubFooter,
     getGithubFooterWithLinearCommentId,
     setIssueMilestone
 } from "../github";
@@ -57,14 +56,14 @@ export async function linearWebhookHandler(
         }
     });
 
-    const sync = syncs.find(sync => {
+    const sync = syncs.find(s => {
         // For comment events the teamId property from linear is not passed,
         // so we fallback to only match on user
         const isTeamMatching = data.teamId
-            ? sync.linearTeamId === data.teamId
+            ? s.linearTeamId === data.teamId
             : true;
         const isUserMatching =
-            sync.linearUserId === (data.userId ?? data.creatorId);
+            s.linearUserId === (data.userId ?? data.creatorId);
 
         return isUserMatching && isTeamMatching;
     });
@@ -275,8 +274,7 @@ export async function linearWebhookHandler(
 
             if (
                 !syncs.some(
-                    sync =>
-                        sync.linearUserId === (data.userId ?? data.creatorId)
+                    s => s.linearUserId === (data.userId ?? data.creatorId)
                 )
             ) {
                 await inviteMember(
@@ -298,7 +296,7 @@ export async function linearWebhookHandler(
                 );
             }
 
-            let createdIssueData: components["schemas"]["issue"] = JSON.parse(
+            const createdIssueData: components["schemas"]["issue"] = JSON.parse(
                 createdIssueResponse.body
             );
 
@@ -848,7 +846,7 @@ export async function linearWebhookHandler(
 
         if ("estimate" in updatedFrom) {
             // Remove old estimate label
-            const prevLabelName = `${updatedFrom["estimate"]} points`;
+            const prevLabelName = `${updatedFrom.estimate} points`;
 
             const removedLabelResponse = await got.delete(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels/${prevLabelName}`,
@@ -871,13 +869,13 @@ export async function linearWebhookHandler(
                 );
             }
 
-            if (!data["estimate"]) {
+            if (!data.estimate) {
                 return `Removed estimate label "${prevLabelName}" from issue #${syncedIssue.githubIssueNumber}.`;
             }
 
             // Create new estimate label if not yet existent
             const estimateLabel = {
-                name: `${data["estimate"]} points`,
+                name: `${data.estimate} points`,
                 color: "666"
             };
 
@@ -918,20 +916,20 @@ export async function linearWebhookHandler(
         if (actionType === "Comment") {
             // Comment added
 
-            if (data.id.includes(GITHUB.UUID_SUFFIX)) {
-                console.log(skipReason("comment", data.issue!.id, true));
-                return skipReason("comment", data.issue!.id, true);
+            if (data.id.includes(GITHUB.UUID_SUFFIX) && data.issue) {
+                console.log(skipReason("comment", data.issue.id, true));
+                return skipReason("comment", data.issue.id, true);
             }
 
             // Overrides the outer-scope syncedIssue because comments do not come with teamId
-            const syncedIssue = await prisma.syncedIssue.findFirst({
+            const syncedIssueWithTeam = await prisma.syncedIssue.findFirst({
                 where: {
                     linearIssueId: data.issueId
                 },
                 include: { GitHubRepo: true }
             });
 
-            if (!syncedIssue) {
+            if (!syncedIssueWithTeam) {
                 console.log(
                     skipReason("comment", `${data.team?.key}-${data.number}`)
                 );
@@ -950,8 +948,8 @@ export async function linearWebhookHandler(
             );
 
             const { error: commentError } = await createComment({
-                repoFullName: syncedIssue.GitHubRepo.repoName,
-                issueNumber: syncedIssue.githubIssueNumber,
+                repoFullName: syncedIssueWithTeam.GitHubRepo.repoName,
+                issueNumber: syncedIssueWithTeam.githubIssueNumber,
                 body: `${modifiedBody || ""}${footer}`,
                 githubAuthHeader,
                 userAgentHeader
@@ -959,11 +957,11 @@ export async function linearWebhookHandler(
 
             if (commentError) {
                 console.log(
-                    `Failed to update GitHub issue state for ${data.issue?.id} on GitHub issue #${syncedIssue.githubIssueNumber}.`
+                    `Failed to update GitHub issue state for ${data.issue?.id} on GitHub issue #${syncedIssueWithTeam.githubIssueNumber}.`
                 );
             } else {
                 console.log(
-                    `Synced comment for GitHub issue #${syncedIssue.githubIssueNumber}.`
+                    `Synced comment for GitHub issue #${syncedIssueWithTeam.githubIssueNumber}.`
                 );
             }
         } else if (actionType === "Issue") {
@@ -1145,7 +1143,7 @@ export async function linearWebhookHandler(
                 );
             }
 
-            if (!syncs.some(sync => sync.linearUserId === data.creatorId)) {
+            if (!syncs.some(s => s.linearUserId === data.creatorId)) {
                 await inviteMember(
                     data.creatorId,
                     data.teamId,
