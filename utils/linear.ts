@@ -320,7 +320,7 @@ export const saveLinearContext = async (
 
 export const exchangeLinearToken = async (
     refreshToken: string
-): Promise<object> => {
+): Promise<{ access_token?: string }> => {
     const redirectURI = window.location.origin;
 
     const response = await fetch("/api/linear/token", {
@@ -336,7 +336,7 @@ export const checkTeamWebhook = async (
     teamId: string,
     teamName: string,
     token: string
-): Promise<object> => {
+): Promise<{ teamInDB?: boolean; webhookExists?: boolean }> => {
     const response = await fetch("/api/linear/webhook", {
         method: "POST",
         headers: {

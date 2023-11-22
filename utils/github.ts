@@ -90,7 +90,7 @@ export const saveGitHubContext = async (
 export const getRepoWebhook = async (
     repoName: string,
     token: string
-): Promise<{ id: string }> => {
+): Promise<{ id: string; exists: boolean }> => {
     const webhookUrl = getWebhookURL();
 
     const response = await fetch(`/api/github/webhook`, {
@@ -112,7 +112,7 @@ export const setGitHubWebook = async (
     token: string,
     repo: GitHubRepo,
     webhookSecret: string
-): Promise<object> => {
+): Promise<{ errors?: { message: string }[] }> => {
     const webhookURL = getWebhookURL();
     const webhookData = {
         name: "web",
@@ -169,7 +169,7 @@ export const updateGitHubWebhook = async (
 
 export const exchangeGitHubToken = async (
     refreshToken: string
-): Promise<object> => {
+): Promise<{ access_token?: string }> => {
     const redirectURI = window.location.origin;
 
     const response = await fetch("/api/github/token", {
@@ -184,7 +184,7 @@ export const exchangeGitHubToken = async (
 export const listReposForUser = async (
     token: string,
     page = 0
-): Promise<object> => {
+): Promise<{ id: string; full_name: string }[]> => {
     const response = await fetch(
         `${GITHUB.LIST_REPOS_ENDPOINT}&page=${page + 1}`,
         {
@@ -195,7 +195,9 @@ export const listReposForUser = async (
     return await response.json();
 };
 
-export const getGitHubUser = async (token: string): Promise<object> => {
+export const getGitHubUser = async (
+    token: string
+): Promise<{ id: string; login: string }> => {
     const response = await fetch(GITHUB.USER_ENDPOINT, {
         headers: { Authorization: `Bearer ${token}` }
     });
