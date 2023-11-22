@@ -168,6 +168,11 @@ const LinearAuthButton = ({
                 if (err?.message?.includes("url not unique")) {
                     alert("Webhook already deployed");
                     setDeployed(true);
+                    onDeployWebhook({
+                        userId: user.id,
+                        teamId: chosenTeam.id,
+                        apiKey: accessToken
+                    });
                     return;
                 }
 
