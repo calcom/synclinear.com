@@ -87,6 +87,18 @@ export const saveGitHubContext = async (
     };
 };
 
+export const getGitHubContext = async (
+    repoId: string,
+    token: string
+): Promise<{ inDb: boolean }> => {
+    const response = await fetch("/api/github/repo", {
+        method: "POST",
+        body: JSON.stringify({ repoId, token })
+    });
+
+    return await response.json();
+};
+
 export const getRepoWebhook = async (
     repoName: string,
     token: string

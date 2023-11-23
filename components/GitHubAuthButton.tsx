@@ -12,7 +12,8 @@ import {
     getRepoWebhook,
     getGitHubAuthURL,
     saveGitHubContext,
-    setGitHubWebook
+    setGitHubWebook,
+    getGitHubContext
 } from "../utils/github";
 import { Context } from "./ContextProvider";
 import Select from "./Select";
@@ -121,9 +122,14 @@ const GitHubAuthButton = ({
 
         setLoading(true);
 
-        getRepoWebhook(chosenRepo.name, gitHubToken)
-            .then(res => {
-                if (res?.exists) {
+        const checkRepo = async () => {
+            try {
+                const [webhook, repo] = await Promise.all([
+                    getRepoWebhook(chosenRepo.name, gitHubToken),
+                    getGitHubContext(chosenRepo.id, gitHubToken)
+                ]);
+
+                if (webhook?.exists && repo?.inDb) {
                     setDeployed(true);
                     onDeployWebhook({
                         userId: gitHubUser.id,
@@ -133,12 +139,14 @@ const GitHubAuthButton = ({
                 } else {
                     setDeployed(false);
                 }
-                setLoading(false);
-            })
-            .catch(err => {
+            } catch (err) {
                 alert(`Error checking for existing repo: ${err}`);
-                setLoading(false);
-            });
+            }
+
+            setLoading(false);
+        };
+
+        checkRepo();
     }, [chosenRepo]);
 
     const openAuthPage = () => {
