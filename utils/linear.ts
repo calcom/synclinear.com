@@ -74,6 +74,7 @@ export const getLinearWebhook = async (token: string, teamName: string) => {
             nodes {
                 url
                 id
+                resourceTypes
                 team {
                     name
                 }
@@ -170,31 +171,6 @@ export const createLinearLabel = async (
         labelName,
         color
     });
-};
-
-export const getLinearCycle = async (
-    token: string,
-    cycleId: string
-): Promise<{
-    data: {
-        cycle: {
-            name: string;
-            description: string;
-            number: number;
-            endsAt: string;
-        };
-    };
-}> => {
-    const query = `query GetCycle($cycleId: String!) {
-        cycle(id: $cycleId) {
-            name
-            description
-            number
-            endsAt
-        }
-    }`;
-
-    return await linearQuery(query, token, { cycleId });
 };
 
 export const createLinearCycle = async (

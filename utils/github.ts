@@ -210,12 +210,14 @@ export const createMilestone = async (
     repoName: string,
     title: string,
     description?: string,
-    state?: MilestoneState
+    state?: MilestoneState,
+    dueDate?: string
 ): Promise<{ milestoneId: number }> => {
     const milestoneData = {
         title,
-        state: state || "open",
-        ...(description && { description })
+        ...(state && { state }),
+        ...(description && { description }),
+        ...(dueDate && { due_on: dueDate })
     };
 
     const response = await fetch(
