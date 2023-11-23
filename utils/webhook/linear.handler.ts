@@ -584,7 +584,7 @@ export async function linearWebhookHandler(
                 );
 
                 if (!resource) {
-                    const reason = `Could not find cycle for ${ticketName}.`;
+                    const reason = `Could not find cycle/project for ${ticketName}.`;
                     console.log(reason);
                     throw new ApiError(reason, 500);
                 }
@@ -605,10 +605,13 @@ export async function linearWebhookHandler(
                     : "?";
 
                 const today = new Date();
-                const endDate = new Date(
-                    (resource as Cycle).endsAt ||
-                        (resource as Project).targetDate
-                );
+
+                const endDate = (resource as Cycle).endsAt
+                    ? new Date((resource as Cycle).endsAt)
+                    : (resource as Project).targetDate
+                    ? new Date((resource as Project).targetDate)
+                    : null;
+
                 const state: MilestoneState =
                     endDate > today ? "open" : "closed";
 
@@ -618,10 +621,12 @@ export async function linearWebhookHandler(
                     title,
                     `${resource.description}\n\n> ${getSyncFooter()}`,
                     state,
-                    endDate.toISOString()
+                    endDate?.toISOString()
                 );
 
-                if (!createdMilestone?.milestoneId) {
+                if (createdMilestone?.alreadyExists) {
+                    console.log("Milestone already exists.");
+                } else if (!createdMilestone?.milestoneId) {
                     const reason = `Could not create milestone for ${ticketName}.`;
                     console.log(reason);
                     throw new ApiError(reason, 500);
