@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
-import { GitHubContext, LinearContext, Platform } from "../typings";
+import { GitHubContext, LinearContext } from "../typings";
 import { GENERAL, GITHUB } from "./constants";
 
 export const isDev = (): boolean => {
@@ -22,7 +22,7 @@ export const copyToClipboard = (text: string) => {
     navigator?.clipboard?.writeText(text);
 };
 
-export const formatJSON = (body: Object): string => {
+export const formatJSON = (body: object): string => {
     return JSON.stringify(body, null, 4);
 };
 
@@ -136,12 +136,13 @@ export const skipReason = (
         | "issue"
         | "edit"
         | "milestone"
+        | "project"
         | "comment"
         | "state change"
         | "label"
         | "assignee",
     issueNumber: number | string,
-    causedBySync: boolean = false
+    causedBySync = false
 ): string => {
     return `Skipping over ${event} for issue #${issueNumber} as it is ${
         causedBySync ? "caused by sync" : "not synced"
