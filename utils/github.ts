@@ -197,14 +197,24 @@ export const listReposForUser = async (
     token: string,
     page = 0
 ): Promise<{ id: string; full_name: string }[]> => {
-    const response = await fetch(
-        `${GITHUB.LIST_REPOS_ENDPOINT}&page=${page + 1}`,
-        {
-            headers: { Authorization: `Bearer ${token}` }
-        }
-    );
+    try {
+        const response = await fetch(
+            `${GITHUB.LIST_REPOS_ENDPOINT}&page=${page + 1}`,
+            {
+                headers: { Authorization: `Bearer ${token}` }
+            }
+        );
 
-    return await response.json();
+        if (response.status > 200) {
+            console.error(response);
+            return [];
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
 };
 
 export const getGitHubUser = async (
