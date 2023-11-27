@@ -110,6 +110,10 @@ export async function linearWebhookHandler(
     const githubAuthHeader = `token ${githubKey}`;
     const userAgentHeader = `${repoFullName}, linear-github-sync`;
     const issuesEndpoint = `https://api.github.com/repos/${repoFullName}/issues`;
+    const defaultHeaders = {
+        Authorization: githubAuthHeader,
+        "User-Agent": userAgentHeader
+    };
 
     // Map the user's Linear username to their GitHub username if not yet mapped
     await upsertUser(
@@ -160,12 +164,7 @@ export async function linearWebhookHandler(
 
                 const removedLabelResponse = await got.delete(
                     `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels/${label.name}`,
-                    {
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        }
-                    }
+                    { headers: defaultHeaders }
                 );
 
                 if (removedLabelResponse.statusCode > 201) {
@@ -256,6 +255,7 @@ export async function linearWebhookHandler(
             });
 
             const createdIssueResponse = await got.post(issuesEndpoint, {
+                headers: defaultHeaders,
                 json: {
                     title: `[${ticketName}] ${data.title}`,
                     body: `${
@@ -265,10 +265,6 @@ export async function linearWebhookHandler(
                         assignee?.githubUsername && {
                             assignees: [assignee?.githubUsername]
                         })
-                },
-                headers: {
-                    Authorization: githubAuthHeader,
-                    "User-Agent": userAgentHeader
                 }
             });
 
@@ -466,10 +462,9 @@ export async function linearWebhookHandler(
             const updatedIssueResponse = await got.patch(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
                 {
-                    json: { title: `[${ticketName}] ${data.title}` },
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
+                    headers: defaultHeaders,
+                    json: {
+                        title: `[${ticketName}] ${data.title}`
                     }
                 }
             );
@@ -509,14 +504,11 @@ export async function linearWebhookHandler(
             const updatedIssueResponse = await got.patch(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
                 {
+                    headers: defaultHeaders,
                     json: {
                         body: `${
                             modifiedDescription ?? ""
                         }\n\n<sub>${getSyncFooter()} | [${ticketName}](${url})</sub>`
-                    },
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
                     }
                 }
             );
@@ -673,10 +665,10 @@ export async function linearWebhookHandler(
             const updatedIssueResponse = await got.patch(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`,
                 {
-                    json: { state, state_reason: reason },
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
+                    headers: defaultHeaders,
+                    json: {
+                        state,
+                        state_reason: reason
                     }
                 }
             );
@@ -703,10 +695,7 @@ export async function linearWebhookHandler(
             const issueEndpoint = `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}`;
 
             const issueResponse = await got.get(issueEndpoint, {
-                headers: {
-                    Authorization: githubAuthHeader,
-                    "User-Agent": userAgentHeader
-                },
+                headers: defaultHeaders,
                 responseType: "json"
             });
 
@@ -738,12 +727,9 @@ export async function linearWebhookHandler(
                 const assigneeEndpoint = `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/assignees`;
 
                 const response = await got.post(assigneeEndpoint, {
+                    headers: defaultHeaders,
                     json: {
                         assignees: [newAssignee?.githubUsername]
-                    },
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
                     }
                 });
 
@@ -764,12 +750,9 @@ export async function linearWebhookHandler(
 
                 // Remove old assignees on GitHub
                 const unassignResponse = await got.delete(assigneeEndpoint, {
+                    headers: defaultHeaders,
                     json: {
                         assignees: [prevAssignees]
-                    },
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
                     }
                 });
 
@@ -807,12 +790,7 @@ export async function linearWebhookHandler(
             try {
                 const removedLabelResponse = await got.delete(
                     `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels/${prevPriorityLabel.name}`,
-                    {
-                        headers: {
-                            Authorization: githubAuthHeader,
-                            "User-Agent": userAgentHeader
-                        }
-                    }
+                    { headers: defaultHeaders }
                 );
 
                 if (removedLabelResponse.statusCode > 201) {
@@ -871,10 +849,7 @@ export async function linearWebhookHandler(
             const removedLabelResponse = await got.delete(
                 `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/labels/${prevLabelName}`,
                 {
-                    headers: {
-                        Authorization: githubAuthHeader,
-                        "User-Agent": userAgentHeader
-                    },
+                    headers: defaultHeaders,
                     throwHttpErrors: false
                 }
             );
@@ -1025,10 +1000,7 @@ export async function linearWebhookHandler(
             });
 
             const createdIssueResponse = await got.post(issuesEndpoint, {
-                headers: {
-                    Authorization: githubAuthHeader,
-                    "User-Agent": userAgentHeader
-                },
+                headers: defaultHeaders,
                 json: {
                     title: `[${ticketName}] ${data.title}`,
                     body: `${
