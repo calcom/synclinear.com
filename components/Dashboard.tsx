@@ -1,16 +1,36 @@
 import { Cross1Icon, InfoCircledIcon, WidthIcon } from "@radix-ui/react-icons";
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { LINEAR } from "../utils/constants";
 import { updateGitHubWebhook } from "../utils/github";
-import { updateLinearWebhook } from "../utils/linear";
+import { getLinearWebhook, updateLinearWebhook } from "../utils/linear";
 import { Context } from "./ContextProvider";
 import Tooltip from "./Tooltip";
+
+const options = ["Cycle", "Project"] as const;
+type Option = (typeof options)[number];
 
 const Dashboard = () => {
     const { syncs, setSyncs, gitHubContext, linearContext } =
         useContext(Context);
 
     const [loading, setLoading] = useState(false);
+    const [milestoneAction, setMilestoneAction] = useState<Option | null>(null);
+
+    // Get initial webhook settings
+    useEffect(() => {
+        if (!syncs?.length) return;
+
+        getLinearWebhook(
+            linearContext.apiKey,
+            syncs[0].LinearTeam.teamName
+        ).then(res => {
+            if (res.resourceTypes.includes("Cycle")) {
+                setMilestoneAction("Cycle");
+            } else if (res.resourceTypes.includes("Project")) {
+                setMilestoneAction("Project");
+            }
+        });
+    }, [syncs]);
 
     const removeSync = async (syncId: string) => {
         if (!syncId || !gitHubContext.apiKey) return;
@@ -37,36 +57,37 @@ const Dashboard = () => {
             });
     };
 
-    const handleMilestoneSyncChange = async (
-        e: React.ChangeEvent<HTMLInputElement>
-    ) => {
-        setLoading(true);
+    useEffect(() => {
+        const handleMilestoneSyncChange = async () => {
+            setLoading(true);
 
-        const checked = e.target.checked || false;
+            for (const sync of syncs) {
+                await updateGitHubWebhook(
+                    gitHubContext.apiKey,
+                    sync.GitHubRepo.repoName,
+                    {
+                        ...(milestoneAction
+                            ? { add_events: ["milestone"] }
+                            : { remove_events: ["milestone"] })
+                    }
+                );
+                await updateLinearWebhook(
+                    linearContext.apiKey,
+                    sync.LinearTeam.teamName,
+                    {
+                        resourceTypes: [
+                            ...LINEAR.WEBHOOK_EVENTS,
+                            ...(milestoneAction ? [milestoneAction] : [])
+                        ]
+                    }
+                );
+            }
 
-        for (const sync of syncs) {
-            await updateGitHubWebhook(
-                gitHubContext.apiKey,
-                sync.GitHubRepo.repoName,
-                {
-                    ...(checked && { add_events: ["milestone"] }),
-                    ...(!checked && { remove_events: ["milestone"] })
-                }
-            );
-            await updateLinearWebhook(
-                linearContext.apiKey,
-                sync.LinearTeam.teamName,
-                {
-                    resourceTypes: [
-                        ...LINEAR.WEBHOOK_EVENTS,
-                        ...(checked ? ["Cycle"] : [])
-                    ]
-                }
-            );
-        }
+            setLoading(false);
+        };
 
-        setLoading(false);
-    };
+        handleMilestoneSyncChange();
+    }, [milestoneAction]);
 
     if (!syncs?.length) return <></>;
 
@@ -104,19 +125,45 @@ const Dashboard = () => {
                     </Tooltip>
                 </div>
             ))}
-            <div className="flex items-center space-x-2 mb-4">
-                <input
-                    disabled={!linearContext.apiKey}
-                    type="checkbox"
-                    id="syncsMilestones"
-                    onChange={handleMilestoneSyncChange}
-                />
-                <label htmlFor="syncsMilestones" className="whitespace-nowrap">
-                    Sync milestones to cycles
-                </label>
-                <Tooltip content="Requires connecting to Linear first">
-                    <InfoCircledIcon className="w-6 h-6 text-gray-400 hover:font-secondary transition-colors duration-200" />
-                </Tooltip>
+            <div className="flex flex-col items-start">
+                {options.map(option => (
+                    <div
+                        key={option}
+                        className="flex items-center space-x-2 mb-4"
+                    >
+                        <input
+                            id={option}
+                            disabled={!linearContext.apiKey}
+                            type="checkbox"
+                            checked={milestoneAction === option}
+                            onChange={e =>
+                                setMilestoneAction(
+                                    e.target.checked
+                                        ? (e.target.id as Option)
+                                        : null
+                                )
+                            }
+                        />
+                        <label htmlFor={option} className="whitespace-nowrap">
+                            Sync {option}s to Milestones
+                        </label>
+                        <Tooltip
+                            content={
+                                !linearContext.apiKey
+                                    ? "Requires connecting to Linear first"
+                                    : milestoneAction
+                                    ? `Will disable ${
+                                          option == "Cycle"
+                                              ? "Project"
+                                              : "Cycle"
+                                      } sync`
+                                    : ""
+                            }
+                        >
+                            <InfoCircledIcon className="w-6 h-6 text-gray-400 hover:font-secondary transition-colors duration-200" />
+                        </Tooltip>
+                    </div>
+                ))}
             </div>
         </div>
     );

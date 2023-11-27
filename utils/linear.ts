@@ -74,6 +74,7 @@ export const getLinearWebhook = async (token: string, teamName: string) => {
             nodes {
                 url
                 id
+                resourceTypes
                 team {
                     name
                 }
@@ -169,108 +170,6 @@ export const createLinearLabel = async (
         teamID,
         labelName,
         color
-    });
-};
-
-export const getLinearCycle = async (
-    token: string,
-    cycleId: string
-): Promise<{
-    data: {
-        cycle: {
-            name: string;
-            description: string;
-            number: number;
-            endsAt: string;
-        };
-    };
-}> => {
-    const query = `query GetCycle($cycleId: String!) {
-        cycle(id: $cycleId) {
-            name
-            description
-            number
-            endsAt
-        }
-    }`;
-
-    return await linearQuery(query, token, { cycleId });
-};
-
-export const createLinearCycle = async (
-    token: string,
-    teamId: string,
-    title: string,
-    description?: string,
-    endDate?: Date
-): Promise<{
-    data: { cycleCreate: { success: boolean; cycle: { id: string } } };
-}> => {
-    const mutation = `mutation CreateCycle(
-        $teamId: String!,
-        $title: String!,
-        $description: String,
-        $startsAt: DateTime!,
-        $endsAt: DateTime!
-    ) {
-        cycleCreate(
-            input: {
-                name: $title,
-                description: $description,
-                teamId: $teamId,
-                startsAt: $startsAt,
-                endsAt: $endsAt
-            }
-        ) {
-            success
-            cycle {
-                id
-            }
-        }
-    }`;
-
-    return await linearQuery(mutation, token, {
-        teamId,
-        title,
-        ...(description && { description }),
-        ...(endDate && { endsAt: endDate }),
-        startsAt: new Date()
-    });
-};
-
-export const updateLinearCycle = async (
-    token: string,
-    cycleId: string,
-    name?: string,
-    description?: string,
-    endDate?: Date
-): Promise<{
-    data: { cycleUpdate: { success: boolean } };
-}> => {
-    const mutation = `mutation UpdateCycle(
-        $cycleId: String!,
-        $name: String,
-        $description: String,
-        $endsAt: DateTime
-    ) {
-        cycleUpdate(
-            id: $cycleId,
-            input: {
-                name: $name,
-                description: $description,
-                endsAt: $endsAt
-            }
-        ) {
-            success
-        }
-    }`;
-
-    return await linearQuery(mutation, token, {
-        cycleId,
-        // Only include the fields that are defined to avoid server error
-        ...(name && { name }),
-        ...(description && { description }),
-        ...(endDate && { endsAt: endDate })
     });
 };
 

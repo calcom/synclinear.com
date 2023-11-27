@@ -8,7 +8,7 @@ import {
     isNumber,
     skipReason
 } from "../index";
-import { LinearClient } from "@linear/sdk";
+import { Cycle, LinearClient, Project } from "@linear/sdk";
 import {
     applyLabel,
     createComment,
@@ -18,7 +18,7 @@ import {
     upsertUser
 } from "../../pages/api/utils";
 import got from "got";
-import { getLinearCycle, inviteMember } from "../linear";
+import { inviteMember } from "../linear";
 import { components } from "@octokit/openapi-types";
 import { linearQuery } from "../apollo";
 import {
@@ -537,15 +537,22 @@ export async function linearWebhookHandler(
             }
         }
 
-        // Cycle change
-        if ("cycleId" in updatedFrom && actionType === "Issue") {
+        // Cycle or Project change
+        if (
+            ("cycleId" in updatedFrom || "projectId" in updatedFrom) &&
+            actionType === "Issue"
+        ) {
             if (!syncedIssue) {
                 const reason = skipReason("milestone", ticketName);
                 console.log(reason);
                 return reason;
             }
 
-            if (!data.cycleId) {
+            const isCycle = "cycleId" in updatedFrom;
+            const resourceId = isCycle ? data.cycleId : data.projectId;
+
+            if (!resourceId) {
+                // Remove milestone
                 const response = await setIssueMilestone(
                     githubKey,
                     syncedIssue.GitHubRepo.repoName,
@@ -566,49 +573,62 @@ export async function linearWebhookHandler(
 
             let syncedMilestone = await prisma.milestone.findFirst({
                 where: {
-                    cycleId: data.cycleId,
+                    cycleId: resourceId,
                     linearTeamId: linearTeamId
                 }
             });
 
             if (!syncedMilestone) {
-                const cycleResponse = await getLinearCycle(
-                    linearKey,
-                    data.cycleId
+                const resource = await linear[isCycle ? "cycle" : "project"](
+                    resourceId
                 );
-                const cycle = await cycleResponse?.data?.cycle;
 
-                if (!cycle) {
-                    const reason = `Could not find cycle for ${ticketName}.`;
+                if (!resource) {
+                    const reason = `Could not find cycle/project for ${ticketName}.`;
                     console.log(reason);
                     throw new ApiError(reason, 500);
                 }
 
-                // Skip if cycle was created by bot but not yet synced
-                if (cycle.description?.includes(getSyncFooter())) {
-                    const reason = `Skipping over cycle "${cycle.name}" because it is caused by sync`;
+                // Skip if cycle/project was created by bot but not yet synced
+                if (resource.description?.includes(getSyncFooter())) {
+                    const reason = `Skipping over cycle/project "${resource.name}" because it is caused by sync`;
                     console.log(reason);
                     return reason;
                 }
 
-                const title = !cycle.name
-                    ? `v.${cycle.number}`
-                    : isNumber(cycle.name)
-                    ? `v.${cycle.name}`
-                    : cycle.name;
+                const title = isCycle
+                    ? !resource.name
+                        ? `v.${(resource as Cycle).number}`
+                        : isNumber(resource.name)
+                        ? `v.${resource.name}`
+                        : resource.name
+                    : resource.name || "?";
+
                 const today = new Date();
+
+                const endDate = (resource as Cycle).endsAt
+                    ? new Date((resource as Cycle).endsAt)
+                    : (resource as Project).targetDate
+                    ? new Date((resource as Project).targetDate)
+                    : null;
+
                 const state: MilestoneState =
-                    new Date(cycle.endsAt) > today ? "open" : "closed";
+                    endDate > today ? "open" : "closed";
 
                 const createdMilestone = await createMilestone(
                     githubKey,
                     syncedIssue.GitHubRepo.repoName,
                     title,
-                    `${cycle.description}\n\n> ${getSyncFooter()}`,
-                    state
+                    `${resource.description}${
+                        isCycle ? "" : " (Project)"
+                    }\n\n> ${getSyncFooter()}`,
+                    state,
+                    endDate?.toISOString()
                 );
 
-                if (!createdMilestone?.milestoneId) {
+                if (createdMilestone?.alreadyExists) {
+                    console.log("Milestone already exists.");
+                } else if (!createdMilestone?.milestoneId) {
                     const reason = `Could not create milestone for ${ticketName}.`;
                     console.log(reason);
                     throw new ApiError(reason, 500);
@@ -617,7 +637,7 @@ export async function linearWebhookHandler(
                 syncedMilestone = await prisma.milestone.create({
                     data: {
                         milestoneId: createdMilestone.milestoneId,
-                        cycleId: data.cycleId,
+                        cycleId: resourceId,
                         linearTeamId: linearTeamId,
                         githubRepoId: syncedIssue.githubRepoId
                     }

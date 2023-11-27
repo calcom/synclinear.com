@@ -87,6 +87,18 @@ export const saveGitHubContext = async (
     };
 };
 
+export const getGitHubContext = async (
+    repoId: string,
+    token: string
+): Promise<{ inDb: boolean }> => {
+    const response = await fetch("/api/github/repo", {
+        method: "POST",
+        body: JSON.stringify({ repoId, token })
+    });
+
+    return await response.json();
+};
+
 export const getRepoWebhook = async (
     repoName: string,
     token: string
@@ -185,14 +197,24 @@ export const listReposForUser = async (
     token: string,
     page = 0
 ): Promise<{ id: string; full_name: string }[]> => {
-    const response = await fetch(
-        `${GITHUB.LIST_REPOS_ENDPOINT}&page=${page + 1}`,
-        {
-            headers: { Authorization: `Bearer ${token}` }
-        }
-    );
+    try {
+        const response = await fetch(
+            `${GITHUB.LIST_REPOS_ENDPOINT}&page=${page + 1}`,
+            {
+                headers: { Authorization: `Bearer ${token}` }
+            }
+        );
 
-    return await response.json();
+        if (response.status > 200) {
+            console.error(response);
+            return [];
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
 };
 
 export const getGitHubUser = async (
@@ -210,15 +232,17 @@ export const createMilestone = async (
     repoName: string,
     title: string,
     description?: string,
-    state?: MilestoneState
-): Promise<{ milestoneId: number }> => {
+    state?: MilestoneState,
+    dueDate?: string
+): Promise<{ milestoneId?: number; alreadyExists?: boolean }> => {
     const milestoneData = {
         title,
-        state: state || "open",
-        ...(description && { description })
+        ...(state && { state }),
+        ...(description && { description }),
+        ...(dueDate && { due_on: dueDate })
     };
 
-    const response = await fetch(
+    const res = await fetch(
         `https://api.github.com/repos/${repoName}/milestones`,
         {
             method: "POST",
@@ -230,9 +254,33 @@ export const createMilestone = async (
         }
     );
 
-    const responseBody = await response.json();
+    const body = await res.json();
 
-    return { milestoneId: responseBody?.number };
+    if (res.status == 422) {
+        const milestonesRes = await fetch(
+            `https://api.github.com/repos/${repoName}/milestones`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28"
+                }
+            }
+        );
+
+        const milestones = await milestonesRes.json();
+
+        const existingMilestone = milestones.find(
+            milestone => milestone.title == title
+        );
+
+        return {
+            milestoneId: existingMilestone?.number,
+            alreadyExists: true
+        };
+    }
+
+    return { milestoneId: body?.number };
 };
 
 export const updateMilestone = async (

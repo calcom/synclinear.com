@@ -12,7 +12,8 @@ import {
     getRepoWebhook,
     getGitHubAuthURL,
     saveGitHubContext,
-    setGitHubWebook
+    setGitHubWebook,
+    getGitHubContext
 } from "../utils/github";
 import { Context } from "./ContextProvider";
 import Select from "./Select";
@@ -90,21 +91,28 @@ const GitHubAuthButton = ({
         const startingPage = 0;
 
         const listReposRecursively = async (page: number): Promise<void> => {
-            const res = await listReposForUser(gitHubToken, page);
+            try {
+                const res = await listReposForUser(gitHubToken, page);
 
-            if (!res || res.length < 1) {
+                if (!res || res?.length < 1) {
+                    setReposLoading(false);
+                    return;
+                }
+
+                setRepos((current: GitHubRepo[]) => [
+                    ...current,
+                    ...(res?.map?.(repo => {
+                        return { id: repo.id, name: repo.full_name };
+                    }) ?? [])
+                ]);
+
+                return await listReposRecursively(page + 1);
+            } catch (err) {
+                alert(`Error fetching repos: ${err}`);
                 setReposLoading(false);
+
                 return;
             }
-
-            setRepos((current: GitHubRepo[]) => [
-                ...current,
-                ...(res?.map?.(repo => {
-                    return { id: repo.id, name: repo.full_name };
-                }) ?? [])
-            ]);
-
-            return await listReposRecursively(page + 1);
         };
 
         setReposLoading(true);
@@ -121,9 +129,14 @@ const GitHubAuthButton = ({
 
         setLoading(true);
 
-        getRepoWebhook(chosenRepo.name, gitHubToken)
-            .then(res => {
-                if (res?.exists) {
+        const checkRepo = async () => {
+            try {
+                const [webhook, repo] = await Promise.all([
+                    getRepoWebhook(chosenRepo.name, gitHubToken),
+                    getGitHubContext(chosenRepo.id, gitHubToken)
+                ]);
+
+                if (webhook?.exists && repo?.inDb) {
                     setDeployed(true);
                     onDeployWebhook({
                         userId: gitHubUser.id,
@@ -133,12 +146,14 @@ const GitHubAuthButton = ({
                 } else {
                     setDeployed(false);
                 }
-                setLoading(false);
-            })
-            .catch(err => {
+            } catch (err) {
                 alert(`Error checking for existing repo: ${err}`);
-                setLoading(false);
-            });
+            }
+
+            setLoading(false);
+        };
+
+        checkRepo();
     }, [chosenRepo]);
 
     const openAuthPage = () => {
