@@ -24,11 +24,7 @@ import {
     MilestoneEvent,
     IssueCommentEditedEvent
 } from "@octokit/webhooks-types";
-import {
-    createLinearCycle,
-    generateLinearUUID,
-    updateLinearCycle
-} from "../linear";
+import { generateLinearUUID } from "../linear";
 import { LINEAR, SHARED } from "../constants";
 import got from "got";
 import { linearQuery } from "../apollo";
@@ -226,48 +222,6 @@ export async function githubWebhookHandler(
                 modifiedComment,
                 issue
             );
-        }
-    }
-
-    if (githubEvent === "milestone") {
-        const { milestone } = body as MilestoneEvent;
-        if (!milestone) throw new ApiError("No milestone found", 404);
-
-        const syncedMilestone = await prisma.milestone.findFirst({
-            where: {
-                milestoneId: milestone.id,
-                githubRepoId: repository.id
-            }
-        });
-
-        if (action === "edited") {
-            if (!syncedMilestone?.cycleId) {
-                const reason = `Skipping over update for milestone "${milestone.title}" because it is not synced`;
-                return reason;
-            }
-
-            if (milestone.description?.includes(getSyncFooter())) {
-                const reason = `Skipping over update for milestone "${milestone.title}" because it is caused by sync`;
-                return reason;
-            }
-
-            const cycleResponse = await updateLinearCycle(
-                linearKey,
-                syncedMilestone.cycleId,
-                milestone.title,
-                `${milestone.description}\n\n> ${getSyncFooter()}`,
-                milestone.due_on ? new Date(milestone.due_on) : null
-            );
-
-            if (!cycleResponse?.data?.cycleUpdate?.success) {
-                const error = `Could not update cycle "${milestone.title}" for ${repoName}`;
-                console.log(error);
-                throw new ApiError(error, 500);
-            } else {
-                const result = `Updated cycle "${milestone.title}" for ${repoName}`;
-                console.log(result);
-                return result;
-            }
         }
     }
 
@@ -712,21 +666,10 @@ export async function githubWebhookHandler(
         const { milestone } = issue;
 
         if (milestone === null) {
-            const response = await linear.updateIssue(
-                syncedIssue.linearIssueId,
-                {
-                    cycleId: null
-                }
-            );
-
-            if (!response?.success) {
-                const reason = `Failed to remove Linear ticket from cycle for GitHub issue #${issue.number}.`;
-                throw new ApiError(reason, 500);
-            } else {
-                const reason = `Removed Linear ticket from cycle for GitHub issue #${issue.number}.`;
-                return reason;
-            }
+            return `Skipping over removal of milestone for issue #${issue.number}.`;
         }
+
+        const isProject = milestone.description?.includes?.("(Project)");
 
         let syncedMilestone = await prisma.milestone.findFirst({
             where: {
@@ -741,38 +684,57 @@ export async function githubWebhookHandler(
                 return reason;
             }
 
-            const createdCycle = await createLinearCycle(
-                linearKey,
-                linearTeamId,
-                milestone.title,
-                `${milestone.description}\n\n> ${getSyncFooter()}`,
-                milestone.due_on ? new Date(milestone.due_on) : null
-            );
+            const createdResource = await linear[
+                isProject ? "createProject" : "createCycle"
+            ]({
+                name: milestone.title,
+                description: `${milestone.description}\n\n> ${getSyncFooter()}`,
+                ...(isProject && { teamIds: [linearTeamId] }),
+                ...(!isProject && { teamId: linearTeamId }),
+                ...(isProject && {
+                    targetDate: milestone.due_on
+                        ? new Date(milestone.due_on)
+                        : null,
+                    startDate: new Date()
+                }),
+                ...(!isProject && {
+                    endsAt: milestone.due_on
+                        ? new Date(milestone.due_on)
+                        : null,
+                    startsAt: new Date()
+                })
+            });
 
-            if (!createdCycle?.data?.cycleCreate?.cycle?.id) {
-                const reason = `Failed to create Linear cycle for GitHub milestone #${milestone.number}.`;
+            if (!createdResource?.success) {
+                const reason = `Failed to create Linear cycle/project for GitHub milestone #${milestone.number}.`;
                 throw new ApiError(reason, 500);
             }
+
+            const resourceData = await createdResource[
+                isProject ? "project" : "cycle"
+            ];
 
             syncedMilestone = await prisma.milestone.create({
                 data: {
                     milestoneId: milestone.number,
                     githubRepoId: repository.id,
-                    cycleId: createdCycle.data.cycleCreate.cycle.id,
+                    cycleId: resourceData.id,
                     linearTeamId: linearTeamId
                 }
             });
         }
 
         const response = await linear.updateIssue(syncedIssue.linearIssueId, {
-            cycleId: syncedMilestone.cycleId
+            ...(isProject
+                ? { projectId: syncedMilestone.cycleId }
+                : { cycleId: syncedMilestone.cycleId })
         });
 
         if (!response?.success) {
-            const reason = `Failed to add Linear ticket to cycle for GitHub issue #${issue.number}.`;
+            const reason = `Failed to add Linear ticket to cycle/project for GitHub issue #${issue.number}.`;
             throw new ApiError(reason, 500);
         } else {
-            const reason = `Added Linear ticket to cycle for GitHub issue #${issue.number}.`;
+            const reason = `Added Linear ticket to cycle/project for GitHub issue #${issue.number}.`;
             return reason;
         }
     } else if (["labeled", "unlabeled"].includes(action)) {

@@ -596,13 +596,13 @@ export async function linearWebhookHandler(
                     return reason;
                 }
 
-                const title = resource.name
-                    ? isCycle
-                        ? isNumber(resource.name)
-                            ? `v.${resource.name}`
-                            : `v.${(resource as Cycle).number}`
+                const title = isCycle
+                    ? !resource.name
+                        ? `v.${(resource as Cycle).number}`
+                        : isNumber(resource.name)
+                        ? `v.${resource.name}`
                         : resource.name
-                    : "?";
+                    : resource.name || "?";
 
                 const today = new Date();
 
@@ -619,7 +619,9 @@ export async function linearWebhookHandler(
                     githubKey,
                     syncedIssue.GitHubRepo.repoName,
                     title,
-                    `${resource.description}\n\n> ${getSyncFooter()}`,
+                    `${resource.description}${
+                        isCycle ? "" : " (Project)"
+                    }\n\n> ${getSyncFooter()}`,
                     state,
                     endDate?.toISOString()
                 );
