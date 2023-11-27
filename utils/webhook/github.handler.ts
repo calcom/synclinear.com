@@ -25,7 +25,7 @@ import {
     IssueCommentEditedEvent
 } from "@octokit/webhooks-types";
 import { generateLinearUUID } from "../linear";
-import { LINEAR, SHARED } from "../constants";
+import { GENERAL, LINEAR, SHARED } from "../constants";
 import got from "got";
 import { linearQuery } from "../apollo";
 import { ApiError } from "../errors";
@@ -261,11 +261,11 @@ export async function githubWebhookHandler(
                     updatedIssueData.team?.then(teamData => {
                         if (!updatedIssue.success)
                             console.log(
-                                `Failed to edit issue for ${syncedIssue.linearIssueNumber} [${syncedIssue.linearIssueNumber}] for GitHub issue #${issue.number} [${issue.id}].`
+                                `Failed to edit issue for ${syncedIssue.linearIssueNumber} for GitHub issue #${issue.number}.`
                             );
                         else
                             console.log(
-                                `Edited issue ${teamData.key}-${syncedIssue.linearIssueNumber} [${syncedIssue.linearIssueId}] for GitHub issue #${issue.number} [${issue.id}].`
+                                `Edited issue ${teamData.key}-${syncedIssue.linearIssueNumber} for GitHub issue #${issue.number}.`
                             );
                     });
                 });
@@ -292,11 +292,11 @@ export async function githubWebhookHandler(
                     updatedIssueData.team?.then(teamData => {
                         if (!updatedIssue.success)
                             console.log(
-                                `Failed to change state for ${syncedIssue.linearIssueNumber} [${syncedIssue.linearIssueNumber}] for GitHub issue #${issue.number} [${issue.id}].`
+                                `Failed to change state for ${syncedIssue.linearIssueNumber} for GitHub issue #${issue.number}.`
                             );
                         else
                             console.log(
-                                `Changed state ${teamData.key}-${syncedIssue.linearIssueNumber} [${syncedIssue.linearIssueId}] for GitHub issue #${issue.number} [${issue.id}].`
+                                `Changed state ${teamData.key}-${syncedIssue.linearIssueNumber} for GitHub issue #${issue.number}.`
                             );
                     });
                 });
@@ -313,6 +313,10 @@ export async function githubWebhookHandler(
             return reason;
         }
 
+        if (issue.title.match(GENERAL.LINEAR_TICKET_ID_REGEX)) {
+            return `Skipping creation as issue ${issue.number}'s title seems to contain a Linear ticket ID.`;
+        }
+
         const modifiedDescription = await prepareMarkdownContent(
             issue.body,
             "github",
@@ -322,7 +326,7 @@ export async function githubWebhookHandler(
             }
         );
 
-        /** In case if user has added some other labels on issue */
+        // Collect other labels on the issue
         const githubLabels = issue.labels.filter(
             label => label.name !== "linear"
         );
