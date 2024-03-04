@@ -62,7 +62,7 @@ export const GENERAL = {
     CONTRIBUTE_URL: "https://github.com/calcom/synclinear.com",
     IMG_TAG_REGEX: /<img.*src=[\'|\"| ]?https?:\/\/(.*?)[\'|\"| ].*\/?>/g,
     INLINE_IMG_TAG_REGEX: /!\[.*?\]\((https:\/\/(?!.*\?signature=).*?)\)/g,
-    LINEAR_TICKET_ID_REGEX: /^\[\w{3}-\d{1,6}\]\s/,
+    LINEAR_TICKET_ID_REGEX: /^\[\w{1,5}-\d{1,6}\]\s/,
     LOGIN_KEY: "login",
     SYNCED_ITEMS: [
         {
