@@ -315,7 +315,7 @@ export const updateMilestone = async (
 export const setIssueMilestone = async (
     token: string,
     repoName: string,
-    issueNumber: number,
+    issueNumber: bigint,
     milestoneId: number | null
 ): Promise<Response> => {
     const response = await fetch(
