@@ -3,7 +3,7 @@ import { formatJSON } from ".";
 export const getIssueUpdateError = (
     resource: "state" | "description" | "title" | "assignee",
     data: { number: number; id: string; team: { key: string } },
-    syncedIssue: { githubIssueNumber: number; githubIssueId: number },
+    syncedIssue: { githubIssueNumber: bigint; githubIssueId: bigint },
     updatedIssueResponse: any
 ): string => {
     return `Failed to update GitHub issue ${resource} for ${data.team.key}-${
