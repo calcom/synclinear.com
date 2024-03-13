@@ -935,7 +935,13 @@ export async function linearWebhookHandler(
                 );
             }
 
-            const modifiedBody = await replaceMentions(data.body, "linear");
+            let modifiedBody = await replaceMentions(data.body, "linear");
+
+            // Re-fetching the comment  returns it with public image URLs
+            if (modifiedBody?.match(GENERAL.INLINE_IMG_TAG_REGEX)) {
+                const publicComment = await linear.comment(data.id);
+                modifiedBody = publicComment.body;
+            }
 
             const footer = getGithubFooterWithLinearCommentId(
                 data.user?.name,
