@@ -26,13 +26,12 @@
         "eslint-plugin-react": "^7.31.11",
         "postcss": "^8.4.16",
         "prettier": "^2.8.0",
-        "prisma": "^4.12.0",
         "typescript": "4.7.2"
     },
     "dependencies": {
         "@apollo/client": "^3.6.9",
         "@linear/sdk": "^11.0.0",
-        "@prisma/client": "^4.12.0",
+        "@prisma/client": "^5.11.0",
         "@radix-ui/react-icons": "^1.1.1",
         "@radix-ui/react-tooltip": "^1.0.2",
         "canvas-confetti": "^1.5.1",
@@ -40,6 +39,7 @@
         "graphql": "^16.6.0",
         "next": "^12.3.0",
         "ngrok": "^4.3.3",
+        "prisma": "^5.11.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "react-select": "^5.7.4",
@@ -48,4 +48,3 @@
     },
     "packageManager": "pnpm@7.33.3"
 }
-
