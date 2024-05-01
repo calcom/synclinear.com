@@ -28,3 +28,4 @@ yarn-error.log*
 .env.production.local
 .idea
 .vercel
+.neon
