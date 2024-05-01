@@ -1,5 +1,9 @@
 import colors from "tailwindcss/colors";
 
+export const SECONDS_IN_HOUR = 60 * 60;
+export const SECONDS_IN_DAY = 24 * SECONDS_IN_HOUR;
+export const SECONDS_IN_YEAR = 365 * SECONDS_IN_DAY;
+
 export const LINEAR = {
     OAUTH_ID: process.env.NEXT_PUBLIC_LINEAR_OAUTH_ID,
     OAUTH_URL: "https://linear.app/oauth/authorize",
@@ -20,7 +24,7 @@ export const LINEAR = {
         canceled: "Canceled"
     },
     PUBLIC_QUERY_HEADERS: {
-        "public-file-urls-expire-in": "86400"
+        "public-file-urls-expire-in": SECONDS_IN_YEAR
     }
 };
 
