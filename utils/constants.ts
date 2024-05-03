@@ -24,7 +24,7 @@ export const LINEAR = {
         canceled: "Canceled"
     },
     PUBLIC_QUERY_HEADERS: {
-        "public-file-urls-expire-in": SECONDS_IN_YEAR
+        "public-file-urls-expire-in": SECONDS_IN_YEAR.toString()
     }
 };
 
