@@ -121,7 +121,7 @@ export const getAttachmentQuery = (
     return `mutation {
         attachmentCreate(input: {
             issueId: "${issueId}"
-            title: "GitHub Issue #${issueNumber}"
+            title: "GitHub Issue #${issueNumber} - ${repoFullName}"
             subtitle: "Synchronized"
             url: "https://github.com/${repoFullName}/issues/${issueNumber}"
             iconUrl: "${GITHUB.ICON_URL}"
