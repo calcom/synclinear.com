@@ -59,7 +59,10 @@ export async function githubWebhookHandler(
         (!sync?.LinearTeam || !sync?.GitHubRepo) &&
         !process.env.LINEAR_APPLICATION_ADMIN_KEY
     ) {
-        throw new ApiError("Could not find issue's corresponding team.", 404);
+        throw new ApiError(
+            `Team not found (repo: ${repository?.id || ""})`,
+            404
+        );
     }
 
     const { issue }: IssuesEvent = body as unknown as IssuesEvent;
@@ -81,7 +84,7 @@ export async function githubWebhookHandler(
 
         if (!sync) {
             throw new ApiError(
-                `Could not find sync for ${repository?.full_name}`,
+                `Sync not found (repo: ${repository?.id || ""})`,
                 404
             );
         }
@@ -95,7 +98,10 @@ export async function githubWebhookHandler(
     const sig = Buffer.from(signature, "utf-8");
 
     if (sig.length !== digest.length || !timingSafeEqual(digest, sig)) {
-        throw new ApiError("GitHub webhook secret doesn't match up.", 403);
+        throw new ApiError(
+            `GH webhook secret doesn't match (repo: ${repository?.id || ""})`,
+            403
+        );
     }
 
     const {
@@ -247,8 +253,8 @@ export async function githubWebhookHandler(
                 updatedIssue.issue?.then(updatedIssueData => {
                     updatedIssueData.team?.then(teamData => {
                         if (!updatedIssue.success)
-                            console.log(
-                                `Failed to edit issue for ${syncedIssue.linearIssueNumber} for GitHub issue #${issue.number}.`
+                            console.error(
+                                `Issue edit failed: ${syncedIssue.linearIssueNumber} for #${issue.number} (repo: ${repository.id}).`
                             );
                         else
                             console.log(
@@ -275,8 +281,8 @@ export async function githubWebhookHandler(
                 updatedIssue.issue?.then(updatedIssueData => {
                     updatedIssueData.team?.then(teamData => {
                         if (!updatedIssue.success)
-                            console.log(
-                                `Failed to change state for ${syncedIssue.linearIssueNumber} for GitHub issue #${issue.number}.`
+                            console.error(
+                                `State change failed: ${syncedIssue.linearIssueNumber} for #${issue.number} (repo: ${repository.id}).`
                             );
                         else
                             console.log(
@@ -293,7 +299,9 @@ export async function githubWebhookHandler(
         // Issue opened or special "linear" label added
 
         if (syncedIssue) {
-            return `Not creating ticket as issue ${issue.number} already exists on Linear as ${syncedIssue.linearIssueNumber}.`;
+            return `Not creating: ${issue?.id || ""} exists as ${
+                syncedIssue.linearIssueId
+            } (repo: ${repository.id}).`;
         }
 
         if (issue.title.match(GENERAL.LINEAR_TICKET_ID_REGEX)) {
@@ -347,7 +355,7 @@ export async function githubWebhookHandler(
         });
 
         if (!createdIssueData.success) {
-            const reason = `Failed to create ticket for GitHub issue #${issue.number}.`;
+            const reason = `Failed to create ticket for #${issue.number} (repo: ${repository.id}).`;
             throw new ApiError(reason, 500);
         }
 
@@ -355,14 +363,14 @@ export async function githubWebhookHandler(
 
         if (!createdIssue) {
             console.log(
-                `Failed to fetch ticket I just created for GitHub issue #${issue.number}.`
+                `Failed to fetch created ticket for #${issue.number} (repo: ${repository.id}).`
             );
         } else {
             const team = await createdIssue.team;
 
             if (!team) {
                 console.log(
-                    `Failed to fetch team for ticket, ${createdIssue.id} for GitHub issue #${issue.number}.`
+                    `Failed to fetch team for ${createdIssue.id} for #${issue.number} (repo: ${repository.id}).`
                 );
             } else {
                 const ticketName = `${team.key}-${createdIssue.number}`;
@@ -399,15 +407,21 @@ export async function githubWebhookHandler(
 
                 if (titleRenameResponse.statusCode > 201) {
                     console.log(
-                        `Failed to update title for ${ticketName} on GitHub issue #${issue.number} with status ${titleRenameResponse.statusCode}.`
+                        `Failed to update title for ${
+                            createdIssue?.id || ""
+                        } on ${issue.id} with status ${
+                            titleRenameResponse.statusCode
+                        } (repo: ${repository.id}).`
                     );
                 }
 
                 if (!attachmentResponse?.data?.attachmentCreate?.success) {
                     console.log(
-                        `Failed to add attachment to ${ticketName} for GitHub issue #${
-                            issue.number
-                        }: ${attachmentResponse?.error || ""}.`
+                        `Failed to add attachment to ${
+                            createdIssue?.id || ""
+                        } for ${issue.id}: ${
+                            attachmentResponse?.error || ""
+                        } (repo: ${repository.id}).`
                     );
                 }
 
@@ -420,7 +434,7 @@ export async function githubWebhookHandler(
 
                     if (issueCommentsPayload.statusCode > 201) {
                         throw new ApiError(
-                            `Failed to fetch comments for GitHub issue #${issue.number} with status ${issueCommentsPayload.statusCode}.`,
+                            `Failed to fetch comments for ${issue.id} with status ${issueCommentsPayload.statusCode} (repo: ${repository.id}).`,
                             403
                         );
                     }
@@ -473,7 +487,7 @@ export async function githubWebhookHandler(
                 );
 
                 if (!response?.success) {
-                    const reason = `Failed to remove assignee on Linear ticket for GitHub issue #${issue.number}.`;
+                    const reason = `Failed to unassign on ${syncedIssue.linearIssueId} for ${issue.id} (repo: ${repository.id}).`;
                     throw new ApiError(reason, 500);
                 } else {
                     return `Removed assignee from Linear ticket for GitHub issue #${issue.number}.`;
@@ -490,7 +504,7 @@ export async function githubWebhookHandler(
                 : null;
 
             if (!newAssignee) {
-                return `Skipping assignee for issue #${issue.number} as no Linear user was found for GitHub user ${modifiedAssignee?.login}.`;
+                return `Skipping assignee for ${issue.id}: Linear user not found for GH user ${modifiedAssignee?.login}`;
             }
 
             if (linearAssignee?.id != newAssignee?.linearUserId) {
@@ -500,10 +514,10 @@ export async function githubWebhookHandler(
                 );
 
                 if (!response?.success) {
-                    const reason = `Failed to add assignee on Linear ticket for GitHub issue #${issue.number}.`;
+                    const reason = `Failed to assign on ${syncedIssue.linearIssueId} for ${issue.id} (repo: ${repository.id}).`;
                     throw new ApiError(reason, 500);
                 } else {
-                    return `Added assignee to Linear ticket for GitHub issue #${issue.number}.`;
+                    return `Assigned ${syncedIssue.linearIssueId} for ${issue.id} (repo: ${repository.id}).`;
                 }
             }
         }
@@ -513,7 +527,7 @@ export async function githubWebhookHandler(
         // Sync the newly-milestoned issue
         if (!syncedIssue) {
             if (action === "demilestoned") {
-                return `Skipping over removal of milestone for issue #${issue.number} because it is not synced`;
+                return `Skipping milestone removal for ${issue.id}: not synced (repo: ${repository.id}).`;
             }
 
             const modifiedDescription = await prepareMarkdownContent(
@@ -543,22 +557,24 @@ export async function githubWebhookHandler(
             });
 
             if (!createdIssueData.success) {
-                const reason = `Failed to create ticket for GitHub issue #${issue.number}.`;
-                throw new ApiError(reason, 500);
+                throw new ApiError(
+                    `Failed to create ticket for ${issue.id} (repo: ${repository.id}).`,
+                    500
+                );
             }
 
             const createdIssue = await createdIssueData.issue;
 
             if (!createdIssue) {
                 console.log(
-                    `Failed to fetch ticket I just created for GitHub issue #${issue.number}.`
+                    `Failed to fetch created ticket for ${issue.id} (repo: ${repository.id}).`
                 );
             } else {
                 const team = await createdIssue.team;
 
                 if (!team) {
                     console.log(
-                        `Failed to fetch team for ticket, ${createdIssue.id} for GitHub issue #${issue.number}.`
+                        `Failed to fetch team for ${createdIssue.id} for ${issue.id} (repo: ${repository.id}).`
                     );
                 } else {
                     const ticketName = `${team.key}-${createdIssue.number}`;
@@ -600,21 +616,27 @@ export async function githubWebhookHandler(
 
                     if (titleRenameResponse.statusCode > 201) {
                         console.log(
-                            `Failed to update title for ${ticketName} on GitHub issue #${issue.number} with status ${titleRenameResponse.statusCode}.`
+                            `Failed to update title for ${
+                                createdIssue?.id || ""
+                            } on ${issue.id} with status ${
+                                titleRenameResponse.statusCode
+                            } (repo: ${repository.id}).`
                         );
                     }
 
                     if (!attachmentResponse?.data?.attachmentCreate?.success) {
                         console.log(
-                            `Failed to add attachment to ${ticketName} for GitHub issue #${
-                                issue.number
-                            }: ${attachmentResponse?.error || ""}.`
+                            `Failed to add attachment to ${
+                                createdIssue?.id || ""
+                            } for ${issue.id}: ${
+                                attachmentResponse?.error || ""
+                            } (repo: ${repository.id})`
                         );
                     }
 
                     if (issueCommentsPayload.statusCode > 201) {
                         throw new ApiError(
-                            `Failed to fetch comments for GitHub issue #${issue.number} with status ${issueCommentsPayload.statusCode}.`,
+                            `Failed to fetch comments for ${issue.id} with status ${issueCommentsPayload.statusCode} (repo: ${repository.id}).`,
                             403
                         );
                     }
@@ -680,7 +702,7 @@ export async function githubWebhookHandler(
             });
 
             if (!createdResource?.success) {
-                const reason = `Failed to create Linear cycle/project for GitHub milestone #${milestone.number}.`;
+                const reason = `Failed to create Linear cycle/project for milestone ${milestone.id}.`;
                 throw new ApiError(reason, 500);
             }
 
@@ -705,15 +727,15 @@ export async function githubWebhookHandler(
         });
 
         if (!response?.success) {
-            const reason = `Failed to add Linear ticket to cycle/project for GitHub issue #${issue.number}.`;
+            const reason = `Failed to add Linear ticket to cycle/project for ${issue.id}.`;
             throw new ApiError(reason, 500);
         } else {
-            return `Added Linear ticket to cycle/project for GitHub issue #${issue.number}.`;
+            return `Added Linear ticket to cycle/project for ${issue.id}.`;
         }
     } else if (["labeled", "unlabeled"].includes(action)) {
         // Label added to issue
 
-        if (!syncedIssue) return skipReason("label", issue.number);
+        if (!syncedIssue) return skipReason("label", issue.id);
 
         const { label } = body as IssuesLabeledEvent | IssuesUnlabeledEvent;
 
@@ -741,7 +763,7 @@ export async function githubWebhookHandler(
 
         if (!linearLabels?.nodes?.length) {
             // Could create the label in Linear here, but we'll skip it to avoid cluttering Linear.
-            return `Skipping label "${label?.name}" for issue #${issue.number} as no Linear label was found.`;
+            return `Skipping label "${label?.name}" for ${issue.id} as no Linear label was found (repo: ${repository.id}).`;
         }
 
         const linearLabelIDs = linearLabels.nodes.map(l => l.id);
@@ -763,10 +785,10 @@ export async function githubWebhookHandler(
         });
 
         if (!response?.success) {
-            const reason = `Failed to add label "${label?.name}" to Linear ticket for GitHub issue #${issue.number}.`;
+            const reason = `Failed to add label "${label?.name}" to ${syncedIssue.linearIssueId} for ${issue.id} (repo: ${repository.id}).`;
             throw new ApiError(reason, 500);
         }
 
-        return `Added label "${label?.name}" to Linear ticket for GitHub issue #${issue.number}.`;
+        return `Added label "${label?.name}" to Linear ticket for ${issue.id} (repo: ${repository.id}).`;
     }
 }

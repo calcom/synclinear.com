@@ -34,8 +34,9 @@ export async function linearWebhookHandler(
     originIp: string
 ) {
     if (!LINEAR.IP_ORIGINS.includes(`${originIp || ""}`)) {
-        console.log("Could not verify Linear webhook.");
-        throw new Error("Could not verify Linear webhook.");
+        throw new Error(
+            `Could not verify Linear webhook from ${originIp || ""}`
+        );
     }
 
     const {
@@ -69,13 +70,15 @@ export async function linearWebhookHandler(
     });
 
     if (syncs.length === 0 || !sync) {
-        console.log("Could not find Linear user in syncs.");
-        return "Could not find Linear user in syncs.";
+        const reason = `Linear user ${data?.userId || ""} not found in syncs.`;
+        console.log(reason);
+        return reason;
     }
 
     if (!sync?.LinearTeam || !sync?.GitHubRepo) {
-        console.log("Could not find ticket's corresponding repo.");
-        throw new ApiError("Could not find ticket's corresponding repo.", 404);
+        const reason = `Repo not found for ${data?.teamId || ""}`;
+        console.log(reason);
+        throw new ApiError(reason, 404);
     }
 
     const {
@@ -159,7 +162,10 @@ export async function linearWebhookHandler(
 
                 const label = await linear.issueLabel(removedLabelId);
                 if (!label) {
-                    throw new ApiError("Could not find label.", 403);
+                    throw new ApiError(
+                        `Could not find label ${removedLabelId}.`,
+                        403
+                    );
                 }
 
                 const removedLabelResponse = await got.delete(
@@ -168,14 +174,12 @@ export async function linearWebhookHandler(
                 );
 
                 if (removedLabelResponse.statusCode > 201) {
-                    console.log(`Could not remove label "${label.name}".`);
-                    throw new ApiError(
-                        `Could not remove label "${label.name}".`,
-                        403
-                    );
+                    const reason = `Failed to remove label "${label.name}" from ${syncedIssue.githubIssueId}.`;
+                    console.log(reason);
+                    throw new ApiError(reason, 403);
                 } else {
                     console.log(
-                        `Removed label "${label.name}" from issue #${syncedIssue.githubIssueNumber}.`
+                        `Removed label "${label.name}" from ${syncedIssue.githubIssueId}.`
                     );
                 }
             } else if (data.labelIds.length > updatedFrom.labelIds.length) {
@@ -185,7 +189,10 @@ export async function linearWebhookHandler(
 
                 const label = await linear.issueLabel(addedLabelId);
                 if (!label) {
-                    throw new ApiError("Could not find label.", 403);
+                    throw new ApiError(
+                        `Could not find label ${addedLabelId}.`,
+                        403
+                    );
                 }
 
                 const { createdLabel, error: createLabelError } =
@@ -212,11 +219,12 @@ export async function linearWebhookHandler(
                 });
 
                 if (applyLabelError) {
-                    console.log("Could not apply label.");
-                    throw new ApiError("Could not apply label.", 403);
+                    const reason = `Failed to apply label "${labelName}" to ${syncedIssue.githubIssueId}.`;
+                    console.log(reason);
+                    throw new ApiError(reason, 403);
                 } else {
                     console.log(
-                        `Applied label "${labelName}" to issue #${syncedIssue.githubIssueNumber}.`
+                        `Applied label "${labelName}" to issue #${syncedIssue.githubIssueId}.`
                     );
                 }
             }
@@ -227,11 +235,9 @@ export async function linearWebhookHandler(
         ) {
             // Public label added to an issue
             if (syncedIssue) {
-                console.log(
-                    `Not creating issue after label added as issue ${ticketName} [${data.id}] already exists on GitHub as issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
-                );
-
-                return "Issue already exists on GitHub.";
+                const reason = `Skipping issue create: ${data.id} exists as ${syncedIssue.githubIssueId}`;
+                console.log(reason);
+                return reason;
             }
 
             let markdown = data.description;
@@ -282,14 +288,9 @@ export async function linearWebhookHandler(
             }
 
             if (createdIssueResponse.statusCode > 201) {
-                console.log(
-                    `Failed to create GitHub issue for ${data.team.key}-${data.number} with status ${createdIssueResponse.statusCode}.`
-                );
-
-                throw new ApiError(
-                    `I was unable to create an issue on Github. Status code: ${createdIssueResponse.statusCode}`,
-                    500
-                );
+                const reason = `Failed to create issue for ${data.id} with status ${createdIssueResponse.statusCode}.`;
+                console.log(reason);
+                throw new ApiError(reason, 500);
             }
 
             const createdIssueData: components["schemas"]["issue"] = JSON.parse(
@@ -308,13 +309,13 @@ export async function linearWebhookHandler(
                 linearQuery(attachmentQuery, linearKey).then(response => {
                     if (!response?.data?.attachmentCreate?.success) {
                         console.log(
-                            `Failed to add attachment to ${ticketName} for GitHub issue #${
-                                createdIssueData.number
+                            `Failed to add attachment to ${ticketName} for ${
+                                createdIssueData.id
                             }: ${response?.error || ""}.`
                         );
                     } else {
                         console.log(
-                            `Created attachment on ${ticketName} for GitHub issue #${createdIssueData.number}.`
+                            `Created attachment on ${ticketName} for ${createdIssueData.id}.`
                         );
                     }
                 }),
@@ -353,7 +354,7 @@ export async function linearWebhookHandler(
 
                 if (error) {
                     console.log(
-                        `Could not create GH label "${label.name}" in ${repoFullName}.`
+                        `Failed to create GH label "${label.name}" in ${repoFullName}.`
                     );
                     continue;
                 }
@@ -375,7 +376,7 @@ export async function linearWebhookHandler(
 
                 if (error) {
                     console.log(
-                        `Could not create priority label "${priorityLabel.name}" in ${repoFullName}.`
+                        `Failed to create priority label "${priorityLabel.name}" in ${repoFullName}.`
                     );
                 } else {
                     const labelName = createdLabel
@@ -396,11 +397,11 @@ export async function linearWebhookHandler(
 
             if (applyLabelError) {
                 console.log(
-                    `Could not apply labels to #${createdIssueData.number} in ${repoFullName}.`
+                    `Failed to apply labels to ${createdIssueData.id} in ${repoFullName}.`
                 );
             } else {
                 console.log(
-                    `Applied labels to #${createdIssueData.number} in ${repoFullName}.`
+                    `Applied labels to ${createdIssueData.id} in ${repoFullName}.`
                 );
             }
 
@@ -440,11 +441,11 @@ export async function linearWebhookHandler(
 
                 if (commentError) {
                     console.log(
-                        `Failed to add comment to GitHub issue ${createdIssueData.number} for ${ticketName}.`
+                        `Failed to add comment to ${createdIssueData.id} for ${ticketName}.`
                     );
                 } else {
                     console.log(
-                        `Created comment on GitHub issue #${createdIssueData.number} [${createdIssueData.id}] for Linear issue ${ticketName}.`
+                        `Created comment on ${createdIssueData.id} for ${ticketName}.`
                     );
                 }
             }
@@ -480,7 +481,7 @@ export async function linearWebhookHandler(
                 );
             } else {
                 console.log(
-                    `Updated GitHub issue title for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                    `Updated GH issue title for ${data.id} on ${syncedIssue.githubIssueId}`
                 );
             }
         }
@@ -524,7 +525,7 @@ export async function linearWebhookHandler(
                 );
             } else {
                 console.log(
-                    `Updated GitHub issue description for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                    `Updated GH issue desc for ${data.id} on ${syncedIssue.githubIssueId}`
                 );
             }
         }
@@ -553,7 +554,7 @@ export async function linearWebhookHandler(
                 );
 
                 if (response.status > 201) {
-                    const reason = `Could not remove milestone for ${ticketName}.`;
+                    const reason = `Failed to remove milestone for ${syncedIssue.githubIssueId} to ${ticketName}.`;
                     console.log(reason);
                     throw new ApiError(reason, 500);
                 } else {
@@ -576,14 +577,14 @@ export async function linearWebhookHandler(
                 );
 
                 if (!resource) {
-                    const reason = `Could not find cycle/project for ${ticketName}.`;
+                    const reason = `Could not find cycle/project ${resourceId} for ${ticketName}.`;
                     console.log(reason);
                     throw new ApiError(reason, 500);
                 }
 
                 // Skip if cycle/project was created by bot but not yet synced
                 if (resource.description?.includes(getSyncFooter())) {
-                    const reason = `Skipping over cycle/project "${resource.name}" because it is caused by sync`;
+                    const reason = `Skipping cycle/project "${resource.name}" for ${ticketName}: caused by sync`;
                     console.log(reason);
                     return reason;
                 }
@@ -621,7 +622,7 @@ export async function linearWebhookHandler(
                 if (createdMilestone?.alreadyExists) {
                     console.log("Milestone already exists.");
                 } else if (!createdMilestone?.milestoneId) {
-                    const reason = `Could not create milestone for ${ticketName}.`;
+                    const reason = `Failed to create milestone for ${syncedIssue.githubIssueId} to ${ticketName}.`;
                     console.log(reason);
                     throw new ApiError(reason, 500);
                 }
@@ -644,11 +645,11 @@ export async function linearWebhookHandler(
             );
 
             if (response.status > 201) {
-                const reason = `Could not add milestone for ${ticketName}.`;
+                const reason = `Failed to add milestone for ${syncedIssue.githubIssueId} to ${ticketName}.`;
                 console.log(reason);
                 throw new ApiError(reason, 500);
             } else {
-                const reason = `Added milestone to #${syncedIssue.githubIssueNumber} for ${ticketName}.`;
+                const reason = `Added milestone to ${syncedIssue.githubIssueId} for ${ticketName}.`;
                 console.log(reason);
                 return reason;
             }
@@ -684,7 +685,7 @@ export async function linearWebhookHandler(
                 );
             } else {
                 console.log(
-                    `Updated GitHub issue state for ${ticketName} [${data.id}] on GitHub issue #${syncedIssue.githubIssueNumber} [${syncedIssue.githubIssueId}].`
+                    `Updated GH issue state for ${data.id} on ${syncedIssue.githubIssueId}`
                 );
             }
         }
@@ -717,11 +718,11 @@ export async function linearWebhookHandler(
 
             if (data?.assigneeId && !newAssignee?.githubUsername) {
                 console.log(
-                    `Skipping assignee for ${ticketName} as no GitHub username was found for Linear user ${data.assigneeId}.`
+                    `Skipping assign for ${ticketName}: no GH user was found for Linear user ${data.assigneeId}.`
                 );
             } else if (prevAssignees?.includes(newAssignee?.githubUsername)) {
                 console.log(
-                    `Skipping assignee for ${ticketName} as Linear user ${data.assigneeId} is already assigned.`
+                    `Skipping assign for ${ticketName}: Linear user ${data.assigneeId} is already assigned.`
                 );
             } else {
                 const assigneeEndpoint = `${GITHUB.REPO_ENDPOINT}/${syncedIssue.GitHubRepo.repoName}/issues/${syncedIssue.githubIssueNumber}/assignees`;
@@ -744,7 +745,7 @@ export async function linearWebhookHandler(
                     );
                 } else {
                     console.log(
-                        `Added assignee to GitHub issue #${syncedIssue.githubIssueNumber} for ${ticketName}.`
+                        `Added assignee to ${syncedIssue.githubIssueId} for ${ticketName}.`
                     );
                 }
 
@@ -767,7 +768,7 @@ export async function linearWebhookHandler(
                     );
                 } else {
                     console.log(
-                        `Removed assignee from GitHub issue #${syncedIssue.githubIssueNumber} for ${ticketName}.`
+                        `Removed assignee from ${syncedIssue.githubIssueId} for ${ticketName}.`
                     );
                 }
             }
@@ -780,8 +781,10 @@ export async function linearWebhookHandler(
                 !priorityLabels[data.priority] ||
                 !priorityLabels[updatedFrom.priority]
             ) {
-                const reason = `Could not find a priority label for ${updatedFrom.priority} or ${data.priority}.`;
-                throw new ApiError(reason, 403);
+                throw new ApiError(
+                    `Could not find a priority label for ${updatedFrom.priority} or ${data.priority}.`,
+                    403
+                );
             }
 
             const prevPriorityLabel = priorityLabels[updatedFrom.priority];
@@ -795,19 +798,21 @@ export async function linearWebhookHandler(
 
                 if (removedLabelResponse.statusCode > 201) {
                     console.log(
-                        `Did not remove priority label "${prevPriorityLabel.name}".`
+                        `Failed to remove priority label "${prevPriorityLabel.name}" from ${syncedIssue.githubIssueId}.`
                     );
                 } else {
                     console.log(
-                        `Removed priority "${prevPriorityLabel.name}" from issue #${syncedIssue.githubIssueNumber}.`
+                        `Removed priority "${prevPriorityLabel.name}" from ${syncedIssue.githubIssueId}.`
                     );
                 }
             } catch (e) {
-                console.log("Could not remove previous priority label.");
+                console.log(
+                    `Failed to remove previous priority label from ${syncedIssue.githubIssueId}.`
+                );
             }
 
             if (data.priority === 0) {
-                return `Removed priority label "${prevPriorityLabel.name}" from issue #${syncedIssue.githubIssueNumber}.`;
+                return `Removed priority label "${prevPriorityLabel.name}" from ${syncedIssue.githubIssueId}.`;
             }
 
             // Add new priority label if not none
@@ -836,9 +841,12 @@ export async function linearWebhookHandler(
             });
 
             if (applyLabelError) {
-                throw new ApiError("Could not apply label.", 403);
+                throw new ApiError(
+                    `Failed to apply priority label "${labelName}" to ${syncedIssue.githubIssueId}.`,
+                    403
+                );
             } else {
-                return `Applied priority label "${labelName}" to issue #${syncedIssue.githubIssueNumber}.`;
+                return `Applied priority label "${labelName}" to ${syncedIssue.githubIssueId}.`;
             }
         }
 
@@ -856,16 +864,16 @@ export async function linearWebhookHandler(
 
             if (removedLabelResponse.statusCode > 201) {
                 console.log(
-                    `Did not remove estimate label "${prevLabelName}".`
+                    `Failed to remove estimate label "${prevLabelName}" from ${syncedIssue.githubIssueId}.`
                 );
             } else {
                 console.log(
-                    `Removed estimate "${prevLabelName}" from issue #${syncedIssue.githubIssueNumber}.`
+                    `Removed estimate "${prevLabelName}" from ${syncedIssue.githubIssueId}.`
                 );
             }
 
             if (!data.estimate) {
-                return `Removed estimate label "${prevLabelName}" from issue #${syncedIssue.githubIssueNumber}.`;
+                return `Removed estimate label "${prevLabelName}" from ${syncedIssue.githubIssueId}.`;
             }
 
             // Create new estimate label if not yet existent
@@ -882,8 +890,9 @@ export async function linearWebhookHandler(
             });
 
             if (error) {
-                console.log("Could not create estimate label.");
-                throw new ApiError("Could not create estimate label.", 403);
+                const reason = `Could not create estimate label "${estimateLabel.name}" for ${syncedIssue.githubIssueId}.`;
+                console.log(reason);
+                throw new ApiError(reason, 403);
             }
 
             const labelName = createdLabel
@@ -899,8 +908,9 @@ export async function linearWebhookHandler(
             });
 
             if (applyLabelError) {
-                console.log("Could not apply label.");
-                throw new ApiError("Could not apply label.", 403);
+                const reason = `Could not apply estimate label "${labelName}" to ${syncedIssue.githubIssueId}.`;
+                console.log(reason);
+                throw new ApiError(reason, 403);
             } else {
                 console.log(
                     `Applied estimate label "${labelName}" to issue #${syncedIssue.githubIssueNumber}.`
@@ -958,11 +968,11 @@ export async function linearWebhookHandler(
 
             if (commentError) {
                 console.log(
-                    `Failed to update GitHub issue state for ${data.issue?.id} on GitHub issue #${syncedIssueWithTeam.githubIssueNumber}.`
+                    `Failed to update GH issue state for ${data?.issue?.id} on ${syncedIssueWithTeam.githubIssueId}.`
                 );
             } else {
                 console.log(
-                    `Synced comment for GitHub issue #${syncedIssueWithTeam.githubIssueNumber}.`
+                    `Synced comment for ${syncedIssueWithTeam.githubIssueId}.`
                 );
             }
         } else if (actionType === "Issue") {
@@ -975,7 +985,7 @@ export async function linearWebhookHandler(
             }
 
             if (syncedIssue) {
-                const reason = `Not creating issue after label added as issue ${ticketName} already exists on GitHub as #${syncedIssue.githubIssueNumber}.`;
+                const reason = `Skipping create after label: ${ticketName} exists as ${syncedIssue.githubIssueId}.`;
                 console.log(reason);
                 return reason;
             }
@@ -1020,14 +1030,9 @@ export async function linearWebhookHandler(
             });
 
             if (createdIssueResponse.statusCode > 201) {
-                console.log(
-                    `Failed to create issue for ${data.team.key}-${data.number} with status ${createdIssueResponse.statusCode}.`
-                );
-
-                throw new ApiError(
-                    `I was unable to create an issue on Github. Status code: ${createdIssueResponse.statusCode}`,
-                    500
-                );
+                const reason = `Failed to create issue for ${data.id} with status ${createdIssueResponse.statusCode}.`;
+                console.log(reason);
+                throw new ApiError(reason, 500);
             }
 
             const createdIssueData: components["schemas"]["issue"] = JSON.parse(
@@ -1044,13 +1049,13 @@ export async function linearWebhookHandler(
                 linearQuery(attachmentQuery, linearKey).then(response => {
                     if (!response?.data?.attachmentCreate?.success) {
                         console.log(
-                            `Failed to add attachment to ${ticketName} for GitHub issue #${
-                                createdIssueData.number
+                            `Failed to add attachment to ${ticketName} for ${
+                                createdIssueData.id
                             }: ${response?.error || ""}.`
                         );
                     } else {
                         console.log(
-                            `Created attachment on ${ticketName} for GitHub issue #${createdIssueData.number}.`
+                            `Created attachment on ${ticketName} for ${createdIssueData.id}.`
                         );
                     }
                 }),
@@ -1133,11 +1138,11 @@ export async function linearWebhookHandler(
 
             if (applyLabelError) {
                 console.log(
-                    `Could not apply labels to #${createdIssueData.number} in ${repoFullName}.`
+                    `Could not apply labels to #${createdIssueData.id} in ${repoFullName}.`
                 );
             } else {
                 console.log(
-                    `Applied labels to #${createdIssueData.number} in ${repoFullName}.`
+                    `Applied labels to #${createdIssueData.id} in ${repoFullName}.`
                 );
             }
 
