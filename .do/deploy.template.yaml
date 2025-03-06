@@ -5,7 +5,7 @@ spec:
           dockerfile_path: Dockerfile
           git:
               branch: main
-              repo_clone_url: https://github.com/calcom/synclinear.com.git
+              repo_clone_url: https://github.com/guchenhe/synclinear.com.git
           envs:
               - key: LINEAR_API_KEY
                 type: SECRET
