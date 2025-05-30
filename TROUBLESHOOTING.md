@@ -6,7 +6,7 @@ Having issues? Read through this guide before raising an issue on the repo to se
 
 ## Linear not syncing data to GitHub
 
-In order for data to sync from linear to GitHub, your Linear account must have both: 
+In order for data to sync from Linear to GitHub, your Linear account must have both: 
 - the SyncLinear application installed
 - the SyncLinear webhook
 
@@ -14,7 +14,7 @@ In order for data to sync from linear to GitHub, your Linear account must have b
 
 To ensure the application is installed, see [Linear application settings](https://linear.app/settings/account/security). You should see the app installed.
 
-![Screenshot 2023-02-09 at 18 39 57](https://user-images.githubusercontent.com/11256663/217907001-09ebda00-bb55-40aa-b71d-ad99513f8328.png)
+<img width="667" alt="image" src="https://github.com/user-attachments/assets/cc81f256-aa6f-43e2-9a3b-8334f45c91a4" />
 
 ### Linear webhook
 
@@ -22,7 +22,7 @@ For the webhook, you can see your existing webhooks under [webhook settings](htt
 
 You should have a Linear webhook with the following configuration. If it's not there and you've already set SyncLinear up, you can add it manually.
 
-![Screenshot 2023-02-09 at 18 39 10](https://user-images.githubusercontent.com/11256663/217906823-d8d958f6-eef7-42af-aea5-87c10677d75d.png)
+<img width="673" alt="image" src="https://github.com/user-attachments/assets/6384e416-d14a-4134-a7d3-20f552f2b6ce" />
 
 Your Linear data should now be syncing to GitHub!
 
